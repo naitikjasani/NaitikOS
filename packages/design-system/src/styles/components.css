@@ -1,0 +1,1092 @@
+/**
+ * Component styles.
+ *
+ * Every declaration references a TIER 3 token where one exists, TIER 2 where
+ * one does not. A literal colour, radius, or duration in this file is a bug
+ * (§8.1: "A component may only reference tier 3").
+ *
+ * Plain namespaced CSS rather than CSS Modules, deliberately. Under P2 the
+ * durable artifact is the token JSON, and a stylesheet that is readable
+ * without a bundler is one fewer thing that has to still work in 2038. The
+ * `nos-` prefix is the scoping.
+ */
+
+/* ==========================================================================
+   Motion helper
+   ========================================================================== */
+
+@keyframes nos-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.nos-spin {
+  animation: nos-spin 900ms linear infinite;
+}
+
+/* Reduced motion: hold the glyph still. §8.6 collapses durations to instant;
+   an infinite animation has to be stopped outright rather than shortened. */
+[data-motion='reduced'] .nos-spin {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='full']) .nos-spin {
+    animation: none;
+  }
+}
+
+/* ==========================================================================
+   Button
+   ========================================================================== */
+
+.nos-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--button-height);
+  /* 44px minimum in both dimensions (§8.13). */
+  min-width: var(--button-height);
+  padding-inline: var(--button-padding-x);
+  border: 1px solid transparent;
+  border-radius: var(--button-radius);
+  font-size: var(--typography-body-sm-font-size);
+  font-weight: var(--font-weight-medium);
+  line-height: 1;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color var(--motion-duration-fast) var(--motion-ease-out),
+    border-color var(--motion-duration-fast) var(--motion-ease-out);
+}
+
+.nos-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.nos-button--primary {
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
+}
+.nos-button--primary:hover:not(:disabled) {
+  background: var(--button-primary-bg-hover);
+}
+.nos-button--primary:active:not(:disabled) {
+  background: var(--button-primary-bg-active);
+}
+
+.nos-button--secondary {
+  background: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+  border-color: var(--button-secondary-border);
+}
+.nos-button--secondary:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+}
+
+.nos-button--ghost {
+  background: transparent;
+  color: var(--button-ghost-text);
+}
+.nos-button--ghost:hover:not(:disabled) {
+  background: var(--button-ghost-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.nos-button--destructive {
+  background: var(--button-destructive-bg);
+  color: var(--button-destructive-text);
+}
+.nos-button--destructive:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.nos-button--sm {
+  min-height: var(--space-8);
+  min-width: var(--space-8);
+  padding-inline: var(--space-3);
+  font-size: var(--typography-caption-font-size);
+}
+.nos-button--lg {
+  min-height: var(--space-12);
+  padding-inline: var(--space-6);
+  font-size: var(--typography-body-font-size);
+}
+
+.nos-button--icon {
+  padding-inline: 0;
+  aspect-ratio: 1;
+}
+
+.nos-button--full {
+  width: 100%;
+}
+
+/* ==========================================================================
+   Card (§8.8)
+   ========================================================================== */
+
+.nos-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--card-padding);
+  border-radius: var(--card-radius);
+  border: 1px solid transparent;
+  background: transparent;
+  color: inherit;
+  text-align: start;
+}
+
+.nos-card--outlined {
+  background: var(--card-bg);
+  border-color: var(--card-border-outlined);
+}
+
+/**
+ * Raised.
+ *
+ * §8.7: "elevation is conveyed by lightness, not shadow, since shadows are
+ * near-invisible on dark surfaces." Dark gets a lighter surface; light gets a
+ * shadow. Same component, two mechanisms, chosen by the theme rather than by
+ * the caller.
+ */
+.nos-card--raised {
+  background: var(--color-surface-overlay);
+  border-color: var(--card-border);
+}
+[data-theme='light'] .nos-card--raised {
+  box-shadow: 0 1px 2px rgb(0 0 0 / 6%), 0 4px 12px rgb(0 0 0 / 8%);
+}
+
+.nos-card--interactive {
+  background: var(--card-bg);
+  border-color: var(--card-border);
+  cursor: pointer;
+  width: 100%;
+  transition:
+    background-color var(--motion-duration-fast) var(--motion-ease-out),
+    border-color var(--motion-duration-fast) var(--motion-ease-out);
+}
+.nos-card--interactive:hover {
+  background: var(--card-bg-interactive-hover);
+  border-color: var(--color-border-default);
+}
+
+.nos-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.nos-card__header-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.nos-card__header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+.nos-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.nos-card__footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--card-border);
+}
+
+/* ==========================================================================
+   Badge
+   ========================================================================== */
+
+.nos-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-px) var(--space-2);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border-default);
+  background: var(--color-surface-overlay);
+  color: var(--color-text-secondary);
+  font-size: var(--typography-caption-font-size);
+  line-height: var(--typography-caption-line-height);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+.nos-badge--accent {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.nos-badge--positive {
+  border-color: var(--color-positive);
+  color: var(--color-positive);
+}
+.nos-badge--caution {
+  border-color: var(--color-caution);
+  color: var(--color-caution);
+}
+.nos-badge--critical {
+  border-color: var(--color-critical);
+  color: var(--color-critical);
+}
+
+/* ==========================================================================
+   Avatar
+   ========================================================================== */
+
+.nos-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-overlay);
+  user-select: none;
+  flex-shrink: 0;
+}
+.nos-avatar--sm { width: var(--space-6); height: var(--space-6); font-size: var(--typography-caption-font-size); }
+.nos-avatar--md { width: var(--space-8); height: var(--space-8); font-size: var(--typography-body-sm-font-size); }
+.nos-avatar--lg { width: var(--space-12); height: var(--space-12); font-size: var(--typography-body-font-size); }
+
+.nos-avatar__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.nos-avatar__fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ==========================================================================
+   Progress
+   ========================================================================== */
+
+.nos-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+}
+.nos-progress__labels {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-variant-numeric: tabular-nums;
+}
+.nos-progress__track {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-overlay);
+}
+.nos-progress__track--sm { height: var(--space-1); }
+.nos-progress__track--md { height: var(--space-2); }
+.nos-progress__indicator {
+  width: 100%;
+  height: 100%;
+  background: var(--color-accent);
+  transition: transform var(--motion-duration-normal) var(--motion-ease-out);
+}
+
+/* ==========================================================================
+   Skeleton and Spinner
+   ========================================================================== */
+
+.nos-skeleton {
+  background: var(--skeleton-bg);
+  /* No shimmer. §8.6: "Skeletons do not shimmer; they hold layout." */
+}
+
+.nos-spinner {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-text-secondary);
+}
+
+/* ==========================================================================
+   Fields (§8.10)
+   ========================================================================== */
+
+.nos-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.nos-field__label {
+  font-size: var(--typography-body-sm-font-size);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+
+.nos-field__required {
+  margin-inline-start: var(--space-1);
+  color: var(--color-critical);
+}
+
+.nos-field__error {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.nos-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.nos-input-wrap__icon {
+  position: absolute;
+  inset-inline-start: var(--space-3);
+  color: var(--input-placeholder);
+  pointer-events: none;
+}
+
+.nos-input-wrap__clear {
+  position: absolute;
+  inset-inline-end: var(--space-1);
+}
+
+.nos-input {
+  width: 100%;
+  min-height: var(--input-height);
+  padding-inline: var(--input-padding-x);
+  border: 1px solid var(--input-border);
+  border-radius: var(--input-radius);
+  background: var(--input-bg);
+  color: var(--input-text);
+  /**
+   * 16px minimum, always.
+   *
+   * Below 16px, iOS Safari zooms the viewport on focus and does not zoom back
+   * out. The body scale is 15px, so inputs deliberately break from it — a
+   * capture flow that zooms on every field fails P1 outright.
+   */
+  font-size: max(16px, var(--typography-body-font-size));
+  transition: border-color var(--motion-duration-fast) var(--motion-ease-out);
+}
+
+.nos-input::placeholder {
+  color: var(--input-placeholder);
+}
+
+.nos-input:focus-visible {
+  border-color: var(--input-border-focus);
+}
+
+.nos-input[aria-invalid='true'] {
+  border-color: var(--input-border-invalid);
+}
+
+.nos-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.nos-input--with-icon {
+  padding-inline-start: calc(var(--space-8) + var(--space-1));
+}
+
+.nos-input--numeric {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The browser's own clear button, hidden in favour of our labelled one. */
+.nos-input[type='search']::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.nos-textarea {
+  min-height: calc(var(--space-16) + var(--space-4));
+  padding-block: var(--space-3);
+  resize: vertical;
+  line-height: var(--typography-body-line-height);
+}
+
+.nos-textarea--serif {
+  font-family: var(--font-family-serif);
+}
+
+/* --- NumberField ---------------------------------------------------- */
+
+.nos-number {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.nos-number__input {
+  flex: 1;
+  min-width: 0;
+}
+.nos-number__unit {
+  position: absolute;
+  inset-inline-end: var(--space-3);
+  color: var(--color-text-tertiary);
+  font-size: var(--typography-caption-font-size);
+  pointer-events: none;
+}
+
+/* --- ScaleField ----------------------------------------------------- */
+
+.nos-scale {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.nos-scale__option {
+  flex: 1;
+  /* Full touch target: this is the Daily Close control, pressed half-awake. */
+  min-height: var(--size-touch-target);
+  min-width: var(--size-touch-target);
+  border: 1px solid var(--input-border);
+  border-radius: var(--input-radius);
+  background: var(--input-bg);
+  color: var(--color-text-secondary);
+  font-size: var(--typography-body-font-size);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-duration-instant) var(--motion-ease-out),
+    border-color var(--motion-duration-instant) var(--motion-ease-out);
+}
+
+/**
+ * The selected state uses the ACCENT, not a valence colour.
+ *
+ * §8.2: "A mood of 2 is not red." The scale looks identical at 1 and at 5 —
+ * only the position of the selection differs.
+ */
+.nos-scale__option.is-selected {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-text-on-accent);
+}
+
+.nos-scale__anchors {
+  display: flex;
+  justify-content: space-between;
+}
+
+/* --- Toggle --------------------------------------------------------- */
+
+.nos-toggle-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  /* The whole row is the target area on touch. */
+  min-height: var(--size-touch-target);
+}
+.nos-toggle-field__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.nos-switch {
+  position: relative;
+  flex-shrink: 0;
+  width: calc(var(--space-10) + var(--space-1));
+  height: var(--space-6);
+  padding: 0;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-full);
+  background: var(--input-bg);
+  cursor: pointer;
+  transition: background-color var(--motion-duration-fast) var(--motion-ease-out);
+}
+.nos-switch.is-checked {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+.nos-switch__thumb {
+  position: absolute;
+  top: 50%;
+  inset-inline-start: var(--space-px);
+  width: calc(var(--space-5) - var(--space-px));
+  height: calc(var(--space-5) - var(--space-px));
+  border-radius: var(--radius-full);
+  background: var(--color-text-primary);
+  transform: translateY(-50%);
+  transition: transform var(--motion-duration-fast) var(--motion-ease-out);
+}
+.nos-switch.is-checked .nos-switch__thumb {
+  background: var(--color-text-on-accent);
+  transform: translateY(-50%) translateX(calc(var(--space-5) - var(--space-px)));
+}
+
+/* --- FileField ------------------------------------------------------ */
+
+.nos-filefield {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-6);
+  border: 1px dashed var(--input-border);
+  border-radius: var(--input-radius);
+  background: var(--input-bg);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color var(--motion-duration-fast) var(--motion-ease-out);
+}
+.nos-filefield:hover,
+.nos-filefield.is-dragging {
+  border-color: var(--color-accent);
+}
+/* The real input is visually hidden inside the label; focus must still show. */
+.nos-filefield:has(:focus-visible) {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Overlays (§8.12)
+   ========================================================================== */
+
+.nos-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-index-overlay);
+  background: color-mix(in oklch, var(--dialog-backdrop) 70%, transparent);
+  animation: nos-fade-in var(--motion-duration-fast) var(--motion-ease-out);
+}
+
+@keyframes nos-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.nos-dialog {
+  position: fixed;
+  z-index: var(--z-index-dialog);
+  top: 50%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: calc(100vw - var(--space-8));
+  max-height: calc(100dvh - var(--space-16));
+  overflow-y: auto;
+  padding: var(--dialog-padding);
+  border: 1px solid var(--dialog-border);
+  border-radius: var(--dialog-radius);
+  background: var(--dialog-bg);
+  /* `--motion-travel` is 0 under reduced motion, which turns the slide into a
+     pure fade with no per-component branching (§8.6). */
+  transform: translate(-50%, -50%);
+  animation: nos-dialog-in var(--motion-duration-normal) var(--motion-ease-out);
+}
+
+@keyframes nos-dialog-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + (8px * var(--motion-travel))));
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+.nos-dialog--sm { max-width: 24rem; }
+.nos-dialog--md { max-width: 32rem; }
+.nos-dialog--lg { max-width: 48rem; }
+
+.nos-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.nos-dialog__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.nos-dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+/* --- Sheet ---------------------------------------------------------- */
+
+.nos-sheet {
+  position: fixed;
+  z-index: var(--z-index-dialog);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--sheet-padding);
+  background: var(--sheet-bg);
+  border: 1px solid var(--sheet-border);
+}
+
+.nos-sheet--bottom {
+  inset-inline: 0;
+  bottom: 0;
+  max-height: 92dvh;
+  border-start-start-radius: var(--sheet-radius);
+  border-start-end-radius: var(--sheet-radius);
+  /* Clears the home indicator on iOS. Without it the last control in a sheet
+     is under the system gesture bar and cannot be pressed. */
+  padding-bottom: max(var(--sheet-padding), env(safe-area-inset-bottom));
+}
+
+.nos-sheet--right {
+  inset-block: 0;
+  inset-inline-end: 0;
+  width: min(28rem, 100vw);
+  border-start-start-radius: var(--sheet-radius);
+  border-end-start-radius: var(--sheet-radius);
+}
+
+.nos-sheet__handle {
+  align-self: center;
+  width: var(--space-10);
+  height: var(--space-1);
+  border-radius: var(--radius-full);
+  background: var(--sheet-handle);
+}
+
+.nos-sheet__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.nos-sheet__body {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.nos-sheet__footer {
+  display: flex;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--sheet-border);
+}
+
+/* --- Popover, Tooltip, Menu ----------------------------------------- */
+
+.nos-popover {
+  z-index: var(--z-index-dialog);
+  max-width: min(22rem, calc(100vw - var(--space-8)));
+  padding: var(--space-4);
+  border: 1px solid var(--dialog-border);
+  border-radius: var(--radius-md);
+  background: var(--dialog-bg);
+  animation: nos-fade-in var(--motion-duration-fast) var(--motion-ease-out);
+}
+.nos-popover__arrow { fill: var(--dialog-bg); }
+
+.nos-tooltip {
+  z-index: var(--z-index-dialog);
+  max-width: 18rem;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-text-primary);
+  color: var(--color-surface);
+  font-size: var(--typography-caption-font-size);
+  line-height: var(--typography-caption-line-height);
+}
+.nos-tooltip__arrow { fill: var(--color-text-primary); }
+
+.nos-menu {
+  z-index: var(--z-index-dialog);
+  min-width: 12rem;
+  padding: var(--space-1);
+  border: 1px solid var(--dialog-border);
+  border-radius: var(--radius-md);
+  background: var(--dialog-bg);
+  animation: nos-fade-in var(--motion-duration-fast) var(--motion-ease-out);
+}
+
+.nos-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--space-10);
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  font-size: var(--typography-body-sm-font-size);
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+}
+/* Radix sets data-highlighted for both hover and keyboard, so one rule covers
+   pointer and arrow-key navigation identically. */
+.nos-menu__item[data-highlighted] {
+  background: var(--color-surface-overlay);
+}
+.nos-menu__item.is-destructive {
+  color: var(--color-critical);
+}
+.nos-menu__item[data-disabled] {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.nos-menu__separator {
+  height: 1px;
+  margin: var(--space-1) 0;
+  background: var(--color-border-subtle);
+}
+
+/* --- Toast ---------------------------------------------------------- */
+
+.nos-toast-viewport {
+  position: fixed;
+  z-index: var(--z-index-toast);
+  bottom: 0;
+  inset-inline-end: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: min(24rem, 100vw);
+  max-width: 100vw;
+  margin: 0;
+  padding: var(--space-4);
+  /* Clears the mobile tab bar and the home indicator — a toast that covers the
+     navigation blocks the way out. */
+  padding-bottom: calc(var(--space-4) + var(--app-bottom-nav-height, 0px) + env(safe-area-inset-bottom));
+  list-style: none;
+  outline: none;
+}
+
+.nos-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--toast-padding);
+  border: 1px solid var(--toast-border);
+  border-radius: var(--toast-radius);
+  background: var(--toast-bg);
+  color: var(--toast-text);
+}
+.nos-toast[data-state='open'] {
+  animation: nos-toast-in var(--motion-duration-normal) var(--motion-ease-out);
+}
+.nos-toast[data-swipe='move'] {
+  transform: translateX(var(--radix-toast-swipe-move-x));
+}
+.nos-toast[data-swipe='end'] {
+  animation: nos-fade-in var(--motion-duration-fast) var(--motion-ease-in) reverse;
+}
+
+@keyframes nos-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(calc(12px * var(--motion-travel)));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.nos-toast--positive { border-color: var(--color-positive); }
+.nos-toast--caution { border-color: var(--color-caution); }
+.nos-toast--critical { border-color: var(--color-critical); }
+
+.nos-toast__text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.nos-toast__action {
+  flex-shrink: 0;
+  min-height: var(--space-8);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-accent);
+  font-size: var(--typography-body-sm-font-size);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+.nos-toast__close {
+  flex-shrink: 0;
+  display: inline-flex;
+  padding: var(--space-1);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   Tabs and SegmentedControl
+   ========================================================================== */
+
+.nos-tabs { display: flex; flex-direction: column; gap: var(--space-4); }
+
+.nos-tabs__list {
+  display: flex;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--nav-border);
+  /* Horizontal scroll rather than wrap: a tab list that wraps to two rows
+     reads as two separate lists. */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.nos-tabs__list::-webkit-scrollbar { display: none; }
+
+.nos-tabs__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--size-touch-target);
+  padding-inline: var(--space-3);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--nav-item-text);
+  font-size: var(--typography-body-sm-font-size);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.nos-tabs__trigger[data-state='active'] {
+  color: var(--nav-item-text-active);
+  border-bottom-color: var(--nav-item-indicator);
+}
+
+.nos-segmented {
+  display: inline-flex;
+  gap: var(--space-px);
+  padding: var(--space-px);
+  border: 1px solid var(--input-border);
+  border-radius: var(--input-radius);
+  background: var(--input-bg);
+}
+.nos-segmented--full { display: flex; width: 100%; }
+
+.nos-segmented__item {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: calc(var(--input-height) - var(--space-2));
+  padding-inline: var(--space-3);
+  border: 0;
+  border-radius: calc(var(--input-radius) - 2px);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--typography-body-sm-font-size);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--motion-duration-instant) var(--motion-ease-out);
+}
+.nos-segmented__item[data-state='on'] {
+  background: var(--color-surface-overlay);
+  color: var(--color-text-primary);
+}
+.nos-segmented--sm .nos-segmented__item {
+  min-height: var(--space-8);
+  font-size: var(--typography-caption-font-size);
+}
+
+/* ==========================================================================
+   Breadcrumbs
+   ========================================================================== */
+
+.nos-breadcrumbs__list {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--typography-caption-font-size);
+  color: var(--color-text-tertiary);
+}
+.nos-breadcrumbs__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.nos-breadcrumbs__item a {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+.nos-breadcrumbs__item a:hover { text-decoration: underline; }
+.nos-breadcrumbs__item [aria-current='page'] { color: var(--color-text-primary); }
+.nos-breadcrumbs__sep { color: var(--color-text-tertiary); }
+
+/* ==========================================================================
+   States
+   ========================================================================== */
+
+.nos-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-8) var(--space-4);
+}
+.nos-state--sm { padding: var(--space-5) var(--space-3); }
+
+.nos-state__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-12);
+  height: var(--space-12);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-overlay);
+  color: var(--color-text-tertiary);
+}
+.nos-state__icon--caution { color: var(--color-caution); }
+
+.nos-loading { width: 100%; }
+
+/* ==========================================================================
+   Charts (§8.9)
+   ========================================================================== */
+
+.nos-chart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  /* §8.9(7): "Charts are readable at 360px wide. Mobile is not a degraded
+     case; it is the common case." Nothing here has a min-width. */
+  min-width: 0;
+}
+
+.nos-chart__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.nos-chart__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nos-chart__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.nos-chart__swatch {
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.nos-chart__plot {
+  position: relative;
+  width: 100%;
+  border: 1px solid var(--chart-grid);
+  border-radius: var(--radius-md);
+}
+
+.nos-chart__placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 100%;
+  padding: var(--space-4);
+  color: var(--color-text-tertiary);
+}
+
+.nos-chart__annotations,
+.nos-chart__problems {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding-inline-start: var(--space-4);
+}
+
+.nos-chart__table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--table-row-border);
+  border-radius: var(--radius-md);
+}
+
+/* ==========================================================================
+   Table (§8.11)
+   ========================================================================== */
+
+.nos-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--typography-body-sm-font-size);
+}
+
+.nos-table th,
+.nos-table td {
+  height: var(--table-row-height);
+  padding-inline: var(--table-cell-padding-x);
+  border-bottom: 1px solid var(--table-row-border);
+  text-align: start;
+}
+
+.nos-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--table-header-bg);
+  color: var(--table-header-text);
+  font-size: var(--typography-caption-font-size);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+.nos-table tbody tr:hover {
+  background: var(--table-row-hover);
+}
+
+/* §8.11: "Numeric columns right-aligned with tabular figures." Columns of
+   numbers that are not tabular jitter as values change. */
+.nos-table__num {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}

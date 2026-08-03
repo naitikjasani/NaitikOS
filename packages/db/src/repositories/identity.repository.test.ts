@@ -312,7 +312,9 @@ describe.skipIf(db === undefined)('profile repository', () => {
 
     expect(isOk(read)).toBe(true);
     if (isOk(read)) {
-      expect(read.value.theme).toBe('system');
+      // §8.7: "Dark is the default, with light available." Not `system` — the
+      // blueprint names the two contexts this application is opened in.
+      expect(read.value.theme).toBe('dark');
       // §5.9: everything off except the correctness signal.
       expect(read.value.notifications.daily_close_reminder).toBe(false);
       expect(read.value.notifications.sync_failure).toBe(true);
@@ -329,6 +331,8 @@ describe.skipIf(db === undefined)('profile repository', () => {
     const read = await profiles.getPreferences();
 
     expect(isOk(read)).toBe(true);
-    if (isOk(read)) expect(read.value.theme).toBe('system');
+    // Falls back to the default rather than throwing — a preference that throws
+    // on read locks the user out of the screen that would fix it.
+    if (isOk(read)) expect(read.value.theme).toBe('dark');
   });
 });

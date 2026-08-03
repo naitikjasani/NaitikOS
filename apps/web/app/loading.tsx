@@ -1,19 +1,17 @@
 /**
  * Route-level loading state.
  *
- * Text rather than a spinner. §4.7 and P6 both push against motion that exists
- * to fill time, and a health tool that pulses at its user is imposing.
- * `aria-live` announces it without stealing focus.
+ * Skeletons rather than a spinner: §8.6 requires them to "hold layout", and a
+ * centred spinner guarantees a layout shift when content arrives. No shimmer.
  */
 
 import type { ReactNode } from 'react';
+import { Container, LoadingState } from '@naitikos/design-system';
 
 export default function Loading(): ReactNode {
   return (
-    <main className="auth-shell" id="main">
-      <p className="muted" role="status" aria-live="polite">
-        Loading…
-      </p>
-    </main>
+    <Container width="content" style={{ paddingBlock: 'var(--space-6)' }}>
+      <LoadingState rows={5} label="Loading page" />
+    </Container>
   );
 }

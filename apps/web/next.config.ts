@@ -15,15 +15,27 @@ const nextConfig: NextConfig = {
    * Packages consumed as source (docs/adr/0003), so Next must transpile them
    * rather than expect prebuilt output.
    */
-  transpilePackages: ['@naitikos/core', '@naitikos/db', '@naitikos/api', '@naitikos/shared'],
+  transpilePackages: [
+    '@naitikos/core',
+    '@naitikos/db',
+    '@naitikos/api',
+    '@naitikos/shared',
+    '@naitikos/design-system',
+  ],
 
   /**
    * §5.6: "Next.js route caching is disabled for all personal data. Every data
    * route is dynamic. Serving one user's stale data to that same user is a
    * correctness bug in a system whose entire premise is an accurate record."
+   *
+   * Only `dynamic` is set. Next rejects `static` below 30 seconds, and it does
+   * not matter here: every route in this application is `force-dynamic`, so
+   * nothing is classified static in the first place. Setting it to 0 was
+   * invalid config that Next warned about and ignored — the caching guarantee
+   * comes from the route segment config, not from this line.
    */
   experimental: {
-    staleTimes: { dynamic: 0, static: 0 },
+    staleTimes: { dynamic: 0 },
   },
 
   /** §5.14 — do not advertise the framework. */

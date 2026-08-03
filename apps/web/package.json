@@ -25,7 +25,10 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "server-only": "^0.0.1",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "@naitikos/design-system": "workspace:*",
+    "zustand": "catalog:",
+    "cmdk": "catalog:"
   },
   "devDependencies": {
     "@naitikos/config": "workspace:*",

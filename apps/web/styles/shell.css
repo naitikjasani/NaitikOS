@@ -1,0 +1,397 @@
+/**
+ * The application shell layout.
+ *
+ * Mobile-first without qualification (§8.4): the base rules describe the phone,
+ * and the sidebar appears at `lg` as progressive enhancement. There is no
+ * `max-width` media query in this file — every query widens.
+ *
+ * Breakpoints, per §8.4: sm 640 · md 768 · lg 1024 · xl 1280.
+ */
+
+.app-shell {
+  display: flex;
+  min-height: 100dvh;
+  background: var(--color-surface);
+}
+
+.app-shell__main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.app-shell__content {
+  flex: 1;
+  padding-block: var(--layout-gutter);
+  /**
+   * Clears the mobile tab bar and the home indicator.
+   *
+   * `--app-bottom-nav-height` is also read by the toast viewport, so a toast
+   * never covers the navigation. Set to 0 at `lg`, where the tab bar is gone.
+   */
+  padding-bottom: calc(
+    var(--space-6) + var(--app-bottom-nav-height, 0px) + env(safe-area-inset-bottom)
+  );
+}
+
+/* The skip-link target must not show a focus ring when focused
+   programmatically — the user asked to move, not to be outlined. */
+.app-shell__content:focus {
+  outline: none;
+}
+
+/* ==========================================================================
+   Sidebar — desktop only
+   ========================================================================== */
+
+.sidebar {
+  /* Hidden, not unmounted: crossing the breakpoint costs no re-render. */
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    flex-shrink: 0;
+    width: 15rem;
+    padding: var(--space-4) var(--space-3);
+    border-inline-end: 1px solid var(--nav-border);
+    background: var(--nav-bg);
+    /* Sticky rather than fixed, so it participates in the flex row and the
+       content does not need a matching margin. */
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    overflow-y: auto;
+  }
+
+  .sidebar.is-collapsed {
+    width: calc(var(--space-16) + var(--space-1));
+    align-items: center;
+  }
+}
+
+.sidebar__brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: var(--size-touch-target);
+}
+
+.sidebar.is-collapsed .sidebar__brand {
+  justify-content: center;
+}
+
+.sidebar__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* ==========================================================================
+   Nav links
+   ========================================================================== */
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--size-touch-target);
+  padding-inline: var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--nav-item-text);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--motion-duration-fast) var(--motion-ease-out);
+}
+
+.nav-link:hover:not(.is-unavailable) {
+  background: var(--nav-item-bg-active);
+  color: var(--nav-item-text-active);
+}
+
+.nav-link.is-active {
+  background: var(--nav-item-bg-active);
+  color: var(--nav-item-text-active);
+  /* The active indicator is a shape as well as a colour — §8.13 forbids colour
+     as the sole carrier of state. */
+  box-shadow: inset 2px 0 0 var(--nav-item-indicator);
+}
+
+.nav-link.is-unavailable,
+.tab-link.is-unavailable {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Labels disappear when collapsed; the accessible name survives via the
+   visually-hidden text in NavLink. */
+.sidebar.is-collapsed .nav-link {
+  justify-content: center;
+  padding-inline: 0;
+}
+.sidebar.is-collapsed .nav-link > span:not(.nos-visually-hidden) {
+  display: none;
+}
+
+/* ==========================================================================
+   Mobile tab bar
+   ========================================================================== */
+
+.mobile-nav {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: var(--z-index-sticky);
+  border-top: 1px solid var(--nav-border);
+  /* Opaque, not translucent: content scrolling behind a blurred bar reduces
+     the contrast of the labels below the §8.13 threshold. */
+  background: var(--nav-bg);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@media (min-width: 1024px) {
+  .mobile-nav {
+    display: none;
+  }
+}
+
+/* Consumed by the content padding and the toast viewport. Declared on :root so
+   both can read it; zeroed at `lg` where the bar is gone. */
+:root {
+  --app-bottom-nav-height: calc(var(--space-12) + var(--space-2));
+}
+@media (min-width: 1024px) {
+  :root {
+    --app-bottom-nav-height: 0px;
+  }
+}
+
+.mobile-nav__list {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mobile-nav__item {
+  flex: 1;
+}
+
+.tab-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  width: 100%;
+  /* 44px minimum (§8.13), pressed with a thumb, often one-handed. */
+  min-height: var(--size-touch-target);
+  padding-block: var(--space-2);
+  border: 0;
+  background: transparent;
+  color: var(--nav-item-text);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.tab-link.is-active {
+  color: var(--nav-item-text-active);
+}
+
+/* The active tab carries a bar as well as a colour change (§8.13). */
+.tab-link.is-active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: var(--space-6);
+  height: 2px;
+  border-radius: var(--radius-full);
+  background: var(--nav-item-indicator);
+}
+
+.mobile-nav__item {
+  position: relative;
+}
+
+/* ==========================================================================
+   Top bar
+   ========================================================================== */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-index-sticky);
+  border-bottom: 1px solid var(--nav-border);
+  background: var(--nav-bg);
+}
+
+.topbar__inner {
+  min-height: calc(var(--space-12) + var(--space-2));
+  padding-inline: var(--layout-gutter);
+}
+
+/* Breadcrumbs are noise on a phone; the page `h1` carries the context. */
+.topbar__crumbs {
+  display: none;
+  min-width: 0;
+}
+@media (min-width: 768px) {
+  .topbar__crumbs {
+    display: block;
+  }
+}
+
+.topbar__search {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--space-8);
+  padding-inline: var(--space-2) var(--space-2);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-md);
+  background: var(--input-bg);
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+}
+
+/* On a phone the search control collapses to its icon — the label and the
+   keyboard hint are both irrelevant without a keyboard. */
+.topbar__search-label,
+.topbar__kbd {
+  display: none;
+}
+@media (min-width: 640px) {
+  .topbar__search {
+    min-width: 12rem;
+  }
+  .topbar__search-label {
+    display: inline;
+  }
+  .topbar__kbd {
+    display: inline-block;
+    margin-inline-start: auto;
+    padding: 0 var(--space-1);
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-family-mono);
+    font-size: var(--typography-caption-font-size);
+  }
+}
+
+.topbar__profile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--size-touch-target);
+  min-height: var(--size-touch-target);
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   Command palette
+   ========================================================================== */
+
+.palette__content {
+  position: fixed;
+  z-index: var(--z-index-dialog);
+  top: 12vh;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  width: calc(100vw - var(--space-8));
+  max-width: 34rem;
+  max-height: 70dvh;
+  overflow: hidden;
+  border: 1px solid var(--dialog-border);
+  border-radius: var(--dialog-radius);
+  background: var(--dialog-bg);
+}
+
+.palette__input-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--dialog-border);
+  color: var(--color-text-tertiary);
+}
+
+.palette__input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  /* 16px minimum: below it, iOS zooms the viewport on focus. */
+  font-size: max(16px, var(--typography-body-font-size));
+  outline: none;
+}
+
+.palette__list {
+  overflow-y: auto;
+  padding: var(--space-2);
+  /* cmdk exposes the list height so the panel can size to its contents rather
+     than always occupying 70dvh. */
+  max-height: calc(70dvh - 4rem);
+}
+
+.palette__group [cmdk-group-heading] {
+  padding: var(--space-2) var(--space-2) var(--space-1);
+  color: var(--color-text-tertiary);
+  font-size: var(--typography-caption-font-size);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+.palette__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--space-10);
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  font-size: var(--typography-body-sm-font-size);
+  cursor: pointer;
+}
+
+/* cmdk sets aria-selected for both hover and keyboard, so one rule covers
+   pointer and arrow-key navigation identically. */
+.palette__item[aria-selected='true'] {
+  background: var(--color-surface-overlay);
+}
+
+.palette__item[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.palette__hint {
+  margin-inline-start: auto;
+  color: var(--color-text-tertiary);
+  font-size: var(--typography-caption-font-size);
+}
+
+.palette__empty {
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+}
+
+/* ==========================================================================
+   Page
+   ========================================================================== */
+
+.page {
+  padding-block: var(--space-2);
+}

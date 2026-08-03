@@ -1,43 +1,60 @@
 /**
  * Root layout.
  *
- * §6.2: "`app/` contains routing and nothing else." This is the minimum a
- * document needs — everything visual belongs to a screen in a feature.
+ * §6.2: "`app/` contains routing and nothing else." This is the document, the
+ * pre-paint theme stamp, and the two providers that must wrap everything.
  */
 
+import { headers } from 'next/headers';
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
+import { ToastProvider, TooltipProvider } from '@naitikos/design-system';
+
+import { AppearanceProvider, ThemeScript } from '@/lib/providers/AppearanceProvider';
+import { NONCE_HEADER } from '@/proxy';
 
 import '../styles/globals.css';
 
 export const metadata: Metadata = {
   title: 'NaitikOS',
   description: 'A personal operating system. One substrate, many lenses.',
-  // P7: this application must never be indexed. It is one person's medical
-  // record, and a crawler reaching a sign-in page is the first step toward a
-  // search result that confirms the account exists.
+  // P7: never indexed. A crawler confirming the account exists is step one.
   robots: { index: false, follow: false, nocache: true },
+  applicationName: 'NaitikOS',
+  appleWebApp: { capable: true, title: 'NaitikOS', statusBarStyle: 'default' },
 };
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  // Zoom is not disabled. Restricting it is an accessibility failure, and
-  // §11.4 makes accessibility a blocking gate.
+  // Zoom is NOT disabled. §8.13 requires layout to survive 200% zoom, and
+  // `maximumScale: 1` is an accessibility failure that also breaks that.
+  viewportFit: 'cover',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#121214' },
+    { media: '(prefers-color-scheme: dark)', color: '#080b0e' },
+    { media: '(prefers-color-scheme: light)', color: '#f8f9fb' },
   ],
 };
 
-export default function RootLayout({ children }: { children: ReactNode }): ReactNode {
+export default async function RootLayout({ children }: { children: ReactNode }): Promise<ReactNode> {
+  // The per-request CSP nonce, set by the proxy. Required on the inline theme
+  // script — §5.14's CSP forbids `unsafe-inline`, so an unnonced script is
+  // silently blocked and the theme flashes.
+  const nonce = (await headers()).get(NONCE_HEADER) ?? '';
+
   return (
-    <html lang="en-GB">
+    // `suppressHydrationWarning` because ThemeScript mutates these attributes
+    // before React hydrates. It is scoped to <html> and covers exactly that.
+    <html lang="en-GB" data-theme="dark" data-density="comfortable" suppressHydrationWarning>
+      <head>
+        <ThemeScript nonce={nonce} />
+      </head>
       <body>
-        <a className="skip-link" href="#main">
-          Skip to content
-        </a>
-        {children}
+        <AppearanceProvider>
+          <TooltipProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </TooltipProvider>
+        </AppearanceProvider>
       </body>
     </html>
   );

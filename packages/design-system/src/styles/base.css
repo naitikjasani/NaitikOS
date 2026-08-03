@@ -1,0 +1,261 @@
+/**
+ * Base layer — reset, density, motion, focus.
+ *
+ * Loaded after `tokens.css`. Everything here references tier-2 or tier-3
+ * tokens; a literal colour in this file is a bug (§8.1).
+ */
+
+/* ==========================================================================
+   Reset — minimal, opinionated
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /**
+   * No `font-size` override.
+   *
+   * Setting `html { font-size: 62.5% }` — the common "rem maths is easier"
+   * trick — overrides the user's browser font-size preference, which §8.13
+   * counts as an accessibility failure. Token rem values assume the user's
+   * root, whatever they set it to.
+   */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-family: var(--font-family-sans);
+  font-size: var(--typography-body-font-size);
+  line-height: var(--typography-body-line-height);
+  font-weight: var(--typography-body-font-weight);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Prevent the horizontal scroll a single overflowing element would cause. */
+  overflow-wrap: break-word;
+}
+
+h1, h2, h3, h4, h5, h6, p, figure, blockquote, dl, dd {
+  margin: 0;
+}
+
+ul[role='list'],
+ol[role='list'] {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+img, picture, svg, video, canvas {
+  display: block;
+  max-width: 100%;
+}
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* ==========================================================================
+   Density (§8.4) is emitted by the token generator, not here.
+
+   `tokens.css` already defines the comfortable scale on `:root` and the
+   compact overrides under `[data-density='compact']`, generated from the
+   `layout` block in semantic.json. Restating it here would be a second source
+   of truth for the same values — exactly what the three-tier architecture
+   exists to prevent.
+   ========================================================================== */
+
+/* ==========================================================================
+   Motion (§8.6)
+
+   "`prefers-reduced-motion` is honoured globally, implemented once at the
+   motion-provider level rather than per-component. Under reduced motion,
+   transforms become opacity changes and durations collapse to `instant`."
+
+   The provider sets `data-motion` on the root; these two blocks are the single
+   implementation. A component reads `--motion-duration-*` and never queries
+   the media query itself.
+   ========================================================================== */
+
+:root {
+  --motion-duration-instant: var(--duration-instant);
+  --motion-duration-fast: var(--duration-fast);
+  --motion-duration-normal: var(--duration-normal);
+  --motion-duration-slow: var(--duration-slow);
+  --motion-ease-out: var(--easing-out);
+  --motion-ease-in: var(--easing-in);
+  --motion-ease-in-out: var(--easing-in-out);
+  /* Components multiply their translate distance by this. Reduced motion sets
+     it to 0, which turns every slide into a fade with no per-component work. */
+  --motion-travel: 1;
+}
+
+[data-motion='reduced'] {
+  --motion-duration-instant: 1ms;
+  --motion-duration-fast: 1ms;
+  --motion-duration-normal: 1ms;
+  --motion-duration-slow: 1ms;
+  --motion-travel: 0;
+}
+
+/* The OS preference, for the first paint before the provider has hydrated.
+   Without this, a reduced-motion user sees one un-suppressed animation. */
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='full']) {
+    --motion-duration-instant: 1ms;
+    --motion-duration-fast: 1ms;
+    --motion-duration-normal: 1ms;
+    --motion-duration-slow: 1ms;
+    --motion-travel: 0;
+  }
+}
+
+/* ==========================================================================
+   Focus (§8.13)
+
+   "Full keyboard operability. Every action reachable, visible focus rings
+   using a dedicated `--focus-ring` token, logical tab order, skip links."
+   ========================================================================== */
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  /* A radius on the ring, so it traces the control rather than boxing it. */
+  border-radius: var(--radius-sm);
+}
+
+/* Never remove the ring for keyboard users. `:focus-visible` already excludes
+   mouse clicks, so there is no remaining reason to suppress it. */
+
+.nos-skip-link {
+  position: absolute;
+  inset-inline-start: -9999px;
+  top: 0;
+  z-index: var(--z-index-toast);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface-overlay);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+}
+
+.nos-skip-link:focus {
+  inset-inline-start: var(--space-2);
+  top: var(--space-2);
+}
+
+/* ==========================================================================
+   Typography roles (§8.3)
+   ========================================================================== */
+
+.nos-text {
+  margin: 0;
+}
+
+.nos-text--serif {
+  font-family: var(--font-family-serif);
+}
+
+.nos-text--display {
+  font-size: var(--typography-display-font-size);
+  line-height: var(--typography-display-line-height);
+  letter-spacing: var(--typography-display-letter-spacing);
+  font-weight: var(--typography-display-font-weight);
+}
+.nos-text--title-1 {
+  font-size: var(--typography-title-1-font-size);
+  line-height: var(--typography-title-1-line-height);
+  letter-spacing: var(--typography-title-1-letter-spacing);
+  font-weight: var(--typography-title-1-font-weight);
+}
+.nos-text--title-2 {
+  font-size: var(--typography-title-2-font-size);
+  line-height: var(--typography-title-2-line-height);
+  letter-spacing: var(--typography-title-2-letter-spacing);
+  font-weight: var(--typography-title-2-font-weight);
+}
+.nos-text--title-3 {
+  font-size: var(--typography-title-3-font-size);
+  line-height: var(--typography-title-3-line-height);
+  letter-spacing: var(--typography-title-3-letter-spacing);
+  font-weight: var(--typography-title-3-font-weight);
+}
+.nos-text--body {
+  font-size: var(--typography-body-font-size);
+  line-height: var(--typography-body-line-height);
+  font-weight: var(--typography-body-font-weight);
+}
+.nos-text--body-sm {
+  font-size: var(--typography-body-sm-font-size);
+  line-height: var(--typography-body-sm-line-height);
+  font-weight: var(--typography-body-sm-font-weight);
+}
+.nos-text--caption {
+  font-size: var(--typography-caption-font-size);
+  line-height: var(--typography-caption-line-height);
+  letter-spacing: var(--typography-caption-letter-spacing);
+  font-weight: var(--typography-caption-font-weight);
+}
+.nos-text--metric-l {
+  font-size: var(--typography-metric-l-font-size);
+  line-height: var(--typography-metric-l-line-height);
+  letter-spacing: var(--typography-metric-l-letter-spacing);
+  font-weight: var(--typography-metric-l-font-weight);
+}
+.nos-text--metric-m {
+  font-size: var(--typography-metric-m-font-size);
+  line-height: var(--typography-metric-m-line-height);
+  letter-spacing: var(--typography-metric-m-letter-spacing);
+  font-weight: var(--typography-metric-m-font-weight);
+}
+.nos-text--mono {
+  font-family: var(--font-family-mono);
+  font-size: var(--typography-mono-font-size);
+  line-height: var(--typography-mono-line-height);
+  font-weight: var(--typography-mono-font-weight);
+}
+
+.nos-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ==========================================================================
+   Divider
+   ========================================================================== */
+
+.nos-divider {
+  background: var(--color-border-subtle);
+  border: 0;
+  flex-shrink: 0;
+}
+
+.nos-divider--horizontal {
+  width: 100%;
+  height: 1px;
+}
+
+.nos-divider--vertical {
+  width: 1px;
+  align-self: stretch;
+}

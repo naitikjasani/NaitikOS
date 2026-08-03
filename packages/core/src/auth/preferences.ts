@@ -38,14 +38,22 @@ export const THEMES = ['light', 'dark', 'system'] as const;
 export type Theme = (typeof THEMES)[number];
 
 /**
- * `system`, not `dark`.
+ * `dark`, not `system`.
  *
- * §2.1 puts dark mode in the MVP, and the instinct is to default to it. But P6
- * — "Silence is a feature" — is about the system not imposing itself, and a
- * tool that ignores the operating system's own setting is imposing. Following
- * the OS is the quieter default.
+ * §8.7 is explicit and overrides the instinct to follow the OS:
+ *
+ *   "Dark is the **default**, with light available. This is a real decision,
+ *    not a preference: the application is opened last thing at night for the
+ *    Daily Close and in a dimly lit gym. Defaulting to light and requiring a
+ *    setting change is optimising for the wrong context."
+ *
+ * An earlier revision of this file defaulted to `system` on the reasoning that
+ * following the OS is the quieter choice under P6. That was wrong: §8.7 is not
+ * expressing a taste, it is naming the two contexts the application is actually
+ * opened in, and a phone set to light mode in a dark gym is the case the
+ * blueprint is guarding against. `system` remains available to choose.
  */
-export const DEFAULT_THEME: Theme = 'system';
+export const DEFAULT_THEME: Theme = 'dark';
 
 /** Interface density. Not in the MVP scope, defined so the shape is settled. */
 export const DENSITIES = ['comfortable', 'compact'] as const;

@@ -1,0 +1,61 @@
+{
+  "name": "@naitikos/design-system",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tokens, primitives, and components. Domain-agnostic: it renders values, it does not know what a medication is.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens": "./src/tokens/index.ts",
+    "./tokens.css": "./src/tokens/generated/tokens.css",
+    "./icons": "./src/icons/index.ts",
+    "./package.json": "./package.json",
+    "./base.css": "./src/styles/base.css",
+    "./components.css": "./src/styles/components.css"
+  },
+  "scripts": {
+    "tokens:build": "tsx src/tokens/build.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --max-warnings=0",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf .turbo coverage src/tokens/generated"
+  },
+  "dependencies": {
+    "@naitikos/shared": "workspace:*",
+    "@radix-ui/react-alert-dialog": "catalog:",
+    "@radix-ui/react-avatar": "catalog:",
+    "@radix-ui/react-dialog": "catalog:",
+    "@radix-ui/react-dropdown-menu": "catalog:",
+    "@radix-ui/react-popover": "catalog:",
+    "@radix-ui/react-progress": "catalog:",
+    "@radix-ui/react-slot": "catalog:",
+    "@radix-ui/react-tabs": "catalog:",
+    "@radix-ui/react-toast": "catalog:",
+    "@radix-ui/react-toggle-group": "catalog:",
+    "@radix-ui/react-tooltip": "catalog:",
+    "@radix-ui/react-visually-hidden": "catalog:",
+    "class-variance-authority": "catalog:",
+    "clsx": "catalog:",
+    "cmdk": "catalog:",
+    "lucide-react": "catalog:",
+    "tailwind-merge": "catalog:",
+    "vaul": "catalog:"
+  },
+  "peerDependencies": {
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@naitikos/config": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "eslint": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

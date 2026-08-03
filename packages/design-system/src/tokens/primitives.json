@@ -17,8 +17,11 @@
       "200": "oklch(92.4% 0.006 250)",
       "300": "oklch(86.5% 0.008 250)",
       "400": "oklch(70.8% 0.012 250)",
+      "450": "oklch(64.8% 0.014 250)",
       "500": "oklch(58.4% 0.014 250)",
+      "550": "oklch(54.9% 0.014 250)",
       "600": "oklch(48.6% 0.014 250)",
+      "650": "oklch(47.9% 0.013 250)",
       "700": "oklch(38.2% 0.013 250)",
       "800": "oklch(27.9% 0.012 250)",
       "850": "oklch(22.4% 0.011 250)",
@@ -29,9 +32,10 @@
     "$comment_accent": "Indigo. Interactive affordances only — never data (§8.2).",
     "accent": {
       "300": "oklch(80.1% 0.098 265)",
-      "400": "oklch(70.4% 0.155 265)",
+      "400": "oklch(70.4% 0.147 265)",
       "500": "oklch(62.2% 0.188 265)",
       "600": "oklch(54.8% 0.210 265)",
+      "650": "oklch(57.6% 0.210 265)",
       "700": "oklch(47.6% 0.190 265)",
       "800": "oklch(39.2% 0.152 265)"
     },
@@ -45,7 +49,7 @@
     "caution": {
       "400": "oklch(82.1% 0.126 76)",
       "500": "oklch(75.6% 0.141 76)",
-      "600": "oklch(67.4% 0.148 76)"
+      "600": "oklch(65.7% 0.136 76)"
     },
 
     "critical": {
@@ -55,24 +59,57 @@
     },
 
     "$comment_data": [
-      "Categorical data-visualisation ramp. Deliberately distinct from the",
-      "semantic colours above, because §8.2 forbids colour encoding valence in",
-      "health data: 'A mood of 2 is not red.'",
+      "Categorical data-visualisation palette. ADOPTED, NOT AUTHORED.",
       "",
-      "These are hue-spaced at near-constant lightness so no series visually",
-      "dominates. Blueprint §8.9 designates the dataviz methodology as the",
-      "binding source of truth for the chart palette — these values MUST be",
-      "revalidated against its accessibility validator when the chart layer is",
-      "actually built (V2). Until then no chart ships, so nothing depends on",
-      "them being final."
+      "Blueprint §8.9 designates the dataviz methodology as binding for this",
+      "palette specifically: 'its palette must be adopted rather than",
+      "reinvented.' These are its validated slot values, in its slot order.",
+      "",
+      "An earlier revision authored a ramp here by hand — six hues spaced at",
+      "near-constant lightness. It looked principled and it failed the",
+      "validator in both modes: constant lightness is precisely what collapses",
+      "under colour-vision deficiency, because a CVD reader has lost the hue",
+      "axis and lightness is the only one left. Worst adjacent pair was ΔE 3.4",
+      "under deuteranopia against a target of 8.",
+      "",
+      "Do not retune these by eye. Run:",
+      "  node <dataviz>/scripts/validate_palette.js \"<hex,...>\" --mode dark --surface '#080b0e'",
+      "",
+      "Slot order is fixed and assigned by entity, never by rank (§8.2: colour",
+      "never encodes valence, and a filter that removes a series must not",
+      "repaint the survivors)."
     ],
     "data": {
-      "1": "oklch(64.5% 0.132 255)",
-      "2": "oklch(66.2% 0.124 190)",
-      "3": "oklch(67.8% 0.118 145)",
-      "4": "oklch(70.1% 0.126 85)",
-      "5": "oklch(65.4% 0.134 35)",
-      "6": "oklch(62.8% 0.128 320)"
+      "1": "#3987e5",
+      "2": "#d95926",
+      "3": "#199e70",
+      "4": "#c98500",
+      "5": "#d55181",
+      "6": "#008300",
+      "7": "#9085e9",
+      "8": "#e66767"
+    },
+
+    "$comment_data_light": [
+      "The same eight hues stepped for the light surface — not the dark ramp",
+      "reused, and not an inversion of it (§8.7).",
+      "",
+      "Three slots (aqua, yellow, magenta) sit below 3:1 on the light surface.",
+      "The validator flags this as a WARN with the relief rule attached: those",
+      "series must carry visible direct labels or the data table. §8.9(6)",
+      "already requires the table on every chart, so the relief is satisfied by",
+      "construction — but a chart that hides the table and relies on colour",
+      "alone for those three would be non-compliant."
+    ],
+    "dataLight": {
+      "1": "#2a78d6",
+      "2": "#eb6834",
+      "3": "#1baf7a",
+      "4": "#eda100",
+      "5": "#e87ba4",
+      "6": "#008300",
+      "7": "#4a3aa7",
+      "8": "#e34948"
     },
 
     "pure": {

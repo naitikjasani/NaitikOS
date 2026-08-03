@@ -1,18 +1,24 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { Button, EmptyState } from '@naitikos/design-system';
+
+import { DEFAULT_AUTHENTICATED_PATH } from '@/lib/auth/routes';
 
 export const metadata = { title: 'Not found · NaitikOS' };
 
 export default function NotFound(): ReactNode {
   return (
-    <main className="auth-shell" id="main">
-      <div className="auth-card">
-        <h1>Not found</h1>
-        <p className="subtitle">That page does not exist.</p>
-        <Link className="button" href="/" style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>
-          Go to Today
-        </Link>
+    <div className="app-shell__content">
+      <EmptyState
+        icon="status.warning"
+        title="Not found"
+        description="That page does not exist. It may be a module that has not been built yet."
+      />
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <Button asChild variant="secondary">
+          <Link href={DEFAULT_AUTHENTICATED_PATH}>Go to Today</Link>
+        </Button>
       </div>
-    </main>
+    </div>
   );
 }

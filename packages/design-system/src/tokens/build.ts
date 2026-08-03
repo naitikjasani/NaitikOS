@@ -62,7 +62,9 @@ function isCommentKey(key: string): boolean {
   return key.startsWith('$');
 }
 
-function isObject(value: Json): value is JsonObject {
+/** Accepts `unknown` because `noUncheckedIndexedAccess` widens every lookup
+ * to `Json | undefined`, and a guard that cannot be handed one is useless. */
+function isObject(value: unknown): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
@@ -122,8 +124,10 @@ const darkVars = themeColorVars('dark');
 const lightVars = themeColorVars('light');
 
 /* --- Tier 2: shared typography ------------------------------------ */
-const shared = semantic['shared'];
-if (!isObject(shared)) throw new Error('semantic.json is missing the "shared" block.');
+const sharedRaw = semantic['shared'];
+if (!isObject(sharedRaw)) throw new Error('semantic.json is missing the "shared" block.');
+// Re-bound: narrowing on the original does not survive into `densityVars`.
+const shared: JsonObject = sharedRaw;
 
 const typographyVars: Variable[] = [];
 const typography = shared['typography'];

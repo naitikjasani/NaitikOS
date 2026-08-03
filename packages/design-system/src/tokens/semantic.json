@@ -29,11 +29,11 @@
 
       "border-subtle": "{color.neutral.850}",
       "border-default": "{color.neutral.800}",
-      "border-strong": "{color.neutral.700}",
+      "border-strong": "{color.neutral.650}",
 
-      "accent": "{color.accent.500}",
-      "accent-hover": "{color.accent.400}",
-      "accent-active": "{color.accent.600}",
+      "accent": "{color.accent.650}",
+      "accent-hover": "{color.accent.500}",
+      "accent-active": "{color.accent.700}",
       "accent-subtle": "{color.accent.800}",
 
       "positive": "{color.positive.400}",
@@ -49,6 +49,8 @@
       "data-4": "{color.data.4}",
       "data-5": "{color.data.5}",
       "data-6": "{color.data.6}",
+      "data-7": "{color.data.7}",
+      "data-8": "{color.data.8}",
       "data-grid": "{color.neutral.850}",
       "data-axis": "{color.neutral.600}",
       "data-annotation": "{color.neutral.400}"
@@ -64,13 +66,13 @@
 
       "text-primary": "{color.neutral.950}",
       "text-secondary": "{color.neutral.700}",
-      "text-tertiary": "{color.neutral.500}",
+      "text-tertiary": "{color.neutral.550}",
       "text-inverse": "{color.neutral.50}",
       "text-on-accent": "{color.pure.white}",
 
       "border-subtle": "{color.neutral.200}",
       "border-default": "{color.neutral.300}",
-      "border-strong": "{color.neutral.400}",
+      "border-strong": "{color.neutral.450}",
 
       "accent": "{color.accent.600}",
       "accent-hover": "{color.accent.500}",
@@ -83,12 +85,14 @@
 
       "focus-ring": "{color.accent.600}",
 
-      "data-1": "{color.data.1}",
-      "data-2": "{color.data.2}",
-      "data-3": "{color.data.3}",
-      "data-4": "{color.data.4}",
-      "data-5": "{color.data.5}",
-      "data-6": "{color.data.6}",
+      "data-1": "{color.dataLight.1}",
+      "data-2": "{color.dataLight.2}",
+      "data-3": "{color.dataLight.3}",
+      "data-4": "{color.dataLight.4}",
+      "data-5": "{color.dataLight.5}",
+      "data-6": "{color.dataLight.6}",
+      "data-7": "{color.dataLight.7}",
+      "data-8": "{color.dataLight.8}",
       "data-grid": "{color.neutral.200}",
       "data-axis": "{color.neutral.400}",
       "data-annotation": "{color.neutral.500}"

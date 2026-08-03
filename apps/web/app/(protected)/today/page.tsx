@@ -1,30 +1,37 @@
 /**
  * /today — the default authenticated route (§3.2).
  *
- * **A placeholder, deliberately.** The milestone scope is "no application
- * features, no dashboard, no UI beyond what authentication requires", and the
- * Daily Close is Week 2's deliverable (§12). This page exists because
- * authentication needs somewhere to land, and it renders only what proves the
- * session resolved: who you are, and a way out.
+ * **A platform placeholder, deliberately.** This milestone builds the UI
+ * foundation and explicitly excludes dashboard widgets and health features; the
+ * Daily Close is Week 2 (§12). What renders here is the shell proving itself:
+ * a page container, a card, an empty state, and nothing that reads data.
  */
 
 import type { ReactNode } from 'react';
+import { Suspense } from 'react';
 
-import { SignedInPanel } from '@/components/SignedInPanel';
+import { PageContainer } from '@/components/shell';
+import { PlatformStatus } from '@/components/PlatformStatus';
+import { LoadingState } from '@naitikos/design-system';
 
 export const metadata = { title: 'Today · NaitikOS' };
 export const dynamic = 'force-dynamic';
 
 export default function TodayPage(): ReactNode {
   return (
-    <main className="auth-shell" id="main">
-      <div className="auth-card">
-        <h1>Signed in</h1>
-        <p className="subtitle">
-          The identity layer is in place. Today is Week 2 of the roadmap.
-        </p>
-        <SignedInPanel />
-      </div>
-    </main>
+    <PageContainer
+      title="Today"
+      description="The platform foundation. Features arrive from Week 2 of the roadmap."
+    >
+      {/*
+        A Suspense boundary around the one interactive region.
+        Not decoration: it is what lets the page shell stream and paint before
+        the client component hydrates, so the title and layout are visible
+        immediately rather than after the JS bundle lands (§11.5's budget).
+      */}
+      <Suspense fallback={<LoadingState rows={4} label="Loading platform status" />}>
+        <PlatformStatus />
+      </Suspense>
+    </PageContainer>
   );
 }
