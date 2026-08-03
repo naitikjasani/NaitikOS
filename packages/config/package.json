@@ -1,0 +1,30 @@
+{
+  "name": "@naitikos/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared build, lint, and test configuration. Written once, enforced everywhere.",
+  "exports": {
+    "./tsconfig/base.json": "./tsconfig/base.json",
+    "./tsconfig/library.json": "./tsconfig/library.json",
+    "./tsconfig/nextjs.json": "./tsconfig/nextjs.json",
+    "./eslint/base": "./eslint/base.js",
+    "./eslint/library": "./eslint/library.js",
+    "./eslint/react": "./eslint/react.js",
+    "./eslint/plugin": "./eslint/rules/index.js",
+    "./vitest/base": "./vitest/base.js"
+  },
+  "files": ["tsconfig", "eslint", "vitest"],
+  "dependencies": {
+    "@eslint/js": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "eslint-plugin-boundaries": "catalog:",
+    "eslint-plugin-react-hooks": "catalog:",
+    "globals": "catalog:",
+    "typescript-eslint": "catalog:"
+  },
+  "devDependencies": {
+    "eslint": "catalog:",
+    "typescript": "catalog:"
+  }
+}

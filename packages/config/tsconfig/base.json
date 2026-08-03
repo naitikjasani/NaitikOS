@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "NaitikOS — base",
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "preserve",
+    "moduleDetection": "force",
+    "resolveJsonModule": true,
+
+    /* Strictness.
+     * Blueprint §5.1 mandates `strict` + `noUncheckedIndexedAccess`. The
+     * additional flags below are chosen for C2 (twenty-year) durability: each
+     * one converts a class of silent runtime surprise into a compile error,
+     * and the cost of satisfying them is paid once at authoring time rather
+     * than repeatedly at debugging time years later. */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "useUnknownInCatchVariables": true,
+
+    /* Module hygiene.
+     * `verbatimModuleSyntax` + `isolatedModules` keep the emit predictable for
+     * any bundler. `erasableSyntaxOnly` forbids enums and namespaces, so every
+     * .ts file is valid JavaScript with the types stripped — which is what
+     * lets Node run this source directly, and what stops TypeScript-only
+     * runtime constructs leaking into the durable layer. */
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "erasableSyntaxOnly": true,
+    "forceConsistentCasingInFileNames": true,
+
+    /* Emit — packages are consumed as source (see docs/adr/0003). */
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "exclude": ["node_modules", "dist", ".next", ".turbo", "coverage"]
+}

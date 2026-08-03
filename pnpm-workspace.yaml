@@ -1,0 +1,71 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# Single source of truth for dependency versions across every workspace package.
+# Blueprint §6.2: "configuration duplicated across packages drifts; configuration
+# in a package does not." The same reasoning applies to versions — one bump here
+# updates every consumer, so React can never be two versions in two packages.
+catalog:
+  # --- Runtime: UI -----------------------------------------------------------
+  next: 16.2.12
+  react: 19.2.8
+  react-dom: 19.2.8
+  '@types/react': 19.2.7
+  '@types/react-dom': 19.2.5
+
+  # --- Runtime: state --------------------------------------------------------
+  '@tanstack/react-query': 5.101.4
+  '@tanstack/react-query-devtools': 5.101.4
+  zustand: 5.0.14
+
+  # --- Runtime: data ---------------------------------------------------------
+  drizzle-orm: 0.45.2
+  postgres: 3.4.9
+  '@supabase/supabase-js': 2.111.0
+
+  # --- Runtime: validation ---------------------------------------------------
+  zod: 4.4.3
+
+  # --- Runtime: UI primitives ------------------------------------------------
+  # shadcn/ui is vendored as source (blueprint §5.1) — these are its
+  # underlying runtime dependencies, which remain real packages.
+  class-variance-authority: 0.7.1
+  clsx: 2.1.1
+  tailwind-merge: 3.4.1
+  lucide-react: 0.552.0
+
+  # --- Build / tooling -------------------------------------------------------
+  typescript: 6.0.3 # pinned <6.1.0 — see docs/adr/0002
+  tailwindcss: 4.3.3
+  '@tailwindcss/postcss': 4.3.3
+  turbo: 2.10.8
+  vitest: 4.1.10
+  '@vitejs/plugin-react': 5.1.1
+
+  # --- Lint / format ---------------------------------------------------------
+  eslint: 10.8.0
+  '@eslint/js': 10.8.0
+  typescript-eslint: 8.65.0
+  eslint-plugin-boundaries: 7.1.0
+  eslint-config-next: 16.2.12
+  eslint-config-prettier: 10.1.8
+  eslint-plugin-react-hooks: 8.0.1
+  globals: 16.5.0
+  prettier: 3.9.6
+  prettier-plugin-tailwindcss: 0.7.1
+
+  # --- Git hooks -------------------------------------------------------------
+  husky: 9.1.7
+  lint-staged: 17.3.0
+
+  # --- Node ------------------------------------------------------------------
+  '@types/node': 24.10.1
+  tsx: 4.21.1
+
+# pnpm 11 blocks lifecycle scripts by default. Only these are permitted to run,
+# and each is here deliberately — an unreviewed postinstall script is arbitrary
+# code execution against a machine holding medical data (blueprint §5.14).
+onlyBuiltDependencies:
+  - esbuild
+  - sharp

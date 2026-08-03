@@ -1,0 +1,56 @@
+{
+  "name": "naitikos",
+  "version": "0.0.0",
+  "private": true,
+  "description": "A personal operating system. One substrate, many lenses.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "packageManager": "pnpm@11.16.0",
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=11.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "start": "turbo run start",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint -- --fix",
+    "test": "turbo run test",
+    "test:watch": "turbo run test:watch",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "tokens:build": "pnpm --filter @naitikos/design-system run tokens:build",
+    "db:generate": "pnpm --filter @naitikos/db run generate",
+    "db:migrate": "pnpm --filter @naitikos/db run migrate",
+    "db:studio": "pnpm --filter @naitikos/db run studio",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && docker compose up -d postgres",
+    "verify": "turbo run typecheck lint test build",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@naitikos/config": "workspace:*",
+    "husky": "catalog:",
+    "lint-staged": "catalog:",
+    "prettier": "catalog:",
+    "prettier-plugin-tailwindcss": "catalog:",
+    "turbo": "catalog:",
+    "typescript": "catalog:"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,mts,cts}": [
+      "eslint --max-warnings=0 --fix",
+      "prettier --write"
+    ],
+    "*.{js,jsx,mjs,cjs}": [
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml,css}": [
+      "prettier --write"
+    ]
+  }
+}

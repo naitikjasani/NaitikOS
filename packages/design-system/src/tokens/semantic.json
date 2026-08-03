@@ -1,0 +1,182 @@
+{
+  "$comment": [
+    "TIER 2 — SEMANTIC. Meaning, theme-dependent.",
+    "Blueprint §8.1. Every value here is a reference into tier 1 — a raw colour",
+    "appearing in this file is a bug.",
+    "",
+    "Dark is the DEFAULT theme (§8.7): 'the application is opened last thing at",
+    "night for the Daily Close and in a dimly lit gym. Defaulting to light and",
+    "requiring a setting change is optimising for the wrong context.'",
+    "",
+    "Dark never uses pure black (§8.7) — pure black causes OLED smearing on",
+    "scroll and excessive contrast fatigue. The base is neutral.950."
+  ],
+
+  "dark": {
+    "color": {
+      "surface": "{color.neutral.950}",
+      "surface-raised": "{color.neutral.900}",
+      "surface-overlay": "{color.neutral.850}",
+      "surface-sunken": "{color.pure.black}",
+
+      "$comment_elevation": "In dark mode elevation is conveyed by LIGHTNESS, not shadow (§8.7) — shadows are near-invisible on dark surfaces.",
+
+      "text-primary": "{color.neutral.50}",
+      "text-secondary": "{color.neutral.300}",
+      "text-tertiary": "{color.neutral.400}",
+      "text-inverse": "{color.neutral.950}",
+      "text-on-accent": "{color.pure.white}",
+
+      "border-subtle": "{color.neutral.850}",
+      "border-default": "{color.neutral.800}",
+      "border-strong": "{color.neutral.700}",
+
+      "accent": "{color.accent.500}",
+      "accent-hover": "{color.accent.400}",
+      "accent-active": "{color.accent.600}",
+      "accent-subtle": "{color.accent.800}",
+
+      "positive": "{color.positive.400}",
+      "caution": "{color.caution.400}",
+      "critical": "{color.critical.400}",
+
+      "focus-ring": "{color.accent.400}",
+
+      "$comment_data": "Chart series. NEVER coloured by valence (§8.2). Dark uses a distinct ramp rather than the light palette inverted, because saturated hues that read correctly on white vibrate unpleasantly on dark (§8.7).",
+      "data-1": "{color.data.1}",
+      "data-2": "{color.data.2}",
+      "data-3": "{color.data.3}",
+      "data-4": "{color.data.4}",
+      "data-5": "{color.data.5}",
+      "data-6": "{color.data.6}",
+      "data-grid": "{color.neutral.850}",
+      "data-axis": "{color.neutral.600}",
+      "data-annotation": "{color.neutral.400}"
+    }
+  },
+
+  "light": {
+    "color": {
+      "surface": "{color.neutral.50}",
+      "surface-raised": "{color.pure.white}",
+      "surface-overlay": "{color.pure.white}",
+      "surface-sunken": "{color.neutral.100}",
+
+      "text-primary": "{color.neutral.950}",
+      "text-secondary": "{color.neutral.700}",
+      "text-tertiary": "{color.neutral.500}",
+      "text-inverse": "{color.neutral.50}",
+      "text-on-accent": "{color.pure.white}",
+
+      "border-subtle": "{color.neutral.200}",
+      "border-default": "{color.neutral.300}",
+      "border-strong": "{color.neutral.400}",
+
+      "accent": "{color.accent.600}",
+      "accent-hover": "{color.accent.500}",
+      "accent-active": "{color.accent.700}",
+      "accent-subtle": "{color.accent.300}",
+
+      "positive": "{color.positive.600}",
+      "caution": "{color.caution.600}",
+      "critical": "{color.critical.600}",
+
+      "focus-ring": "{color.accent.600}",
+
+      "data-1": "{color.data.1}",
+      "data-2": "{color.data.2}",
+      "data-3": "{color.data.3}",
+      "data-4": "{color.data.4}",
+      "data-5": "{color.data.5}",
+      "data-6": "{color.data.6}",
+      "data-grid": "{color.neutral.200}",
+      "data-axis": "{color.neutral.400}",
+      "data-annotation": "{color.neutral.500}"
+    }
+  },
+
+  "$comment_shared": "Theme-independent semantics. Typography, spacing, and motion do not change between light and dark.",
+  "shared": {
+    "$comment_type": "Roles, not sizes (§8.3). `metric` roles carry tabular figures by default — non-tabular numerals make columns jitter, which reads as instability in a data-dense product.",
+    "typography": {
+      "display": {
+        "fontSize": "{fontSize.36}",
+        "lineHeight": "{lineHeight.40}",
+        "letterSpacing": "{letterSpacing.tight}",
+        "fontWeight": "{fontWeight.semibold}"
+      },
+      "title-1": {
+        "fontSize": "{fontSize.24}",
+        "lineHeight": "{lineHeight.32}",
+        "letterSpacing": "{letterSpacing.snug}",
+        "fontWeight": "{fontWeight.semibold}"
+      },
+      "title-2": {
+        "fontSize": "{fontSize.20}",
+        "lineHeight": "{lineHeight.28}",
+        "letterSpacing": "{letterSpacing.snug}",
+        "fontWeight": "{fontWeight.semibold}"
+      },
+      "title-3": {
+        "fontSize": "{fontSize.16}",
+        "lineHeight": "{lineHeight.24}",
+        "letterSpacing": "{letterSpacing.normal}",
+        "fontWeight": "{fontWeight.semibold}"
+      },
+      "body": {
+        "fontSize": "{fontSize.15}",
+        "lineHeight": "{lineHeight.24}",
+        "letterSpacing": "{letterSpacing.normal}",
+        "fontWeight": "{fontWeight.regular}"
+      },
+      "body-sm": {
+        "fontSize": "{fontSize.13}",
+        "lineHeight": "{lineHeight.20}",
+        "letterSpacing": "{letterSpacing.normal}",
+        "fontWeight": "{fontWeight.regular}"
+      },
+      "caption": {
+        "fontSize": "{fontSize.12}",
+        "lineHeight": "{lineHeight.16}",
+        "letterSpacing": "{letterSpacing.wide}",
+        "fontWeight": "{fontWeight.medium}"
+      },
+      "metric-l": {
+        "fontSize": "{fontSize.32}",
+        "lineHeight": "{lineHeight.36}",
+        "letterSpacing": "{letterSpacing.tight}",
+        "fontWeight": "{fontWeight.semibold}"
+      },
+      "metric-m": {
+        "fontSize": "{fontSize.20}",
+        "lineHeight": "{lineHeight.24}",
+        "letterSpacing": "{letterSpacing.snug}",
+        "fontWeight": "{fontWeight.semibold}"
+      },
+      "mono": {
+        "fontSize": "{fontSize.13}",
+        "lineHeight": "{lineHeight.20}",
+        "letterSpacing": "{letterSpacing.normal}",
+        "fontWeight": "{fontWeight.regular}"
+      }
+    },
+
+    "$comment_density": "Density is a first-class setting (§8.4). A person reviewing five years of lab results wants compact; the same person logging a set mid-workout wants comfortable.",
+    "layout": {
+      "comfortable": {
+        "gutter": "{space.4}",
+        "section-gap": "{space.8}",
+        "card-padding": "{space.5}",
+        "control-height": "{size.touchTarget}",
+        "row-height": "{space.12}"
+      },
+      "compact": {
+        "gutter": "{space.3}",
+        "section-gap": "{space.5}",
+        "card-padding": "{space.4}",
+        "control-height": "{space.10}",
+        "row-height": "{space.8}"
+      }
+    }
+  }
+}

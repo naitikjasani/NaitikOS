@@ -1,0 +1,55 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+
+# Generated design tokens — derived from tokens/*.json, never hand-edited
+packages/design-system/src/tokens/generated/
+
+# Turbo
+.turbo/
+
+# Test output
+coverage/
+playwright-report/
+test-results/
+.vitest/
+
+# Environment — NEVER commit. Blueprint §5.14.
+.env
+.env.*
+!.env.example
+
+# Secrets and keys — defence in depth against an accidental `git add -A`
+*.pem
+*.key
+*.p12
+secrets/
+
+# Local data — a developer's Postgres volume or media cache must never be
+# committed. Blueprint §5.15: preview and local run on synthetic data only.
+.data/
+tmp/
+*.dump
+*.sql.gz
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*

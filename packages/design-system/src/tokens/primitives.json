@@ -1,0 +1,184 @@
+{
+  "$comment": [
+    "TIER 1 — PRIMITIVES. Raw values with no meaning attached.",
+    "Blueprint §8.1: a component may ONLY reference tier 3. Nothing in the",
+    "application imports from this file; tier 2 maps these into meaning.",
+    "",
+    "Colour is OKLCH throughout (§8.1): perceptually uniform lightness means a",
+    "programmatically generated dark theme is actually legible, and contrast",
+    "ratios behave predictably rather than needing per-colour hand-tuning."
+  ],
+
+  "color": {
+    "$comment": "Neutral is hue 250 at very low chroma — a hair cool, never clinical grey.",
+    "neutral": {
+      "50": "oklch(98.2% 0.003 250)",
+      "100": "oklch(96.1% 0.004 250)",
+      "200": "oklch(92.4% 0.006 250)",
+      "300": "oklch(86.5% 0.008 250)",
+      "400": "oklch(70.8% 0.012 250)",
+      "500": "oklch(58.4% 0.014 250)",
+      "600": "oklch(48.6% 0.014 250)",
+      "700": "oklch(38.2% 0.013 250)",
+      "800": "oklch(27.9% 0.012 250)",
+      "850": "oklch(22.4% 0.011 250)",
+      "900": "oklch(18.3% 0.010 250)",
+      "950": "oklch(14.8% 0.009 250)"
+    },
+
+    "$comment_accent": "Indigo. Interactive affordances only — never data (§8.2).",
+    "accent": {
+      "300": "oklch(80.1% 0.098 265)",
+      "400": "oklch(70.4% 0.155 265)",
+      "500": "oklch(62.2% 0.188 265)",
+      "600": "oklch(54.8% 0.210 265)",
+      "700": "oklch(47.6% 0.190 265)",
+      "800": "oklch(39.2% 0.152 265)"
+    },
+
+    "positive": {
+      "400": "oklch(74.2% 0.132 152)",
+      "500": "oklch(65.1% 0.148 152)",
+      "600": "oklch(56.8% 0.145 152)"
+    },
+
+    "caution": {
+      "400": "oklch(82.1% 0.126 76)",
+      "500": "oklch(75.6% 0.141 76)",
+      "600": "oklch(67.4% 0.148 76)"
+    },
+
+    "critical": {
+      "400": "oklch(70.3% 0.176 25)",
+      "500": "oklch(62.1% 0.203 25)",
+      "600": "oklch(54.7% 0.208 25)"
+    },
+
+    "$comment_data": [
+      "Categorical data-visualisation ramp. Deliberately distinct from the",
+      "semantic colours above, because §8.2 forbids colour encoding valence in",
+      "health data: 'A mood of 2 is not red.'",
+      "",
+      "These are hue-spaced at near-constant lightness so no series visually",
+      "dominates. Blueprint §8.9 designates the dataviz methodology as the",
+      "binding source of truth for the chart palette — these values MUST be",
+      "revalidated against its accessibility validator when the chart layer is",
+      "actually built (V2). Until then no chart ships, so nothing depends on",
+      "them being final."
+    ],
+    "data": {
+      "1": "oklch(64.5% 0.132 255)",
+      "2": "oklch(66.2% 0.124 190)",
+      "3": "oklch(67.8% 0.118 145)",
+      "4": "oklch(70.1% 0.126 85)",
+      "5": "oklch(65.4% 0.134 35)",
+      "6": "oklch(62.8% 0.128 320)"
+    },
+
+    "pure": {
+      "white": "oklch(100% 0 0)",
+      "black": "oklch(0% 0 0)",
+      "transparent": "transparent"
+    }
+  },
+
+  "$comment_space": "4px base grid (§8.4). Every margin, padding, and gap references a token; arbitrary values fail lint.",
+  "space": {
+    "0": "0rem",
+    "px": "0.0625rem",
+    "1": "0.25rem",
+    "2": "0.5rem",
+    "3": "0.75rem",
+    "4": "1rem",
+    "5": "1.25rem",
+    "6": "1.5rem",
+    "8": "2rem",
+    "10": "2.5rem",
+    "12": "3rem",
+    "16": "4rem",
+    "20": "5rem",
+    "24": "6rem"
+  },
+
+  "$comment_font": "Two families (§8.3). Interface is Inter; long-form is a serif, because a visual mode-switch between recording data and writing reflectively is a genuine cognitive cue.",
+  "fontFamily": {
+    "sans": "'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif",
+    "serif": "'Source Serif 4 Variable', 'Source Serif 4', Georgia, serif",
+    "mono": "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'SF Mono', monospace"
+  },
+
+  "fontSize": {
+    "12": "0.75rem",
+    "13": "0.8125rem",
+    "15": "0.9375rem",
+    "16": "1rem",
+    "20": "1.25rem",
+    "24": "1.5rem",
+    "32": "2rem",
+    "36": "2.25rem"
+  },
+
+  "lineHeight": {
+    "16": "1rem",
+    "20": "1.25rem",
+    "24": "1.5rem",
+    "28": "1.75rem",
+    "32": "2rem",
+    "36": "2.25rem",
+    "40": "2.5rem"
+  },
+
+  "fontWeight": {
+    "regular": "400",
+    "medium": "500",
+    "semibold": "600"
+  },
+
+  "letterSpacing": {
+    "tight": "-0.02em",
+    "snug": "-0.01em",
+    "normal": "0em",
+    "wide": "0.01em"
+  },
+
+  "radius": {
+    "none": "0rem",
+    "sm": "0.375rem",
+    "md": "0.625rem",
+    "lg": "0.875rem",
+    "xl": "1.25rem",
+    "full": "9999px"
+  },
+
+  "$comment_duration": "Motion is functional (§8.6) — causality, continuity, state change. Never delight for its own sake.",
+  "duration": {
+    "instant": "100ms",
+    "fast": "150ms",
+    "normal": "250ms",
+    "slow": "400ms"
+  },
+
+  "easing": {
+    "out": "cubic-bezier(0.16, 1, 0.3, 1)",
+    "in": "cubic-bezier(0.7, 0, 0.84, 0)",
+    "inOut": "cubic-bezier(0.87, 0, 0.13, 1)"
+  },
+
+  "$comment_size": "44px minimum touch target (§8.13) — non-negotiable for logging a set with sweaty hands.",
+  "size": {
+    "touchTarget": "2.75rem",
+    "icon-16": "1rem",
+    "icon-20": "1.25rem",
+    "icon-24": "1.5rem",
+    "icon-32": "2rem"
+  },
+
+  "zIndex": {
+    "base": "0",
+    "raised": "10",
+    "sticky": "20",
+    "overlay": "30",
+    "dialog": "40",
+    "toast": "50"
+  }
+}

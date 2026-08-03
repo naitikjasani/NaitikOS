@@ -1,0 +1,127 @@
+{
+  "$comment": [
+    "TIER 3 — COMPONENT. Component-scoped contracts.",
+    "Blueprint §8.1: 'A component may only reference tier 3.'",
+    "",
+    "Why the third tier exists at all: tier 1 alone means a redesign edits every",
+    "component; tier 2 alone means a component cannot be adjusted without",
+    "affecting everything sharing its semantic token. Tier 3 gives per-component",
+    "escape hatches without leaking raw values upward — it is what turns a",
+    "year-six redesign into a token change rather than a rewrite.",
+    "",
+    "Every value here references tier 2. A tier-1 reference in this file is a",
+    "layering violation."
+  ],
+
+  "component": {
+    "card": {
+      "bg": "{color.surface-raised}",
+      "bg-interactive-hover": "{color.surface-overlay}",
+      "border": "{color.border-subtle}",
+      "border-outlined": "{color.border-default}",
+      "radius": "{radius.lg}",
+      "padding": "{layout.card-padding}"
+    },
+
+    "button": {
+      "radius": "{radius.md}",
+      "height": "{layout.control-height}",
+      "padding-x": "{space.4}",
+      "primary-bg": "{color.accent}",
+      "primary-bg-hover": "{color.accent-hover}",
+      "primary-bg-active": "{color.accent-active}",
+      "primary-text": "{color.text-on-accent}",
+      "secondary-bg": "{color.surface-overlay}",
+      "secondary-text": "{color.text-primary}",
+      "secondary-border": "{color.border-default}",
+      "ghost-text": "{color.text-secondary}",
+      "ghost-bg-hover": "{color.surface-overlay}",
+      "destructive-bg": "{color.critical}",
+      "destructive-text": "{color.text-on-accent}"
+    },
+
+    "input": {
+      "bg": "{color.surface-sunken}",
+      "border": "{color.border-default}",
+      "border-focus": "{color.accent}",
+      "border-invalid": "{color.critical}",
+      "text": "{color.text-primary}",
+      "placeholder": "{color.text-tertiary}",
+      "radius": "{radius.md}",
+      "height": "{layout.control-height}",
+      "padding-x": "{space.3}"
+    },
+
+    "dialog": {
+      "bg": "{color.surface-overlay}",
+      "border": "{color.border-default}",
+      "radius": "{radius.xl}",
+      "padding": "{space.6}",
+      "backdrop": "{color.surface-sunken}"
+    },
+
+    "sheet": {
+      "bg": "{color.surface-overlay}",
+      "border": "{color.border-default}",
+      "radius": "{radius.xl}",
+      "padding": "{space.5}",
+      "handle": "{color.border-strong}"
+    },
+
+    "toast": {
+      "bg": "{color.surface-overlay}",
+      "border": "{color.border-default}",
+      "text": "{color.text-primary}",
+      "radius": "{radius.md}",
+      "padding": "{space.4}"
+    },
+
+    "$comment_metric": "Metric values are text-primary in EVERY state. §8.2: 'health data is never coloured by valence. A mood of 2 is not red.' Deviation is communicated by position against a baseline, not by alarm colour.",
+    "metric": {
+      "value-color": "{color.text-primary}",
+      "label-color": "{color.text-tertiary}",
+      "unit-color": "{color.text-tertiary}",
+      "delta-color": "{color.text-secondary}"
+    },
+
+    "chart": {
+      "grid": "{color.data-grid}",
+      "axis": "{color.data-axis}",
+      "axis-label": "{color.text-tertiary}",
+      "annotation": "{color.data-annotation}",
+      "tooltip-bg": "{color.surface-overlay}",
+      "tooltip-border": "{color.border-default}",
+      "$comment": "Missing data renders as a gap, never interpolated (§8.9 invariant 3). There is deliberately no 'missing data' colour token — a gap is an absence, not a value."
+    },
+
+    "table": {
+      "header-bg": "{color.surface-sunken}",
+      "header-text": "{color.text-secondary}",
+      "row-border": "{color.border-subtle}",
+      "row-hover": "{color.surface-overlay}",
+      "row-height": "{layout.row-height}",
+      "cell-padding-x": "{space.3}"
+    },
+
+    "nav": {
+      "bg": "{color.surface}",
+      "item-text": "{color.text-secondary}",
+      "item-text-active": "{color.text-primary}",
+      "item-bg-active": "{color.surface-overlay}",
+      "item-indicator": "{color.accent}",
+      "border": "{color.border-subtle}"
+    },
+
+    "$comment_focus": "A visible focus ring is required on every interactive element (§8.13). This token exists so it can never be styled away per-component.",
+    "focus": {
+      "ring-color": "{color.focus-ring}",
+      "ring-width": "2px",
+      "ring-offset": "2px"
+    },
+
+    "skeleton": {
+      "bg": "{color.surface-overlay}",
+      "$comment": "Skeletons hold layout; they do NOT shimmer (§8.6). Nothing animates on data load."
+    }
+  }
+}
