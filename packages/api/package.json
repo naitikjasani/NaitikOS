@@ -1,0 +1,35 @@
+{
+  "name": "@naitikos/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Contracts and transport. Zod schemas imported by both sides, error mapping, middleware, guards.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./contracts": "./src/contracts/index.ts",
+    "./errors": "./src/errors/index.ts",
+    "./middleware": "./src/middleware/index.ts",
+    "./guards": "./src/guards/index.ts",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --max-warnings=0",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf .turbo coverage"
+  },
+  "dependencies": {
+    "@naitikos/core": "workspace:*",
+    "@naitikos/db": "workspace:*",
+    "@naitikos/shared": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@naitikos/config": "workspace:*",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

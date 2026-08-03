@@ -21,6 +21,8 @@ export type {
   NotFoundError,
   ConflictError,
   PreconditionFailedError,
+  UnauthenticatedError,
+  ForbiddenError,
 } from './errors/domain-error';
 
 export {
@@ -28,6 +30,16 @@ export {
   notFoundError,
   conflictError,
   preconditionFailedError,
+  unauthenticatedError,
+  forbiddenError,
   isDomainError,
+  isAuthError,
   isRetryable,
 } from './errors/domain-error';
+
+/** The clock — the one sanctioned reader of wall time (§11.3). */
+export type { Clock } from './temporal/clock';
+export { systemClock, fixedClock, manualClock } from './temporal/clock';
+
+/** Identity, authentication, authorization (§5.4). */
+export * from './auth';

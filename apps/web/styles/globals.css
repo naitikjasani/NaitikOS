@@ -1,0 +1,204 @@
+/**
+ * Baseline styles for the authentication surface.
+ *
+ * Deliberately plain CSS with custom properties, not Tailwind and not the
+ * design system. §8 has not been built yet, and the milestone scope is "no UI
+ * beyond what authentication requires" — importing a design system that does
+ * not exist, or committing to utility classes before the token layer is
+ * designed, would pre-empt that decision.
+ *
+ * The custom properties below are named to match §8.1's intended semantic
+ * layer, so when the design system lands these become aliases rather than a
+ * rewrite.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* Semantic tokens (§8.1). Values are provisional. */
+  --surface: #ffffff;
+  --surface-raised: #f7f7f8;
+  --border: #e2e2e5;
+  --text: #17171a;
+  --text-muted: #62626b;
+  --accent: #2f5fd0;
+  --accent-text: #ffffff;
+  --danger: #b3261e;
+  --danger-surface: #fdf0ef;
+
+  --radius: 10px;
+  --space: 8px;
+  --font: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/**
+ * Dark mode follows the operating system by default.
+ *
+ * `DEFAULT_THEME` in core is `system` for the reason recorded there: P6 says
+ * silence is a feature, and a tool that ignores the OS setting is imposing.
+ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #121214;
+    --surface-raised: #1b1b1f;
+    --border: #2c2c32;
+    --text: #f2f2f4;
+    --text-muted: #a0a0aa;
+    --accent: #7d9bf0;
+    --accent-text: #10131c;
+    --danger: #f2b8b5;
+    --danger-surface: #2a1614;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/**
+ * Respect reduced motion.
+ *
+ * §4.7 gives this more weight than usual: the operator has a documented anxiety
+ * disorder, and motion is one of the levers a health tool should not pull
+ * without being asked.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* A visible focus ring everywhere. §11.4 makes accessibility a blocking gate. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Skip link — the first tab stop on every page. */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  padding: calc(var(--space) * 1.5);
+  background: var(--surface-raised);
+  color: var(--text);
+  z-index: 100;
+}
+.skip-link:focus {
+  left: 0;
+}
+
+.auth-shell {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: calc(var(--space) * 3);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: calc(var(--space) * 4);
+}
+
+.auth-card h1 {
+  margin: 0 0 calc(var(--space) * 0.5);
+  font-size: 1.4rem;
+  letter-spacing: -0.01em;
+}
+
+.auth-card .subtitle {
+  margin: 0 0 calc(var(--space) * 3);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--space) * 0.75);
+  margin-bottom: calc(var(--space) * 2);
+}
+
+.field label {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.field input {
+  padding: calc(var(--space) * 1.25);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px; /* Below 16px, iOS Safari zooms on focus. */
+}
+
+.field input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.field-error {
+  color: var(--danger);
+  font-size: 0.8rem;
+}
+
+.button {
+  width: 100%;
+  padding: calc(var(--space) * 1.5);
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--accent-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.alert {
+  margin-bottom: calc(var(--space) * 2);
+  padding: calc(var(--space) * 1.5);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  background: var(--danger-surface);
+  color: var(--danger);
+  font-size: 0.875rem;
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}

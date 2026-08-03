@@ -25,6 +25,39 @@
 import { pgEnum } from 'drizzle-orm/pg-core';
 
 /* =========================================================================
+ * Identity and authorization (§5.4)
+ * ====================================================================== */
+
+/**
+ * Application roles. Mirrors `ROLES` in `@naitikos/core/auth/roles`.
+ *
+ * The permission matrix deliberately lives in `core`, not here: §5.4 places
+ * authorization "in the API layer where it is testable, readable, and
+ * version-controlled" and warns that encoding domain rules in the database is
+ * "a maintenance trap at C2 horizons". This enum is only the vocabulary — the
+ * database stores which role an identity has, never what that role may do.
+ *
+ * `auth_identity_role_matches_core` in the contract test fails if the two lists
+ * drift.
+ */
+export const appRole = pgEnum('app_role', ['owner', 'clinician', 'delegate', 'service']);
+
+/**
+ * How an identity authenticated. Mirrors `AUTH_STRATEGIES` in core.
+ *
+ * Recorded rather than enforced. §5.4 prefers passkey and magic link; the
+ * current build enables password only, and storing the strategy per sign-in is
+ * what will make "when did this account last use the weaker factor?" answerable
+ * once the others are turned on.
+ */
+export const authStrategy = pgEnum('auth_strategy', [
+  'password',
+  'magic_link',
+  'passkey',
+  'oauth_google',
+]);
+
+/* =========================================================================
  * The substrate (§9.2)
  * ====================================================================== */
 
@@ -409,6 +442,8 @@ export const jobStatus = pgEnum('job_status', ['pending', 'running', 'succeeded'
  * One declaration per vocabulary: the database defines it, TypeScript follows.
  * ====================================================================== */
 
+export type AppRole = (typeof appRole.enumValues)[number];
+export type AuthStrategyValue = (typeof authStrategy.enumValues)[number];
 export type SourceKind = (typeof sourceKind.enumValues)[number];
 export type MetricValueType = (typeof metricValueType.enumValues)[number];
 export type Aggregation = (typeof aggregation.enumValues)[number];

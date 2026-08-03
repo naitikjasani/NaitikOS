@@ -9,12 +9,18 @@
  *    fields. Exceptions are reserved for genuine bugs, not for expected
  *    outcomes."
  *
- * **Closed** is the operative word. These four variants are the complete set.
- * Adding a fifth is an architectural decision requiring an ADR (§11.6), not a
- * convenience — because §5.12 also requires that "domain errors map to HTTP
- * status codes in exactly one place", and every exhaustive switch over this
- * union (guarded by `assertNever`) will fail to compile until that mapping is
- * updated. That compile failure is the feature.
+ * **Closed** is the operative word. Adding a variant is an architectural
+ * decision requiring an ADR (§11.6), not a convenience — because §5.12 also
+ * requires that "domain errors map to HTTP status codes in exactly one place",
+ * and every exhaustive switch over this union (guarded by `assertNever`) will
+ * fail to compile until that mapping is updated. That compile failure is the
+ * feature.
+ *
+ * §5.12 names four variants. Two more were added by
+ * [ADR 0004](../../../../docs/adr/0004-auth-domain-errors.md) —
+ * `unauthenticated` and `forbidden` — because auth failures must map to 401 and
+ * 403, and the alternatives all amounted to a discriminant wearing a disguise.
+ * Six is the complete set.
  *
  * Errors are plain data, not `Error` subclasses. They cross the wire, get
  * persisted in the audit log (§9.4), and are pattern-matched — none of which
@@ -24,7 +30,13 @@
 import type { Sensitive } from '@naitikos/shared';
 
 /** Discriminant for the union. */
-export type DomainErrorKind = 'validation' | 'not_found' | 'conflict' | 'precondition_failed';
+export type DomainErrorKind =
+  | 'validation'
+  | 'not_found'
+  | 'conflict'
+  | 'precondition_failed'
+  | 'unauthenticated'
+  | 'forbidden';
 
 /**
  * Fields common to every variant.
@@ -94,12 +106,45 @@ export type PreconditionFailedError = DomainErrorBase & {
   readonly precondition: string;
 };
 
-/** The complete, closed set. */
+/**
+ * No valid session — the caller has not proved who they are. Maps to 401.
+ *
+ * Distinct from {@link ForbiddenError}: this one means "sign in", that one means
+ * "signing in again will not help". See ADR 0004.
+ */
+export type UnauthenticatedError = DomainErrorBase & {
+  readonly kind: 'unauthenticated';
+  readonly reason: 'no_session' | 'expired' | 'invalid_token' | 'revoked';
+};
+
+/**
+ * The caller is known and refused. Maps to 403.
+ *
+ * **The missing permission is deliberately not carried.** Telling an
+ * unauthorised caller exactly which permission would have worked is a small
+ * information leak that buys nothing at n=1. It is logged server-side instead
+ * (ADR 0004).
+ *
+ * `stepUpRequired` covers §5.4's rule that "sensitive operations — export,
+ * encryption-key access, deletion — require step-up re-authentication
+ * regardless of session age". The caller holds the permission; the session is
+ * simply too old to exercise it.
+ */
+export type ForbiddenError = DomainErrorBase & {
+  readonly kind: 'forbidden';
+  readonly reason: 'insufficient_permission' | 'not_allowlisted' | 'step_up_required';
+  /** True when re-authenticating would grant the request (§5.4). */
+  readonly stepUpRequired: boolean;
+};
+
+/** The complete, closed set. Six variants — see ADR 0004. */
 export type DomainError =
   | ValidationError
   | NotFoundError
   | ConflictError
-  | PreconditionFailedError;
+  | PreconditionFailedError
+  | UnauthenticatedError
+  | ForbiddenError;
 
 /* ------------------------------------------------------------------ *
  * Constructors                                                        *
@@ -156,19 +201,55 @@ export function preconditionFailedError(
   return { kind: 'precondition_failed', code, message, precondition };
 }
 
+export function unauthenticatedError(
+  reason: UnauthenticatedError['reason'] = 'no_session',
+  message = 'Authentication required.',
+): UnauthenticatedError {
+  return { kind: 'unauthenticated', code: `unauthenticated_${reason}`, message, reason };
+}
+
+export function forbiddenError(
+  reason: ForbiddenError['reason'],
+  message = 'Not permitted.',
+): ForbiddenError {
+  return {
+    kind: 'forbidden',
+    code: `forbidden_${reason}`,
+    message,
+    reason,
+    stepUpRequired: reason === 'step_up_required',
+  };
+}
+
 /* ------------------------------------------------------------------ *
  * Guards                                                              *
  * ------------------------------------------------------------------ */
 
+const DOMAIN_ERROR_KINDS: readonly DomainErrorKind[] = [
+  'validation',
+  'not_found',
+  'conflict',
+  'precondition_failed',
+  'unauthenticated',
+  'forbidden',
+];
+
 export function isDomainError(value: unknown): value is DomainError {
   if (typeof value !== 'object' || value === null) return false;
   const kind: unknown = (value as { kind?: unknown }).kind;
-  return (
-    kind === 'validation' ||
-    kind === 'not_found' ||
-    kind === 'conflict' ||
-    kind === 'precondition_failed'
-  );
+  return (DOMAIN_ERROR_KINDS as readonly unknown[]).includes(kind);
+}
+
+/**
+ * Is this an authentication or authorization failure?
+ *
+ * Used by the audit hook (§9.4): every refusal is recorded, and refusals are
+ * the security-relevant subset of errors worth alerting on.
+ */
+export function isAuthError(
+  error: DomainError,
+): error is UnauthenticatedError | ForbiddenError {
+  return error.kind === 'unauthenticated' || error.kind === 'forbidden';
 }
 
 /**

@@ -4,9 +4,22 @@
  */
 
 import { baseConfig } from './base.js';
+import { boundariesConfig } from './boundaries.js';
 
 export const libraryConfig = [
   ...baseConfig,
+
+  /**
+   * The §5.0 layering rules.
+   *
+   * Included here rather than left for each package to opt into. The rule that
+   * matters most — `core` may not import a framework, which §5.0 calls "worth
+   * more over twenty years than every other technical decision in this section
+   * combined" — protects the package least likely to remember to enable it, and
+   * an opt-in guard on the durable layer is not a guard.
+   */
+  ...boundariesConfig,
+
   {
     files: ['**/*.{ts,mts,cts}'],
     rules: {

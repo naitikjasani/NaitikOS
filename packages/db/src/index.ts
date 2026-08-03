@@ -26,3 +26,5 @@ export { createDatabase, getDatabase } from './client';
 export type { Database } from './client';
 
 export { databaseUrl, isLocalDatabase } from './env';
+
+export * from './repositories';

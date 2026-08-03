@@ -1,0 +1,40 @@
+{
+  "name": "@naitikos/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The PWA. Routing only in app/; the application lives in features/.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --max-warnings=0",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf .turbo .next coverage"
+  },
+  "dependencies": {
+    "@naitikos/api": "workspace:*",
+    "@naitikos/core": "workspace:*",
+    "@naitikos/db": "workspace:*",
+    "@naitikos/shared": "workspace:*",
+    "@supabase/ssr": "catalog:",
+    "@supabase/supabase-js": "catalog:",
+    "next": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "server-only": "^0.0.1",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@naitikos/config": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-next": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

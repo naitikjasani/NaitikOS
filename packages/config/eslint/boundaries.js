@@ -23,7 +23,25 @@
  * disabled precisely so that guarantee holds). Both are cheap; both are kept.
  */
 
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+
 import boundaries from 'eslint-plugin-boundaries';
+
+/**
+ * The monorepo root, resolved from this file's own location.
+ *
+ * Load-bearing. The element patterns below (`packages/core/**`) are matched
+ * against paths relative to `boundaries/root-path`, which defaults to the
+ * ESLint working directory. Turborepo runs `eslint .` *inside each package*, so
+ * with the default the patterns match nothing and every rule in this file
+ * silently passes — which is exactly what was happening before this line
+ * existed: the config was written, exported by nobody, and imported by nobody.
+ *
+ * Deriving the root from `import.meta.url` means it is correct whether ESLint
+ * runs from the repo root, from a package, or from an editor.
+ */
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 
 /** Frameworks that must never reach the durable layer. */
 const FRAMEWORK_PACKAGES = [
@@ -47,16 +65,17 @@ export const boundariesConfig = [
     files: ['**/*.{ts,tsx,mts,cts}'],
     plugins: { boundaries },
     settings: {
+      'boundaries/root-path': REPO_ROOT,
       'boundaries/include': ['apps/**/*', 'packages/**/*'],
       'boundaries/elements': [
-        { type: 'shared', mode: 'full', pattern: 'packages/shared/**/*' },
-        { type: 'core', mode: 'full', pattern: 'packages/core/**/*' },
-        { type: 'db', mode: 'full', pattern: 'packages/db/**/*' },
-        { type: 'api', mode: 'full', pattern: 'packages/api/**/*' },
-        { type: 'ai', mode: 'full', pattern: 'packages/ai/**/*' },
-        { type: 'design-system', mode: 'full', pattern: 'packages/design-system/**/*' },
-        { type: 'config', mode: 'full', pattern: 'packages/config/**/*' },
-        { type: 'app', mode: 'full', pattern: 'apps/web/**/*' },
+        { type: 'shared', partialMatch: false, pattern: 'packages/shared/**/*' },
+        { type: 'core', partialMatch: false, pattern: 'packages/core/**/*' },
+        { type: 'db', partialMatch: false, pattern: 'packages/db/**/*' },
+        { type: 'api', partialMatch: false, pattern: 'packages/api/**/*' },
+        { type: 'ai', partialMatch: false, pattern: 'packages/ai/**/*' },
+        { type: 'design-system', partialMatch: false, pattern: 'packages/design-system/**/*' },
+        { type: 'config', partialMatch: false, pattern: 'packages/config/**/*' },
+        { type: 'app', partialMatch: false, pattern: 'apps/web/**/*' },
       ],
     },
     rules: {
@@ -96,7 +115,11 @@ export const boundariesConfig = [
             },
 
             { from: ['config'], allow: [] },
-            { from: ['app'], allow: ['shared', 'core', 'db', 'api', 'ai', 'design-system'] },
+            // 'app' includes itself: a layout importing a stylesheet, a page
+            // importing a feature. Intra-app structure is governed by §7.4 R1
+            // below (features are reachable only through their index), not by
+            // the layering rule.
+            { from: ['app'], allow: ['app', 'shared', 'core', 'db', 'api', 'ai', 'design-system'] },
           ],
         },
       ],

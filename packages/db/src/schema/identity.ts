@@ -11,8 +11,8 @@
 import { sql } from 'drizzle-orm';
 import { boolean, check, index, jsonb, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
 
-import { consentScope } from './enums';
-import { entityColumns, instant, rowTimestamps } from './columns';
+import { appRole, authStrategy, consentScope } from './enums';
+import { entityColumns, instant, reference, rowTimestamps } from './columns';
 
 /**
  * The operator. Exactly one row, forever (C1).
@@ -57,6 +57,88 @@ export const profile = pgTable(
   (t) => [
     check('profile_singleton_true', sql`${t.singleton} IS TRUE`),
     uniqueIndex('profile_singleton_unique').on(t.singleton),
+  ],
+);
+
+/**
+ * A credential-holder, bound to the profile.
+ *
+ * ## Why this is not two columns on `profile`
+ *
+ * Putting `authSubjectId` and `role` on the singleton profile would work today
+ * and would be the wrong shape tomorrow. C1 says there is one *operator*; it
+ * does not say there is one *identity*. §2.2 contemplates a clinician holding a
+ * shared export and §4.7 contemplates a delegate with emergency access to the
+ * crisis plan — both are additional identities reading the same record, which
+ * §2.5 is careful to distinguish from multi-tenancy: "a second user gets a
+ * second instance", but a narrower view of one record is not a second user.
+ *
+ * With this table, granting that access is an INSERT. With two columns on
+ * `profile`, it is a migration. The milestone asked for future roles to require
+ * zero architectural change, and this is where that is paid for — one extra
+ * table, one extra join on a path that runs once per request and is indexed.
+ *
+ * ## What lives here and what does not
+ *
+ * The `subjectId` is the auth provider's opaque identifier — Supabase's
+ * `auth.users.id`. Deliberately `text`, not a foreign key into `auth.users`:
+ * §5.4 uses Supabase as "hosted Postgres with auth and storage" precisely so
+ * migrating away is "a connection-string change plus an auth swap, rather than
+ * a rewrite". A foreign key into the provider's own schema would weld the two
+ * together and make that swap a data migration.
+ *
+ * No credentials. No password hashes, no tokens, no recovery codes. Those stay
+ * entirely with the provider, which is the one part of this system that is
+ * genuinely better outsourced.
+ */
+export const authIdentity = pgTable(
+  'auth_identity',
+  {
+    ...entityColumns,
+
+    /** The provider's subject. Opaque, unique, never reused. */
+    subjectId: text().notNull(),
+
+    /**
+     * Normalised lowercase, matching `normaliseEmail` in core.
+     *
+     * Stored despite the provider also holding it, because the allowlist check
+     * and the audit trail both need it and neither should require a provider
+     * round-trip to answer "who was this?" in year eight.
+     */
+    email: text().notNull(),
+
+    profileId: reference()
+      .notNull()
+      .references(() => profile.id),
+
+    role: appRole().notNull().default('owner'),
+
+    /** Most recent successful authentication, and how. */
+    lastSignInAt: instant(),
+    lastStrategy: authStrategy(),
+
+    /**
+     * Revocation without deletion.
+     *
+     * Separate from `deletedAt`: a revoked identity is history worth keeping
+     * legible — §9.4 keeps tombstones for exactly this reason — and a delegate
+     * whose access ended is a different record from one that was created in
+     * error. Both are refused; only one is a mistake.
+     */
+    disabledAt: instant(),
+    disabledReason: text(),
+  },
+  (t) => [
+    /* One row per provider subject. The uniqueness that makes linkSubject
+     * idempotent under a race between two tabs. */
+    uniqueIndex('auth_identity_subject_unique').on(t.subjectId),
+    /* The per-request lookup: subject → role. Tombstones and revoked
+     * identities excluded from the index, not merely from the result (§9.6). */
+    index('auth_identity_active_idx')
+      .on(t.subjectId)
+      .where(sql`${t.disabledAt} IS NULL AND ${t.deletedAt} IS NULL`),
+    index('auth_identity_email_idx').on(t.email),
   ],
 );
 

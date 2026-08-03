@@ -16,6 +16,11 @@ packages:
 allowBuilds:
   esbuild: true
   sharp: true
+  # Native module resolver behind eslint-config-next's import plugin. Build-time
+  # only — it never ships to the browser and never runs in production. Without
+  # it, `eslint .` cannot resolve a path alias and the boundary rules (§5.0)
+  # silently stop catching violations, which is worse than the build script.
+  unrs-resolver: true
 
 # Single source of truth for dependency versions across every workspace package.
 # Blueprint §6.2: "configuration duplicated across packages drifts; configuration
@@ -38,6 +43,11 @@ catalog:
   drizzle-orm: 0.45.2
   postgres: 3.4.9
   '@supabase/supabase-js': 2.111.0
+
+  # Cookie-based session handling for the App Router. Separate package from
+  # supabase-js because the cookie plumbing differs per framework; §5.4's
+  # "no client-direct-to-database access" means this is used for auth only.
+  '@supabase/ssr': 0.12.4
 
   # drizzle-kit is build-time only (generate/migrate/studio), but its version is
   # coupled to drizzle-orm's — a mismatch produces migrations the runtime cannot
