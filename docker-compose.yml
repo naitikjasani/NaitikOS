@@ -1,0 +1,55 @@
+# Local development database.
+#
+# Blueprint §5.3 rejected seeded SQLite for local development, and the reasoning
+# governs this file:
+#
+#   "Dual-dialect Drizzle schemas are a permanent tax, and more decisively,
+#    `pgvector` and Postgres full-text search — both load-bearing in §10 — have
+#    no SQLite equivalent. Dialect drift between development and production is
+#    exactly the class of bug that costs a weekend and cannot be reproduced.
+#    One dialect, one `docker compose up`."
+#
+# The same argument pins the major version. pgvector publishes a pg18 image, but
+# production is Supabase-hosted (§5.15) and Supabase's current major is 17.
+# Running 18 locally against 17 in production would reintroduce precisely the
+# drift the section above refuses to accept. When Supabase moves, this moves.
+
+services:
+  postgres:
+    # pgvector's image is stock Postgres with the extension precompiled. §9.6
+    # requires an HNSW index on the embedding column, so the extension has to be
+    # present in development or the migration cannot be applied or tested.
+    image: pgvector/pgvector:pg17
+    container_name: naitikos-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: naitikos
+      POSTGRES_PASSWORD: naitikos
+      POSTGRES_DB: naitikos
+      # Deterministic collation. Collation changes silently corrupt text index
+      # ordering across a version upgrade, which over a twenty-year record (C2)
+      # is a genuine and very hard-to-diagnose failure.
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
+    ports:
+      # 5433, not 5432. A system Postgres is already common on a developer
+      # machine, and binding the default port makes "which database did that
+      # migration hit?" a question you can ask in the first place.
+      - '5433:5432'
+    volumes:
+      - naitikos-pgdata:/var/lib/postgresql/data
+      # Runs once, on an empty data directory. §9 requires four extensions and
+      # a migration cannot CREATE EXTENSION without superuser, so they are
+      # established here rather than in migration 0000.
+      - ./packages/db/docker/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # `pnpm db:migrate` immediately after `pnpm db:up` would otherwise race
+      # the server's first-boot initialisation.
+      test: ['CMD-SHELL', 'pg_isready -U naitikos -d naitikos']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+
+volumes:
+  naitikos-pgdata:
+    name: naitikos-pgdata

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import type { Result } from './result';
 import { all, andThen, err, fromPromise, isErr, isOk, map, mapErr, match, ok, unwrapOr } from './result';
 
 describe('Result', () => {
@@ -25,7 +26,10 @@ describe('Result', () => {
 
   it('chains fallible computations, short-circuiting on the first failure', () => {
     const double = (n: number) => ok(n * 2);
-    const fail = () => err('nope');
+    // Annotated rather than inferred: `err('nope')` alone is an `Err<string>`
+    // whose success branch infers as `unknown`, so chaining it into `double`
+    // would not compile. The annotation states the branch the chain expects.
+    const fail = (): Result<number, string> => err('nope');
 
     expect(andThen(ok(2), double)).toEqual(ok(4));
     expect(andThen(andThen(ok(2), fail), double)).toEqual(err('nope'));

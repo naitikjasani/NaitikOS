@@ -55,6 +55,39 @@ const DEFAULT_ALLOWED_SUFFIXES = ['Count', 'Index', 'Total', 'Ratio', 'Percent',
 /** Zero and one are near-always initialisers or identity values, not measurements. */
 const TRIVIAL_VALUES = new Set([0, 1, -1]);
 
+/**
+ * `Array.from({ length: n })` — the standard idiom for building an array of a
+ * given size.
+ *
+ * The `length` here is an array cardinality, not a physical length, and the
+ * spelling is fixed by the language: it cannot be renamed to `lengthCount` as
+ * the rule's message suggests, because `Array.from` reads that exact property.
+ * Without this exemption the rule fires on ordinary array construction, and
+ * per the scope-discipline note above, "a noisy rule gets disabled — taking the
+ * useful signal with it."
+ */
+function isArrayFromLengthIdiom(propertyNode) {
+  if (propertyNode.key.type !== 'Identifier' || propertyNode.key.name !== 'length') return false;
+
+  const objectExpression = propertyNode.parent;
+  if (!objectExpression || objectExpression.type !== 'ObjectExpression') return false;
+
+  const call = objectExpression.parent;
+  if (!call || call.type !== 'CallExpression') return false;
+  // Must be the array-like argument, not some later parameter.
+  if (call.arguments[0] !== objectExpression) return false;
+
+  const { callee } = call;
+  return (
+    callee.type === 'MemberExpression' &&
+    !callee.computed &&
+    callee.object.type === 'Identifier' &&
+    callee.object.name === 'Array' &&
+    callee.property.type === 'Identifier' &&
+    callee.property.name === 'from'
+  );
+}
+
 function buildMatcher(concepts) {
   // Matches `dose`, `doseMg`, `targetDose`, `dose_mg` — but not `doseCount`.
   const alternation = concepts.join('|');
@@ -133,6 +166,7 @@ export const noBareQuantity = {
       // { weight: 74.2 }
       Property(node) {
         if (node.computed || node.shorthand) return;
+        if (isArrayFromLengthIdiom(node)) return;
         check(node.key, node.value);
       },
       // class Foo { weight = 74.2 }

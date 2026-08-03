@@ -2,6 +2,21 @@ packages:
   - 'apps/*'
   - 'packages/*'
 
+# pnpm blocks dependency lifecycle scripts by default. Only these may run, and
+# each is here deliberately — an unreviewed postinstall script is arbitrary code
+# execution against a machine holding medical data (blueprint §5.14).
+#
+# `esbuild` downloads a platform binary in postinstall; tsx and vitest are
+# unusable without it. `sharp` does the same for libvips, and is listed ahead of
+# the media pipeline (§5.5) that will need it.
+#
+# Note for future edits: this key was `onlyBuiltDependencies` (a list) before
+# pnpm 11 renamed it to `allowBuilds` (a map). The old key is silently ignored
+# rather than rejected, so a stale one looks correct and does nothing.
+allowBuilds:
+  esbuild: true
+  sharp: true
+
 # Single source of truth for dependency versions across every workspace package.
 # Blueprint §6.2: "configuration duplicated across packages drifts; configuration
 # in a package does not." The same reasoning applies to versions — one bump here
@@ -12,7 +27,7 @@ catalog:
   react: 19.2.8
   react-dom: 19.2.8
   '@types/react': 19.2.7
-  '@types/react-dom': 19.2.5
+  '@types/react-dom': 19.2.4
 
   # --- Runtime: state --------------------------------------------------------
   '@tanstack/react-query': 5.101.4
@@ -23,6 +38,11 @@ catalog:
   drizzle-orm: 0.45.2
   postgres: 3.4.9
   '@supabase/supabase-js': 2.111.0
+
+  # drizzle-kit is build-time only (generate/migrate/studio), but its version is
+  # coupled to drizzle-orm's — a mismatch produces migrations the runtime cannot
+  # read. Catalogued next to its runtime pair so the two are bumped together.
+  drizzle-kit: 0.31.10
 
   # --- Runtime: validation ---------------------------------------------------
   zod: 4.4.3
@@ -45,12 +65,12 @@ catalog:
 
   # --- Lint / format ---------------------------------------------------------
   eslint: 10.8.0
-  '@eslint/js': 10.8.0
+  '@eslint/js': 10.0.1
   typescript-eslint: 8.65.0
   eslint-plugin-boundaries: 7.1.0
   eslint-config-next: 16.2.12
   eslint-config-prettier: 10.1.8
-  eslint-plugin-react-hooks: 8.0.1
+  eslint-plugin-react-hooks: 7.1.1
   globals: 16.5.0
   prettier: 3.9.6
   prettier-plugin-tailwindcss: 0.7.1
@@ -62,10 +82,3 @@ catalog:
   # --- Node ------------------------------------------------------------------
   '@types/node': 24.10.1
   tsx: 4.21.1
-
-# pnpm 11 blocks lifecycle scripts by default. Only these are permitted to run,
-# and each is here deliberately — an unreviewed postinstall script is arbitrary
-# code execution against a machine holding medical data (blueprint §5.14).
-onlyBuiltDependencies:
-  - esbuild
-  - sharp

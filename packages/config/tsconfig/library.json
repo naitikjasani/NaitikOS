@@ -6,6 +6,19 @@
     "moduleResolution": "bundler",
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true
+    "sourceMap": true,
+
+    /* `.npmrc` sets `node-linker=isolated`, which is what makes the §5.0
+     * layering rule enforceable — a package cannot import what it does not
+     * declare. The side effect is that TypeScript's automatic `@types`
+     * discovery no longer walks up into a hoisted tree and finds nothing, so
+     * ambient Node globals (`crypto` in shared/id.ts, `process` and `URL` in
+     * db/env.ts) go unresolved.
+     *
+     * Declaring it explicitly restores them without reintroducing hoisting.
+     * Note this is `lib`-adjacent, not a licence to use Node APIs anywhere:
+     * `core` and `shared` still may not import `node:*` modules, and the
+     * boundary lint rules are what enforce that. */
+    "types": ["node"]
   }
 }
