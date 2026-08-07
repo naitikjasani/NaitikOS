@@ -96,6 +96,13 @@ catalog:
   '@tailwindcss/postcss': 4.3.3
   turbo: 2.10.8
   vitest: 4.1.10
+  # Version-locked to vitest — the coverage provider tracks it exactly, and a
+  # mismatch fails at run time rather than at install.
+  #
+  # Its absence is why §11.4's thresholds were inert until now: `vitest run`
+  # silently ignores a `coverage.thresholds` block when no provider is installed,
+  # so three packages carried a coverage gate that had never once been evaluated.
+  '@vitest/coverage-v8': 4.1.10
   '@vitejs/plugin-react': 5.1.1
 
   # --- Lint / format ---------------------------------------------------------

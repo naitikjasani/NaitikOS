@@ -12,3 +12,49 @@ export { createAuthAuditRecorder, AUTH_ENTITY_TYPE } from './audit.repository';
 export type { AuditRecorderOptions } from './audit.repository';
 export { createProfileRepository, PREFERENCES_KEY } from './profile.repository';
 export type { ProfileRepository } from './profile.repository';
+
+/* --- The event backbone (ADR 0005) ------------------------------------ */
+export {
+  createEventStore,
+  createHandledLedger,
+  createDeadLetterSink,
+  openDeadLetters,
+  latestSequence,
+  unknownEventTypes,
+} from './event-store.repository';
+
+export { createTimelineRepository, createTimelineProjectionHandler } from './timeline.repository';
+export type { TimelineRepository } from './timeline.repository';
+
+/* --- Deferred work and the media outbox (§5.2, §5.7) ------------------- */
+export { createTaskRepository } from './task.repository';
+export type { TaskRepository, EnqueueTaskInput } from './task.repository';
+
+export { createUploadOutboxRepository } from './upload-outbox.repository';
+export type {
+  UploadOutboxRepository,
+  EnqueueUploadInput,
+  OutboxEntry,
+  OutboxStatus,
+  OutboxHealth,
+} from './upload-outbox.repository';
+
+/* --- The nightly run's completion record (§5.16) ----------------------- */
+export {
+  createJobRunRecorder,
+  lastJobRun,
+  hasCompletedRunSince,
+  abandonedJobRuns,
+  NIGHTLY_JOB_NAME,
+} from './job-run.repository';
+
+/* --- Observability, in our own Postgres (§5.11 — no vendor) ------------ */
+export {
+  createObservability,
+  createConsoleLogger,
+  createPostgresMetrics,
+  createLoggingTracer,
+  createErrorReporter,
+  createAuditHook,
+} from './observability.repository';
+export type { ObservabilityOptions } from './observability.repository';

@@ -25,7 +25,8 @@
  */
 
 import { sql } from 'drizzle-orm';
-import { bigint, customType, integer, numeric, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { bigint, customType, integer, numeric, text, uuid } from 'drizzle-orm/pg-core';
+import { parseSqlTimestamp } from '@naitikos/core';
 
 /* -------------------------------------------------------------------------
  * Identity
@@ -60,14 +61,45 @@ export const reference = () => uuid();
 /**
  * A point in time. Always `timestamptz`, always read back as an ISO 8601 string.
  *
- * `mode: 'string'` is chosen over `mode: 'date'` deliberately. A JavaScript
- * `Date` is a UTC instant with a local-time API bolted on; every read through it
- * is an opportunity to silently reinterpret an instant in the runtime's zone.
- * Over a twenty-year record (C2) that is a slow corruption with no error
- * message. Strings cross the boundary losslessly, and `core/temporal` owns all
+ * A string rather than a `Date`, deliberately. A JavaScript `Date` is a UTC
+ * instant with a local-time API bolted on; every read through it is an
+ * opportunity to silently reinterpret an instant in the runtime's zone. Over a
+ * twenty-year record (C2) that is a slow corruption with no error message.
+ * Strings cross the boundary losslessly, and `core/temporal` owns all
  * interpretation — which is what §11.3 asks for.
+ *
+ * ## Why this is a customType rather than `timestamp({ mode: 'string' })`
+ *
+ * Because `mode: 'string'` returns **Postgres's text format, not ISO 8601** —
+ * `2026-08-03 08:00:00+00`, with a space instead of `T`, microseconds, and a
+ * two-digit offset that `Date` refuses to parse. The sentence above was simply
+ * false until this was written, and the milestone-4 integration tests are what
+ * caught it.
+ *
+ * It matters because timestamps get compared as strings: an ISO string the
+ * application just built sorts *after* a read-back Postgres one for the same
+ * instant, since `'T'` (0x54) > `' '` (0x20). Mixed comparisons therefore order
+ * wrongly, and nothing errors.
+ *
+ * The obvious fix — a postgres.js `types` override — does not work, and the
+ * reason is worth recording so nobody tries it twice: `drizzle-orm/postgres-js`
+ * overwrites `client.options.parsers` for every date and timestamp OID with a
+ * transparent parser *after* the client is constructed, precisely so that column
+ * mode controls conversion. A driver-level override is silently discarded.
+ *
+ * So the normalisation lives here, on the column, where Drizzle's own
+ * `fromDriver` hook runs.
+ *
+ * Note the consequence for call sites: a `customType` has no `.defaultNow()`
+ * helper. Write `.default(sql`now()`)`, which emits identical SQL.
  */
-export const instant = () => timestamp({ withTimezone: true, mode: 'string' });
+export const instant = customType<{ data: string; driverData: string }>({
+  dataType: () => 'timestamp with time zone',
+  fromDriver: (value: string) => parseSqlTimestamp(value) ?? value,
+  // Identity: Postgres accepts ISO 8601 directly, and reformatting on the way in
+  // would be an opportunity to lose the offset.
+  toDriver: (value: string) => value,
+});
 
 /**
  * The IANA zone an instant was captured in — `Asia/Kolkata`, `Europe/London`.
@@ -92,8 +124,8 @@ export const ianaZone = () => text();
  * quietly lies about what was known when.
  */
 export const rowTimestamps = {
-  createdAt: instant().notNull().defaultNow(),
-  updatedAt: instant().notNull().defaultNow(),
+  createdAt: instant().notNull().default(sql`now()`),
+  updatedAt: instant().notNull().default(sql`now()`),
 };
 
 /* -------------------------------------------------------------------------

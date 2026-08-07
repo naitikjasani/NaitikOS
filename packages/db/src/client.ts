@@ -61,15 +61,29 @@ export function createDatabase(url: string = databaseUrl(), options: ClientOptio
         serialize: (x: string) => x,
         parse: (x: string) => x,
       },
+
+      /*
+       * Timestamps are deliberately **not** overridden here.
+       *
+       * Postgres returns `timestamptz` as `2026-08-03 08:00:00+00`, which is not
+       * ISO 8601, and normalising it looks like a job for a driver-level parser.
+       * It is not, and the reason is worth recording so nobody spends an hour on
+       * it twice: `drizzle-orm/postgres-js` overwrites
+       * `client.options.parsers` for OIDs 1184, 1082, 1083, 1114, 1182, 1185,
+       * 1115, and 1231 with a transparent parser *after* the client is built —
+       * intentionally, so that Drizzle's column mode owns the conversion. Any
+       * `types` entry for those OIDs is silently discarded.
+       *
+       * The normalisation therefore lives on the column, in `columns.ts`'s
+       * `instant()`, where Drizzle's own `fromDriver` hook runs.
+       */
     },
 
     /**
-     * Never coerce timestamps into `Date`.
+     * `undefined` in a query parameter becomes SQL NULL.
      *
-     * Same argument as `columns.ts` makes for `mode: 'string'`: a `Date` is a
-     * UTC instant with a local-time API attached, and every read through it is
-     * a chance to reinterpret an instant in the runtime's zone. `core/temporal`
-     * owns interpretation (§11.3).
+     * Without it postgres.js throws on an undefined parameter, which turns an
+     * optional column left unset into a runtime error rather than a null.
      */
     transform: { undefined: null },
 

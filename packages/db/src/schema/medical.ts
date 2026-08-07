@@ -66,7 +66,7 @@ const bitemporal = {
   validFrom: instant().notNull(),
   /** Null while still true. */
   validTo: instant(),
-  recordedFrom: instant().notNull().defaultNow(),
+  recordedFrom: instant().notNull().default(sql`now()`),
   /** Null while still believed. Closing this is how a correction is recorded. */
   recordedTo: instant(),
 };

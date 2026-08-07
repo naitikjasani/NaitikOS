@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Persistence. Drizzle schema, migrations, repositories. Semi-durable — the schema outlives the ORM.",
+  "description": "Persistence. Drizzle schema, migrations, repositories. Semi-durable \u2014 the schema outlives the ORM.",
   "exports": {
     ".": "./src/index.ts",
     "./schema": "./src/schema/index.ts",
@@ -30,6 +30,7 @@
   "devDependencies": {
     "@naitikos/config": "workspace:*",
     "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "drizzle-kit": "catalog:",
     "eslint": "catalog:",
     "tsx": "catalog:",

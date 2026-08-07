@@ -74,7 +74,7 @@ export const auditLog = pgTable(
     actor: text().notNull(),
     changeReason: text(),
 
-    occurredAt: instant().notNull().defaultNow(),
+    occurredAt: instant().notNull().default(sql`now()`),
     zone: ianaZone(),
     /** Correlates a mutation with the request that caused it (§5.13). */
     traceId: text(),
@@ -112,7 +112,7 @@ export const appEvent = pgTable(
     /** Route pattern, never a populated path: `/body/gym/exercises/:id`. */
     route: text(),
 
-    occurredAt: instant().notNull().defaultNow(),
+    occurredAt: instant().notNull().default(sql`now()`),
     zone: ianaZone(),
     /** Coarse device class, for the mobile-versus-desktop split. */
     deviceClass: text(),
@@ -188,7 +188,7 @@ export const idempotencyRecord = pgTable(
     /** Set while in flight, so concurrent replays wait rather than double-execute. */
     isComplete: boolean().notNull().default(false),
 
-    createdAt: instant().notNull().defaultNow(),
+    createdAt: instant().notNull().default(sql`now()`),
     completedAt: instant(),
     /** Pruned after this. Long enough to outlive any plausible offline gap. */
     expiresAt: instant().notNull(),
@@ -215,7 +215,7 @@ export const jobRun = pgTable(
     jobName: text().notNull(),
     status: jobStatus().notNull().default('pending'),
 
-    startedAt: instant().notNull().defaultNow(),
+    startedAt: instant().notNull().default(sql`now()`),
     finishedAt: instant(),
     durationMs: integer(),
 
@@ -253,7 +253,7 @@ export const schemaMigration = pgTable(
     id: text().primaryKey(),
     /** SHA-256 of the SQL, so an edited-after-apply migration is detectable. */
     checksum: text().notNull(),
-    appliedAt: instant().notNull().defaultNow(),
+    appliedAt: instant().notNull().default(sql`now()`),
     /** Application version that applied it. */
     appliedBy: text(),
     /** §9.4: data migrations are separate from structural ones. */

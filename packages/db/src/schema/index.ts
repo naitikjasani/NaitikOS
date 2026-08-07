@@ -46,3 +46,9 @@ export * from './ai';
 
 /** Audit, telemetry, sync, idempotency, jobs. */
 export * from './operations';
+
+/**
+ * The event log, its timeline projection, deferred tasks, and the upload outbox.
+ * See docs/adr/0005-domain-events-as-integration-log.md.
+ */
+export * from './events';

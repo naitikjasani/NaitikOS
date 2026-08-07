@@ -108,7 +108,7 @@ export const foodVersion = pgTable(
     servingLabel: text(),
 
     /** When this label became true. */
-    effectiveFrom: instant().notNull().defaultNow(),
+    effectiveFrom: instant().notNull().default(sql`now()`),
     /** Where the numbers came from: packaging, a database, a manual estimate. */
     sourceNote: text(),
   },

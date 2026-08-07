@@ -467,7 +467,7 @@ export const mediaAccessLog = pgTable(
     mediaObjectId: reference()
       .notNull()
       .references(() => mediaObject.id),
-    accessedAt: instant().notNull().defaultNow(),
+    accessedAt: instant().notNull().default(sql`now()`),
     /** `view`, `export`, `inference`. The last one is the one that matters (P7). */
     purpose: text().notNull(),
     grantedConsent: consentScope(),

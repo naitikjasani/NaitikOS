@@ -194,7 +194,7 @@ export const observation = pgTable(
     /** The IANA zone it was captured in (§5.3). */
     observedZone: ianaZone().notNull(),
     /** When the system was told. Diverges from `observedAt` constantly (§9.5). */
-    recordedAt: instant().notNull().defaultNow(),
+    recordedAt: instant().notNull().default(sql`now()`),
 
     /** FK to provenance. §9.3(2): no unattributable facts. */
     sourceId: reference()
@@ -315,7 +315,7 @@ export const sample = pgTable(
     unit: text().notNull(),
     observedAt: instant().notNull(),
     observedZone: ianaZone().notNull(),
-    recordedAt: instant().notNull().defaultNow(),
+    recordedAt: instant().notNull().default(sql`now()`),
     sourceId: reference()
       .notNull()
       .references(() => observationSource.id),
@@ -396,7 +396,7 @@ export const metricRollup = pgTable(
     minValue: quantity(),
     maxValue: quantity(),
 
-    computedAt: instant().notNull().defaultNow(),
+    computedAt: instant().notNull().default(sql`now()`),
   },
   (t) => [
     uniqueIndex('metric_rollup_unique').on(t.metricKey, t.grain, t.bucketStart),
