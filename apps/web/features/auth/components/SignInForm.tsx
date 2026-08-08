@@ -15,6 +15,7 @@ import { useRouter } from 'next/navigation';
 import { useId, useState, type FormEvent, type ReactNode } from 'react';
 import { signInRequestSchema } from '@naitikos/api';
 import { STRATEGY_REGISTRY } from '@naitikos/core';
+import { Button, Stack, Text, TextField } from '@naitikos/design-system';
 
 import { signIn } from '../services/authClient';
 
@@ -95,17 +96,27 @@ export function SignInForm({ redirectTo }: SignInFormProps): ReactNode {
 
   return (
     <form onSubmit={(e) => void handleSubmit(e)} noValidate>
-      {formError !== null && (
-        // `role="alert"` announces it to a screen reader without moving focus.
-        <p className="alert" role="alert" id={errorId}>
-          {formError}
-        </p>
-      )}
+      <Stack gap="4">
+        {formError !== null && (
+          /*
+           * The ARIA `role` sits on the wrapper because `Text`'s own `role` prop
+           * is the *typography* role — two meanings of the same word, and the
+           * component owns the visual one.
+           *
+           * `alert` announces without moving focus. Rendered as text rather than
+           * an `ErrorState`: that component owns a whole empty region, and this
+           * is one line inside a form the user should stay in.
+           */
+          <div role="alert" id={errorId}>
+            <Text role="body-sm" tone="critical">
+              {formError}
+            </Text>
+          </div>
+        )}
 
-      <div className="field">
-        <label htmlFor={emailId}>Email</label>
-        <input
+        <TextField
           id={emailId}
+          label="Email"
           name="email"
           type="email"
           value={email}
@@ -117,20 +128,12 @@ export function SignInForm({ redirectTo }: SignInFormProps): ReactNode {
           spellCheck={false}
           required
           disabled={isSubmitting}
-          aria-invalid={fieldErrors.email !== undefined}
-          aria-describedby={fieldErrors.email === undefined ? undefined : `${emailId}-error`}
+          {...(fieldErrors.email === undefined ? {} : { error: fieldErrors.email })}
         />
-        {fieldErrors.email !== undefined && (
-          <span className="field-error" id={`${emailId}-error`}>
-            {fieldErrors.email}
-          </span>
-        )}
-      </div>
 
-      <div className="field">
-        <label htmlFor={passwordId}>Password</label>
-        <input
+        <TextField
           id={passwordId}
+          label="Password"
           name="password"
           type="password"
           value={password}
@@ -138,30 +141,25 @@ export function SignInForm({ redirectTo }: SignInFormProps): ReactNode {
           autoComplete="current-password"
           required
           disabled={isSubmitting}
-          aria-invalid={fieldErrors.password !== undefined}
-          aria-describedby={fieldErrors.password === undefined ? undefined : `${passwordId}-error`}
+          {...(fieldErrors.password === undefined ? {} : { error: fieldErrors.password })}
         />
-        {fieldErrors.password !== undefined && (
-          <span className="field-error" id={`${passwordId}-error`}>
-            {fieldErrors.password}
-          </span>
+
+        <Button type="submit" variant="primary" fullWidth isLoading={isSubmitting}>
+          {isSubmitting ? 'Signing in…' : 'Sign in'}
+        </Button>
+
+        {/*
+          The §5.4 divergence, stated in the UI rather than only in a comment.
+          The blueprint prefers passkey and magic link; keeping the gap visible is
+          what stops "temporarily using passwords" becoming permanent by default.
+        */}
+        {!STRATEGY_REGISTRY.passkey.enabled && (
+          <Text role="caption" tone="tertiary" as="p">
+            Passkey and email link sign-in are the intended factors and are not
+            enabled yet.
+          </Text>
         )}
-      </div>
-
-      <button className="button" type="submit" disabled={isSubmitting}>
-        {isSubmitting ? 'Signing in…' : 'Sign in'}
-      </button>
-
-      {/*
-        The §5.4 divergence, stated in the UI rather than only in a comment.
-        The blueprint prefers passkey and magic link; keeping the gap visible is
-        what stops "temporarily using passwords" becoming permanent by default.
-      */}
-      {!STRATEGY_REGISTRY.passkey.enabled && (
-        <p className="muted" style={{ marginTop: 'calc(var(--space) * 2)' }}>
-          Passkey and email link sign-in are the intended factors and are not enabled yet.
-        </p>
-      )}
+      </Stack>
     </form>
   );
 }

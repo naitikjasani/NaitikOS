@@ -51,6 +51,28 @@ import {
 /** Header carrying the CSP nonce to the render layer. */
 const NONCE_HEADER = 'x-naitikos-nonce';
 
+/**
+ * The request headers to forward onward, carrying the nonce.
+ *
+ * **This has to be a *request* header.** `headers()` in a Server Component reads
+ * the headers of the incoming request, not the ones on the response — so setting
+ * the nonce only on the response (which is what this file used to do) meant
+ * `RootLayout` read `null`, fell back to `''`, and rendered the pre-paint theme
+ * script with an empty nonce. Two symptoms followed: a hydration mismatch on
+ * `<script nonce>`, and — the one that matters — the script being **blocked by
+ * the CSP**, since `script-src` has no `unsafe-inline`. The theme stamp silently
+ * never ran.
+ *
+ * Rebuilt from `request.headers` at each call site rather than hoisted, because
+ * `request.cookies.set()` mutates the underlying `cookie` header and the Supabase
+ * refresh path needs the updated value forwarded.
+ */
+function forwardedHeaders(request: NextRequest, nonce: string): Headers {
+  const headers = new Headers(request.headers);
+  headers.set(NONCE_HEADER, nonce);
+  return headers;
+}
+
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   const { pathname, search } = request.nextUrl;
 
@@ -69,7 +91,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
    * symptom is a user signed out every hour with no error anywhere.
    */
   let response = NextResponse.next({
-    request: { headers: new Headers(request.headers) },
+    request: { headers: forwardedHeaders(request, nonce) },
   });
 
   const supabase = createServerClient(
@@ -83,7 +105,11 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
           for (const { name, value } of cookiesToSet) {
             request.cookies.set(name, value);
           }
-          response = NextResponse.next({ request });
+          // Rebuilt from the now-mutated request, so the refreshed `cookie`
+          // header *and* the nonce both survive this second construction.
+          response = NextResponse.next({
+            request: { headers: forwardedHeaders(request, nonce) },
+          });
           for (const { name, value, options } of cookiesToSet) {
             response.cookies.set(name, value, options);
           }
@@ -172,9 +198,9 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
   /* --- 4. Headers ----------------------------------------------------- */
 
-  // The nonce travels to the render layer on a request header, which is how a
-  // Server Component reads it without a global.
-  response.headers.set(NONCE_HEADER, nonce);
+  // The nonce reached the render layer on the *request* headers, set by
+  // `forwardedHeaders` above — that is what `headers()` reads in a Server
+  // Component. Nothing to set here.
   return withSecurity(response, nonce, response);
 }
 
@@ -209,7 +235,6 @@ function withSecurity(
     target.headers.set(name, value);
   }
 
-  target.headers.set(NONCE_HEADER, nonce);
   return target;
 }
 

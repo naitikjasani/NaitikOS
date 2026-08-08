@@ -1,0 +1,47 @@
+/**
+ * The unauthenticated shell.
+ *
+ * Page layout, not components — §8.1 keeps the component library free of
+ * page-specific geometry, and a full-viewport centred card is exactly that.
+ * Everything inside the card is `Card` / `Stack` / `Text` / `TextField` from the
+ * design system; these three rules only place it.
+ *
+ * Every value is a token. A raw pixel here would be a value outside the scale
+ * (§8.1's whole point), and this file is small enough that the temptation is
+ * strongest.
+ */
+
+.auth-shell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /**
+   * `100dvh`, not `100vh`.
+   *
+   * On iOS Safari `100vh` is the height with the URL bar *hidden*, so a centred
+   * card sits noticeably below centre until the user scrolls — and on a sign-in
+   * page there is nothing to scroll, so it never corrects. `dvh` tracks the
+   * visible viewport.
+   */
+  min-height: 100dvh;
+
+  padding: var(--space-6);
+  /* The notch and the home indicator (§8.4's mobile-first, without qualification). */
+  padding-block-start: max(var(--space-6), env(safe-area-inset-top));
+  padding-block-end: max(var(--space-6), env(safe-area-inset-bottom));
+
+  background: var(--color-bg-base);
+}
+
+.auth-card {
+  width: 100%;
+  /**
+   * 24rem, not a percentage.
+   *
+   * A form is read one field at a time, so its comfortable width is set by the
+   * line length of the labels rather than by the viewport. On a wide screen a
+   * percentage-width card stretches into something that looks like a page.
+   */
+  max-width: 24rem;
+}

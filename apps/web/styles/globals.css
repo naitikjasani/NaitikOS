@@ -6,7 +6,8 @@
  *   1. `tokens.css`     — generated tier 1/2/3 custom properties (§8.1)
  *   2. `base.css`       — reset, typography roles, motion, focus (§8.6, §8.13)
  *   3. `components.css` — the component library
- *   4. `shell.css`      — this app's layout
+ *   4. `shell.css`      — the authenticated app's layout
+ *   5. `auth.css`       — the unauthenticated shell
  *
  * Nothing is declared here. A rule in this file would be a rule outside the
  * token system, and §8.1's whole point is that there is no such place.
@@ -16,3 +17,4 @@
 @import '@naitikos/design-system/base.css';
 @import '@naitikos/design-system/components.css';
 @import './shell.css';
+@import './auth.css';

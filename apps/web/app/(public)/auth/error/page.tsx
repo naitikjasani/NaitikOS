@@ -8,6 +8,7 @@
 
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { Button, Card, CardBody, Stack, Text } from '@naitikos/design-system';
 
 import { SIGN_IN_PATH } from '@/lib/auth/routes';
 
@@ -36,15 +37,32 @@ export default async function AuthErrorPage({
 
   return (
     <main className="auth-shell" id="main">
-      <div className="auth-card">
-        <h1>Sign-in problem</h1>
-        <p className="alert" role="alert">
-          {message}
-        </p>
-        <Link className="button" href={SIGN_IN_PATH} style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>
-          Back to sign in
-        </Link>
-      </div>
+      <Card className="auth-card">
+        <CardBody>
+          <Stack gap="6">
+            <Stack gap="2">
+              <Text role="title-1" as="h1">
+                Sign-in problem
+              </Text>
+              {/* The ARIA role goes on the wrapper — `Text`'s `role` is typography. */}
+              <div role="alert">
+                <Text role="body" tone="secondary">
+                  {message}
+                </Text>
+              </div>
+            </Stack>
+
+            {/*
+              `asChild` so this stays an anchor. A `<button>` that navigates
+              breaks middle-click, "open in new tab", and the browser's own link
+              affordances — which is exactly why `Button` has the prop.
+            */}
+            <Button asChild variant="primary" fullWidth>
+              <Link href={SIGN_IN_PATH}>Back to sign in</Link>
+            </Button>
+          </Stack>
+        </CardBody>
+      </Card>
     </main>
   );
 }
