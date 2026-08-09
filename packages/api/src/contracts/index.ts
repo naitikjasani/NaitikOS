@@ -9,3 +9,9 @@ export * from './observations';
 
 /** Gym — sessions, sets, exercises, volume (§4.1). */
 export * from './gym';
+
+/** Mind — episodes, journal, practices, medication adherence (§4.7). */
+export * from './mind';
+
+/** Skin, the routine engine, and the capture protocol (§4.2, §9.2, §9.8). */
+export * from './skin';

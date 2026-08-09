@@ -60,6 +60,22 @@ export type {
 export { createProgramRepository } from './program.repository';
 export type { ProgramRepository } from './program.repository';
 
+/* --- Mind (§4.7) ------------------------------------------------------- */
+export { createMindRepository } from './mind.repository';
+export type { MindRepository, EpisodeWritten, PracticeWritten } from './mind.repository';
+
+/* --- Skin (§4.2) ------------------------------------------------------- */
+export { createSkinRepository } from './skin.repository';
+export type { SkinRepository, SkinStateWritten } from './skin.repository';
+
+/* --- The routine engine (§9.2) ----------------------------------------- */
+export { createRoutineRepository, loggedDays } from './routine.repository';
+export type { RoutineRepository, LogStepInput } from './routine.repository';
+
+/* --- The medication register (§4.4, §4.7) ------------------------------ */
+export { createMedicationRepository } from './medication.repository';
+export type { MedicationRepository, LogDoseInput } from './medication.repository';
+
 /* --- The export (§9.10) ------------------------------------------------ */
 export { createExportRepository, allTableNames } from './export.repository';
 export type { ExportRepository, ExportOptions } from './export.repository';

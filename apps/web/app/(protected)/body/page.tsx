@@ -26,6 +26,11 @@ const MODULES = [
     description: 'Sessions, exercises, progression, volume.',
   },
   {
+    href: '/body/skin',
+    title: 'Skin',
+    description: 'Daily state per region, routine adherence, the product register, photography.',
+  },
+  {
     href: '/body/composition',
     title: 'Composition',
     description: 'Bodyweight and the seven-day trend.',

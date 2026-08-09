@@ -1116,6 +1116,125 @@
   padding-block-start: var(--space-1);
 }
 
+/* Annotation markers — §8.9(2), §4.7. The number sits on the plot; the words
+   sit here, where they can wrap at 360px instead of overlapping each other. */
+.nos-plot__marker-number {
+  fill: var(--color-surface-raised);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.nos-plot__markers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: var(--space-2) 0 0;
+  list-style: none;
+}
+
+.nos-plot__marker {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.nos-plot__marker-badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 16px;
+  block-size: 16px;
+  border-radius: var(--radius-full);
+  background: var(--chart-annotation);
+  color: var(--color-surface-raised);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   Skin capture — the ghost overlay and the protocol checklist (§4.2, §9.8)
+   -------------------------------------------------------------------------- */
+
+/* The overlay is the *primary* protocol mechanism (§14.2 Finding 9): it makes
+   the correct behaviour easier than the incorrect one, which is the only kind
+   of enforcement that survives contact with a person in a hurry. */
+.nos-ghost {
+  position: relative;
+  display: block;
+  inline-size: 100%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-sunken);
+}
+
+.nos-ghost__layer {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+/* Low enough to align against, high enough to see. Deliberately not a slider:
+   an opacity control is a setting nobody adjusts and everybody has to think
+   about, in a flow that has to take ten seconds. */
+.nos-ghost__reference {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
+.nos-ghost__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  block-size: 100%;
+  padding: var(--space-4);
+  text-align: center;
+}
+
+.nos-protocol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nos-protocol__item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.nos-protocol__dot {
+  flex: none;
+  inline-size: 8px;
+  block-size: 8px;
+  margin-block-start: 6px;
+  border-radius: var(--radius-full);
+}
+
+.nos-protocol__dot--pass {
+  background: var(--color-data-2);
+}
+
+/* Amber, not red. An advisory is not a failure (§14.2 Finding 9) and the photo
+   is stored either way. */
+.nos-protocol__dot--advisory {
+  background: var(--color-data-4);
+}
+
+.nos-protocol__dot--unknown {
+  background: var(--color-border);
+}
+
 /* --------------------------------------------------------------------------
    Adherence grid — §8.9's calendar heatmap
    -------------------------------------------------------------------------- */
@@ -1231,6 +1350,32 @@
 .nos-card__link:focus-visible {
   outline: var(--focus-ring-width) solid var(--color-focus-ring);
   outline-offset: calc(var(--focus-ring-width) * -1);
+}
+
+/* An inline link inside a card, as opposed to one that *is* the card.
+   `.nos-card__link` carries a negative margin so its hit area reaches the card
+   edge; using it inline pulls the row out of the card. Separate class rather
+   than a modifier, because they are different things that happen to be links. */
+.nos-inline-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--color-border);
+  text-underline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+.nos-inline-link:hover {
+  text-decoration-color: currentcolor;
+}
+
+.nos-inline-link:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* The operator's own line breaks, kept. They typed it in lines for a reason. */
+.nos-prewrap {
+  white-space: pre-wrap;
 }
 
 /* A selectable row in a list — the exercise picker, and anything like it. */

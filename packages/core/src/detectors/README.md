@@ -2,16 +2,27 @@
 
 Stage 1 of the Insights Engine: deterministic detection. No model involvement.
 
-**Owns:** the nine detector families in §10.6 — changepoint, correlation, adherence, streak, threshold, cycle, anomaly, stagnation, divergence — plus the statistical controls that keep them honest.
+**Owns:** the two detector families §2.1 puts in the MVP — adherence and streak —
+and the battery that applies §10.6's five statistical controls to them.
 
-**The controls are not optional.** §10.6 is explicit that a naive implementation "will generate spurious findings continuously... it would quietly make the insight surface untrustworthy, and an untrustworthy insight surface in a health application is worse than none." All five are mandatory:
+**Does not own** the other seven families in §10.6's table. They are V2, and
+adding one means passing it through `runBattery` rather than around it.
 
-1. Minimum-N gates per detector.
-2. Benjamini–Hochberg FDR control across the **whole nightly battery**, not per-detector.
-3. Pre-registered hypothesis pairs; exploratory findings labelled as such.
-4. Out-of-sample confirmation before promotion to the inbox.
-5. No insights before day 60.
+## The controls, and where each one is
 
-Every finding must state what it does **not** prove.
+| Control | Where |
+|---|---|
+| 1. Minimum-N gates | in each detector, reported as `InsufficientData` |
+| 2. Benjamini–Hochberg across the whole battery | `battery.ts` → `statistics/fdr.ts` |
+| 3. Pre-registered hypotheses | `PRE_REGISTERED` in `battery.ts` |
+| 4. Out-of-sample confirmation | `battery.ts`, via `heldFindingIds` |
+| 5. No insights before day 60 | `baselineState` — **applies to inference, not to counts** |
 
-Blueprint §10.6.
+Control 5's reading is a deviation from the literal text of §10.6 and is argued
+in [`docs/insights.md`](../../../../docs/insights.md) §3. If the reading is wrong,
+the fix is one boolean.
+
+`doesNotProve` is a required field on `Finding`, so a detector cannot construct
+one without writing that sentence.
+
+Blueprint §10.6, §2.1.

@@ -64,13 +64,23 @@ export const PRIMARY_NAV: readonly NavItem[] = Object.freeze([
     label: 'Body',
     href: '/body',
     icon: 'nav.body',
-    // Available from the Gym milestone: `/body`, `/body/gym` and its four views
-    // exist, plus `/body/composition`. Skin and Sleep arrive in week four and
-    // are absent until they do — §3.3 R6.
+    // `/body`, `/body/gym` and its four views, `/body/composition`, and from
+    // week four `/body/skin` and its four. Sleep has no module of its own in the
+    // MVP — it is two Daily Close fields (§4.6) — so there is no `/body/sleep`
+    // route and §3.3 R6 keeps it absent rather than empty.
     available: true,
     phase: 'mvp',
   },
-  { id: 'mind', label: 'Mind', href: '/mind', icon: 'nav.mind', available: false, phase: 'mvp' },
+  {
+    id: 'mind',
+    label: 'Mind',
+    href: '/mind',
+    icon: 'nav.mind',
+    // Available from week four: the overview, anxiety, journal, practices and
+    // the medication lens.
+    available: true,
+    phase: 'mvp',
+  },
   {
     id: 'timeline',
     label: 'Timeline',

@@ -64,7 +64,21 @@ export type OutboxEntry = {
   /** Client-generated, and also the idempotency key the server dedupes on. */
   readonly id: string;
   readonly endpoint: string;
-  readonly method: 'POST' | 'PUT' | 'PATCH';
+  /**
+   * `DELETE` carries a body, which is unusual and is the right call here.
+   *
+   * The one deletion on the offline path is un-tapping a routine step, whose
+   * identity is `(routineId, stepId, occurredOn)` — three values, not a row id
+   * the client holds. Putting them in the path would give the endpoint a
+   * different shape from the POST that created the row, for no gain; `fetch`
+   * permits a body on DELETE and so does the route.
+   *
+   * Ordering matters more than the verb. A tap and an un-tap of the same step
+   * must reach the server in the order they were made, and the queue is what
+   * guarantees that — a direct network call for the delete would race the
+   * queued create and leave the step ticked.
+   */
+  readonly method: 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   readonly body: Record<string, unknown>;
   /** What this entry is, for the unsynced banner. "Daily Close, 3 August". */
   readonly label: string;
@@ -172,7 +186,7 @@ async function withStore<T>(
 
 export type EnqueueInput = {
   readonly endpoint: string;
-  readonly method?: 'POST' | 'PUT' | 'PATCH';
+  readonly method?: 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   readonly body: Record<string, unknown>;
   readonly label: string;
   /** Supply one to make the enqueue itself idempotent. */

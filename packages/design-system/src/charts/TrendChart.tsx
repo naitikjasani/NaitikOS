@@ -120,6 +120,22 @@ function TrendPlot({
 
   const { box, yDomain, xDomain, x, y, days } = geometry;
 
+  /*
+   * Annotations that fall inside the plotted window, numbered in date order.
+   *
+   * Filtered *before* numbering so the flag on the plot and the entry in the
+   * key below always carry the same number. Numbering the full list and then
+   * filtering would leave the chart showing "2" with no "1" anywhere.
+   */
+  const visibleAnnotations = (data.annotations ?? [])
+    .filter((annotation) => {
+      const start = dayIndex(annotation.at);
+      if (start === null) return false;
+      if (annotation.kind === 'range') return true;
+      return start >= xDomain.min && start <= xDomain.max;
+    })
+    .sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
+
   const onPointer = (event: PointerEvent<SVGSVGElement>): void => {
     const bounds = event.currentTarget.getBoundingClientRect();
     const pointerX = event.clientX - bounds.left;
@@ -194,9 +210,8 @@ function TrendPlot({
           without the 'started Escitalopram' marker is actively misleading."
           A range renders as a shaded span, an instant as a rule.
         */}
-        {(data.annotations ?? []).map((annotation) => {
-          const start = dayIndex(annotation.at);
-          if (start === null) return null;
+        {visibleAnnotations.map((annotation, index) => {
+          const start = dayIndex(annotation.at) ?? 0;
           const end = annotation.until === undefined ? null : dayIndex(annotation.until);
 
           if (annotation.kind === 'range' && end !== null) {
@@ -215,18 +230,37 @@ function TrendPlot({
             );
           }
 
-          if (start < xDomain.min || start > xDomain.max) return null;
           return (
-            <line
-              key={annotation.id}
-              x1={x(start)}
-              x2={x(start)}
-              y1={box.top}
-              y2={box.top + box.height}
-              stroke="var(--chart-annotation)"
-              strokeWidth={1}
-              strokeDasharray="3 3"
-            />
+            <g key={annotation.id}>
+              <line
+                x1={x(start)}
+                x2={x(start)}
+                y1={box.top}
+                y2={box.top + box.height}
+                stroke="var(--chart-annotation)"
+                strokeWidth={1}
+                strokeDasharray="3 3"
+              />
+              {/*
+                A numbered flag rather than the label itself.
+                §4.7 requires the marker to *say* what it is — "a mood trend
+                without a 'started Escitalopram' marker is a misleading chart" —
+                and an unlabelled dashed line says nothing. But at 360px (§8.9(7))
+                two labels a fortnight apart overlap into illegibility, so the
+                number goes on the plot and the words go in the key below it,
+                where they can wrap.
+              */}
+              <circle cx={x(start)} cy={box.top + 6} r={7} fill="var(--chart-annotation)" />
+              <text
+                x={x(start)}
+                y={box.top + 6}
+                textAnchor="middle"
+                dominantBaseline="central"
+                className="nos-plot__marker-number"
+              >
+                {String(index + 1)}
+              </text>
+            </g>
           );
         })}
 
@@ -278,6 +312,21 @@ function TrendPlot({
       </svg>
 
       {activeDay !== null && <Readout day={activeDay} series={data.series} unit={data.yAxis.unit} />}
+
+      {visibleAnnotations.length > 0 && (
+        <ol className="nos-plot__markers">
+          {visibleAnnotations.map((annotation, index) => (
+            <li key={annotation.id} className="nos-plot__marker">
+              <span className="nos-plot__marker-badge" aria-hidden="true">
+                {String(index + 1)}
+              </span>
+              <Text role="caption" tone="secondary" as="span">
+                {annotation.label} · {annotation.at}
+              </Text>
+            </li>
+          ))}
+        </ol>
+      )}
 
       {caveat !== undefined && (
         <Text role="caption" tone="tertiary" className="nos-plot__caveat">

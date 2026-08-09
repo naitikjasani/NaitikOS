@@ -93,6 +93,18 @@ export const MVP_METRICS: readonly MetricDefinition[] = [
     inDailyClose: true,
   }),
 
+  metric({
+    key: 'mind.practice.duration',
+    domain: 'mind',
+    displayName: 'Practice duration',
+    description:
+      'Minutes spent on a deliberate practice — meditation, breathwork, grounding — for a single session. The practice_session entity carries the before-and-after state ratings; this is the number that lets other domains ask about practice load through the metric vocabulary without knowing that table exists.',
+    valueType: 'duration',
+    canonicalUnit: 'minutes',
+    minValue: '0',
+    aggregation: 'sum',
+  }),
+
   /* ---------------------------------------------------------------------
    * Sleep (§4.6)
    *

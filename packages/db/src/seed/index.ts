@@ -14,7 +14,7 @@
  * because an environment variable is a weaker guarantee than a hostname.
  */
 
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 /* §4.0's cap. Imported rather than restated: the Close's form generator
  * enforces the same number, and two copies of a budget is one copy too many. */
 import { DAILY_CLOSE_ELEMENT_BUDGET } from '@naitikos/core';
@@ -23,9 +23,11 @@ import { createDatabase } from '../client';
 import { databaseUrl, isLocalDatabase } from '../env';
 import { metric } from '../schema/substrate';
 import { featureFlag } from '../schema/identity';
+import { journalPrompt } from '../schema/mind';
 import { createExerciseRepository } from '../repositories/exercise.repository';
 import { DAILY_CLOSE_METRICS, MVP_METRICS } from './metrics';
 import { SEED_EXERCISES } from './exercises';
+import { SEED_PROMPTS } from './prompts';
 
 /**
  * Feature flags the application expects to exist.
@@ -144,6 +146,31 @@ async function main(): Promise<void> {
   const exercises = await createExerciseRepository(db).upsert(SEED_EXERCISES);
   if (!exercises.ok) throw new Error(`Exercise seed failed: ${exercises.error.message}`);
   console.log(`  exercise            ${String(exercises.value)} rows`);
+
+  /* --- Journal prompts (§12 week 4) ----------------------------------- */
+  /*
+   * The prompt text is its own natural key — there is no slug to collide on,
+   * and re-running the seed must not produce fourteen more rows. `is_active` is
+   * deliberately never refreshed: retiring a prompt is the operator's decision
+   * and a redeploy must not undo it, the same rule the feature flags follow.
+   */
+  let newPrompts = 0;
+  for (const p of SEED_PROMPTS) {
+    const existing = await db
+      .select({ id: journalPrompt.id })
+      .from(journalPrompt)
+      .where(eq(journalPrompt.prompt, p.prompt))
+      .limit(1);
+    if (existing.length > 0) continue;
+    // `entityColumns.id` carries no database default — every write path in the
+    // application supplies a client-generated UUIDv7 (§5.7). The seeder has no
+    // client, so it asks Postgres.
+    await db
+      .insert(journalPrompt)
+      .values({ id: sql`gen_random_uuid()`, prompt: p.prompt, category: p.category });
+    newPrompts += 1;
+  }
+  console.log(`  journal_prompt      ${String(SEED_PROMPTS.length)} rows (${String(newPrompts)} new)`);
 
   if (isLocalDatabase(url)) {
     console.log('  synthetic data      not implemented yet (§5.15 local/preview only)');

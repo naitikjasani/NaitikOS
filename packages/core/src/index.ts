@@ -304,6 +304,232 @@ export type {
 export { parsePrescription, programAdherence, nextBlock } from './domain/gym/program';
 
 /* -------------------------------------------------------------------------
+ * Mind (§4.7) — the module with the highest duty of care.
+ * ---------------------------------------------------------------------- */
+export type { MindScaleId, MindScale, ScaleDirection, ScaleTone, Movement } from './domain/mind/scales';
+export {
+  MIND_METRICS,
+  MIND_SCALE_IDS,
+  MIND_SCALES,
+  MOVEMENT_THRESHOLD,
+  MIN_MOVEMENT_DAYS,
+  scaleLabel,
+  toneFor,
+  describeMovement,
+} from './domain/mind/scales';
+
+export type {
+  EpisodeSeverity,
+  AnxietyEpisode,
+  EpisodeInput,
+  PlannedEpisode,
+  EpisodeSummary,
+} from './domain/mind/episode';
+export {
+  EPISODE_SUBJECT_TYPE,
+  MAX_EPISODE_MINUTES,
+  severityFor,
+  episodeDurationMinutes,
+  planEpisode,
+  summariseEpisodes,
+} from './domain/mind/episode';
+
+export type { JournalConsent, JournalEntry, JournalEntryInput, JournalListItem, JournalPrompt } from './domain/mind/journal';
+export {
+  JOURNAL_CONSENT_SCOPES,
+  MAX_JOURNAL_CHARACTERS,
+  planJournalEntry,
+  wordCount,
+  journalListItem,
+  promptForDay,
+} from './domain/mind/journal';
+
+export type { PracticeKind, PracticeSession, PracticeInput, PlannedPractice } from './domain/mind/practice';
+export {
+  PRACTICE_KINDS,
+  PRACTICE_KIND_LABELS,
+  PRACTICE_METRICS,
+  PRACTICE_SUBJECT_TYPE,
+  MAX_PRACTICE_MINUTES,
+  isPracticeKind,
+  practiceDelta,
+  planPractice,
+} from './domain/mind/practice';
+
+export type { CrisisContact, CrisisPlan, CrisisSurface, CrisisEvaluation } from './domain/mind/crisis';
+export {
+  CRISIS_CONSECUTIVE_DAYS,
+  SEVERE_ANXIETY,
+  SEVERE_LOW_MOOD,
+  parseContacts,
+  evaluateCrisisState,
+  crisisSurface,
+  shouldInvitePlanning,
+} from './domain/mind/crisis';
+
+/* -------------------------------------------------------------------------
+ * Medication (§4.4, §4.7) — Health owns it, Mind reads it.
+ * ---------------------------------------------------------------------- */
+export type {
+  Medication,
+  MedicationSchedule,
+  MedicationEvent,
+  MedicationEventKind,
+  DayAdherence,
+  WindowAdherence,
+  MedicationAnnotation,
+  MedicationAnnotationKind,
+} from './domain/medication/adherence';
+export {
+  ADHERENCE_METRIC,
+  medicationLabel,
+  expectedDosesPerDay,
+  scheduleOn,
+  dayAdherence,
+  windowAdherence,
+  medicationAnnotations,
+  adherenceValue,
+} from './domain/medication/adherence';
+
+/* -------------------------------------------------------------------------
+ * The routine engine (§9.2) — one implementation, three consumers.
+ * ---------------------------------------------------------------------- */
+export type {
+  RoutineKind,
+  RoutinePeriod,
+  RoutineStepStatus,
+  Routine,
+  RoutineStep,
+  RoutineLog,
+  DayRoutineAdherence,
+  RoutineWindowAdherence,
+} from './domain/routine/adherence';
+export {
+  ROUTINE_ADHERENCE_METRIC,
+  ROUTINE_KINDS,
+  ROUTINE_PERIODS,
+  ROUTINE_PERIOD_LABELS,
+  requiredSteps,
+  dayAdherence as routineDayAdherence,
+  windowAdherence as routineWindowAdherence,
+  windowDayKeys,
+  isRoutineDue,
+} from './domain/routine/adherence';
+
+/* -------------------------------------------------------------------------
+ * Skin (§4.2) — the protocol is the module.
+ * ---------------------------------------------------------------------- */
+export type {
+  BodyRegion,
+  SkinState,
+  SkinRegionState,
+  SkinStateInput,
+  SkinRegionInput,
+  ExistingSkinObservation,
+  PlannedSkinState,
+  RegionTrend,
+} from './domain/skin/state';
+export {
+  SKIN_METRICS,
+  SKIN_REVISION_REASON,
+  SKIN_STATE_SUBJECT_TYPE,
+  SKIN_REGION_SUBJECT_TYPE,
+  BODY_REGIONS,
+  TRACKED_REGIONS,
+  REGION_LABELS,
+  SKIN_STATE_LABELS,
+  MAX_LESION_COUNT,
+  isBodyRegion,
+  planSkinState,
+  regionTrends,
+} from './domain/skin/state';
+
+export type {
+  ProductEventKind,
+  ProductSeverity,
+  SkincareProduct,
+  ProductEvent,
+  UsePeriod,
+  Reaction,
+  ProductChange,
+} from './domain/skin/product';
+export {
+  PRODUCT_EVENT_KINDS,
+  CHANGE_WINDOW_DAYS,
+  productLabel,
+  isActiveOn,
+  usePeriods,
+  daysSinceIntroduction,
+  reactionHistory,
+  changesBefore,
+} from './domain/skin/product';
+
+export type {
+  CaptureDistance,
+  CaptureLighting,
+  CaptureTimeBucket,
+  FlashState,
+  SeriesPhoto,
+  CheckStatus,
+  ProtocolCheck,
+  CaptureCandidate,
+  ProtocolVerdict,
+} from './domain/skin/protocol';
+export {
+  CAPTURE_DISTANCES,
+  CAPTURE_LIGHTING,
+  CAPTURE_TIME_BUCKETS,
+  FLASH_STATES,
+  LIGHTING_LABELS,
+  DISTANCE_LABELS,
+  RECOMMENDED,
+  LUMINANCE_TOLERANCE,
+  COMPLIANCE_THRESHOLD,
+  seriesKey,
+  alignmentReferenceFor,
+  timeBucketFor,
+  evaluateProtocol,
+  toProtocolBlock,
+  comparablePhotos,
+} from './domain/skin/protocol';
+
+/* -------------------------------------------------------------------------
+ * Detectors (§10.6) — stage 1, deterministic. No model involvement.
+ * ---------------------------------------------------------------------- */
+export { logGamma, logChoose, binomialTailBelow } from './statistics/binomial';
+export type { FdrResult } from './statistics/fdr';
+export { DEFAULT_ALPHA, benjaminiHochberg } from './statistics/fdr';
+
+export type {
+  DetectorId,
+  FindingConfidence,
+  FindingEvidence,
+  Finding,
+  InsufficientData,
+  DetectorOutcome,
+} from './detectors/types';
+export { EMPTY_OUTCOME, findingId } from './detectors/types';
+
+export type { AdherenceDay, AdherenceSeries, AdherenceOptions } from './detectors/adherence';
+export {
+  MIN_RECORDED_DAYS,
+  MIN_BASELINE_UNITS,
+  RECENT_WINDOW_DAYS,
+  detectAdherence,
+} from './detectors/adherence';
+
+export type { StreakDay, StreakSeries } from './detectors/streak';
+export { MIN_STREAK_DAYS, BREAK_REPORT_WINDOW_DAYS, detectStreak } from './detectors/streak';
+
+export type {
+  BaselineState,
+  PreRegisteredHypothesis,
+  BatteryInput,
+  BatteryOutcome,
+} from './detectors/battery';
+export { BASELINE_DAYS, PRE_REGISTERED, baselineState, runBattery } from './detectors/battery';
+
+/* -------------------------------------------------------------------------
  * Domain events (ADR 0005) — an integration log, not a system of record.
  * ---------------------------------------------------------------------- */
 export type {

@@ -98,7 +98,7 @@ export function ExerciseDetailScreen({ exerciseId }: { readonly exerciseId: stri
   return (
     <Stack gap="5">
       <Stack gap="2">
-        <Text role="title-2" as="h1">
+        <Text role="title-2" as="h2">
           {data.exercise.name}
         </Text>
         <Inline gap="1">
@@ -136,6 +136,9 @@ export function ExerciseDetailScreen({ exerciseId }: { readonly exerciseId: stri
                 key={item.id}
                 variant={item.id === measure ? 'primary' : 'secondary'}
                 size="sm"
+                /* Selection exposed to assistive technology, not implied by
+                   fill alone (§8.13). */
+                aria-pressed={item.id === measure}
                 onClick={() => {
                   setMeasure(item.id);
                 }}

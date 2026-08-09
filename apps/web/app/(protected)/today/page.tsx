@@ -5,8 +5,10 @@
  * one insight card, and open loops. Three of those exist now; the other two
  * cannot yet and their absence is deliberate rather than incomplete.
  *
- * - **Today's signal** is one insight card, and §10 holds insights until day 60
- *   — "an early wrong insight costs more trust than sixty days of silence."
+ * - **Today's signal** is one insight card, and it now renders — see the note in
+ *   `detectors/battery.ts` on why §10.6's sixty-day gate applies to inference
+ *   and not to a count. Before there is enough data it says so, which §10.6
+ *   requires: "'not enough data yet' is honest and builds trust."
  * - **Open loops** needs domains with unfinished items in them, and the first
  *   one lands in week three.
  *
@@ -24,9 +26,10 @@ import { dayKeyInZone, systemClock, isoFromMillis } from '@naitikos/core';
 import { createDailyCloseRepository, createMetricRepository } from '@naitikos/db';
 
 import { PageContainer } from '@/components/shell';
-import { NowPanel } from '@/features/today';
+import { NowPanel, SignalCard } from '@/features/today';
 import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
+import { loadInsights, topFinding } from '@/lib/platform/insights';
 
 export const metadata = { title: 'Today · NaitikOS' };
 export const dynamic = 'force-dynamic';
@@ -58,20 +61,34 @@ async function TodaySummary(): Promise<ReactNode> {
   if (!registry.ok) return null;
 
   const closes = createDailyCloseRepository(db, registry.value);
-  const [state, compounding] = await Promise.all([
+  const [state, compounding, insights] = await Promise.all([
     closes.stateFor(dayKey, zone),
     closes.compoundingDays(dayKey, zone, COMPOUNDING_WINDOW_DAYS),
+    loadInsights(db, { toDayKey: dayKey, zone }),
   ]);
 
   return (
-    <NowPanel
-      dayKey={dayKey}
-      isClosed={
-        state.ok && state.value.observations.some((o) => o.metricKey === 'system.daily_close.completed')
-      }
-      compoundingDays={compounding.ok ? compounding.value : 0}
-      windowDays={COMPOUNDING_WINDOW_DAYS}
-    />
+    <>
+      <NowPanel
+        dayKey={dayKey}
+        isClosed={
+          state.ok && state.value.observations.some((o) => o.metricKey === 'system.daily_close.completed')
+        }
+        compoundingDays={compounding.ok ? compounding.value : 0}
+        windowDays={COMPOUNDING_WINDOW_DAYS}
+      />
+      {/*
+        One card, never two. The cap lives in `topFinding`, server-side, so no
+        component can widen it (§3.2).
+      */}
+      {insights.ok && (
+        <SignalCard
+          finding={topFinding(insights.value)}
+          insufficient={insights.value.insufficient}
+          baseline={insights.value.baseline}
+        />
+      )}
+    </>
   );
 }
 
