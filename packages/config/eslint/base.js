@@ -12,9 +12,22 @@ import tseslint from 'typescript-eslint';
 
 import { naitikosPlugin } from './rules/index.js';
 
-/** Paths permitted to construct dates directly — the helpers themselves, and tests. */
+/**
+ * Paths permitted to construct dates directly — the helpers themselves, and tests.
+ *
+ * **`'**\/temporal/**'`, not `'**\/packages/core/src/temporal/**'`.** The
+ * longer form was here first and it never matched anything. ESLint's flat
+ * config resolves `files` patterns relative to the config's base directory, and
+ * `turbo run lint` runs eslint *inside each package*, so the path this pattern
+ * was tested against is `src/temporal/zone.ts` — no `packages/core` prefix to
+ * match. The allowlist was inert, which is why `instant.ts` needed an inline
+ * `eslint-disable` to say the thing this list already said.
+ *
+ * Every other entry here starts with `**\/` and a directory name, which is why
+ * they worked and this one did not.
+ */
 const TEMPORAL_ALLOWLIST = [
-  '**/packages/core/src/temporal/**',
+  '**/temporal/**',
   '**/*.test.ts',
   '**/*.test.tsx',
   '**/*.spec.ts',

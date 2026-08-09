@@ -66,7 +66,10 @@ export const PRIMARY_NAV: readonly NavItem[] = Object.freeze([
     label: 'Timeline',
     href: '/timeline',
     icon: 'nav.timeline',
-    available: false,
+    // Available from the ritual milestone: the route exists and renders the
+    // event projection. It has nothing to show until a day is closed, which is
+    // an empty state rather than a missing page.
+    available: true,
     phase: 'mvp',
   },
   {

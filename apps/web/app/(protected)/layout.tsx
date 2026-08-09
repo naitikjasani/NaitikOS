@@ -16,7 +16,9 @@ import { visiblePermissions } from '@naitikos/api';
 
 import { SessionProvider } from '@/features/auth';
 import { AppShell } from '@/components/shell';
+import { QueryProvider } from '@/lib/query/QueryProvider';
 import { getAuthState } from '@/lib/auth/session';
+import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { SIGN_IN_PATH } from '@/lib/auth/routes';
 
 export const dynamic = 'force-dynamic';
@@ -44,7 +46,16 @@ export default async function ProtectedLayout({
         permissions: visiblePermissions(state),
       }}
     >
-      <AppShell account={{ email: actor.email, role: actor.role }}>{children}</AppShell>
+      {/*
+        The query client wraps only the protected tree. A signed-out visitor has
+        nothing to cache, and a persisted cache mounted on the sign-in page
+        would write an empty payload over a good one on every visit.
+      */}
+      <QueryProvider>
+        <AppShell account={{ email: actor.email, role: actor.role }} zone={DEFAULT_PROFILE_ZONE}>
+          {children}
+        </AppShell>
+      </QueryProvider>
     </SessionProvider>
   );
 }

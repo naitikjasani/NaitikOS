@@ -40,7 +40,7 @@
 export function parseInstant(iso: string): Date | null {
   if (iso === '') return null;
 
-  // eslint-disable-next-line no-restricted-syntax -- The sanctioned parse point (§11.3). Parsing an explicit instant, not reading the wall clock; see the file header.
+  // The sanctioned parse point (§11.3). Parsing an explicit instant, not reading the wall clock; see the file header.
   const parsed = new Date(iso);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
@@ -121,13 +121,13 @@ export function utcNoonOn(dayKey: string): Date | null {
 
 /** A UTC instant at midday on the given calendar date. Months are 1-based. */
 export function utcNoonAt(year: number, month: number, day: number): Date {
-  // eslint-disable-next-line no-restricted-syntax -- As above. `Date.UTC` takes explicit parts, so there is no ambient zone to discard.
+  // As above. `Date.UTC` takes explicit parts, so there is no ambient zone to discard.
   return new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
 }
 
 /** A new instant `days` later. Does not mutate its argument. */
 export function addUtcDays(instant: Date, days: number): Date {
-  // eslint-disable-next-line no-restricted-syntax -- As above. Derived from an instant that is already in hand.
+  // As above. Derived from an instant that is already in hand.
   const next = new Date(instant.getTime());
   next.setUTCDate(next.getUTCDate() + days);
   return next;
@@ -147,7 +147,7 @@ export function utcDayKey(instant: Date): string {
  * concentrated here.
  */
 export function isoFromMillis(millis: number): string {
-  // eslint-disable-next-line no-restricted-syntax -- The sanctioned construction from explicit epoch millis; see the file header. No ambient zone is involved.
+  // The sanctioned construction from explicit epoch millis; see the file header. No ambient zone is involved.
   return new Date(millis).toISOString();
 }
 

@@ -13,4 +13,31 @@ export default [
   {
     ignores: ['.next/**', 'next-env.d.ts', 'coverage/**'],
   },
+
+  /**
+   * The service worker runs in its own global scope.
+   *
+   * `self`, `caches`, `fetch` and `Response` are all defined there and in no
+   * other file in this app, so the globals are scoped to that one path rather
+   * than declared app-wide — declaring them globally would stop `no-undef` from
+   * catching a genuine typo anywhere else.
+   *
+   * Declared here rather than with an `/* eslint-env serviceworker *\/`
+   * comment, which flat config removed support for in ESLint 9 and now reports
+   * as an error itself.
+   */
+  {
+    files: ['public/sw.js'],
+    languageOptions: {
+      globals: {
+        self: 'readonly',
+        caches: 'readonly',
+        clients: 'readonly',
+        fetch: 'readonly',
+        Response: 'readonly',
+        Request: 'readonly',
+        URL: 'readonly',
+      },
+    },
+  },
 ];

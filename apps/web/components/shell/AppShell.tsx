@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
 
 import { useNavigationStore } from '@/lib/stores/navigation.store';
+import { QuickCapture, SyncBanner } from '@/features/capture';
 import { CommandPalette } from './CommandPalette';
 import { MobileNav } from './MobileNav';
 import { Sidebar } from './Sidebar';
@@ -31,9 +32,11 @@ export type AppShellProps = {
   readonly children: ReactNode;
   /** Rendered in the top bar and the profile menu. */
   readonly account: { readonly email: string; readonly role: string };
+  /** The profile's IANA zone — what a captured observation is stamped with (§5.3). */
+  readonly zone: string;
 };
 
-export function AppShell({ children, account }: AppShellProps): ReactNode {
+export function AppShell({ children, account, zone }: AppShellProps): ReactNode {
   const pathname = usePathname();
   const closeAllOverlays = useNavigationStore((state) => state.closeAllOverlays);
   const toggleCommandPalette = useNavigationStore((state) => state.toggleCommandPalette);
@@ -88,6 +91,13 @@ export function AppShell({ children, account }: AppShellProps): ReactNode {
           the navigation they were trying to skip.
         */}
         <main id="main" className="app-shell__content" tabIndex={-1}>
+          {/*
+            The unsynced banner sits above the page rather than inside it, and
+            that placement is the requirement rather than a layout choice: §5.7
+            wants the state "visible", which means visible on whatever route the
+            operator happens to be on when a drain starts failing.
+          */}
+          <SyncBanner />
           {children}
         </main>
       </div>
@@ -98,6 +108,13 @@ export function AppShell({ children, account }: AppShellProps): ReactNode {
           change mid-transition, and so their portals sit above everything. */}
       <CommandPalette />
       <SettingsDrawer />
+
+      {/*
+        §3.3(4): "Quick capture is global... Capture must never require
+        navigation." Mounted at the shell so its keyboard chord is live on every
+        route and its sheet opens over whatever is already on screen.
+      */}
+      <QuickCapture zone={zone} />
     </div>
   );
 }

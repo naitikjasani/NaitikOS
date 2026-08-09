@@ -26,6 +26,27 @@ export {
 export { createTimelineRepository, createTimelineProjectionHandler } from './timeline.repository';
 export type { TimelineRepository } from './timeline.repository';
 
+/* --- The observation substrate and the Daily Close (§9.1, §9.2, §4.0) -- */
+export { createMetricRepository } from './metric.repository';
+export type { MetricRepository } from './metric.repository';
+
+export { createObservationRepository } from './observation.repository';
+export type { ObservationRepository, ObservationQuery } from './observation.repository';
+
+export { createDailyCloseRepository } from './daily-close.repository';
+export type { DailyCloseRepository, CommitContext, CommitResult } from './daily-close.repository';
+
+export {
+  createIdempotencyRepository,
+  fingerprintRequest,
+  IDEMPOTENCY_TTL_SECONDS,
+} from './idempotency.repository';
+export type { IdempotencyRepository, IdempotencyClaim } from './idempotency.repository';
+
+/* --- The export (§9.10) ------------------------------------------------ */
+export { createExportRepository, allTableNames } from './export.repository';
+export type { ExportRepository, ExportOptions } from './export.repository';
+
 /* --- Deferred work and the media outbox (§5.2, §5.7) ------------------- */
 export { createTaskRepository } from './task.repository';
 export type { TaskRepository, EnqueueTaskInput } from './task.repository';

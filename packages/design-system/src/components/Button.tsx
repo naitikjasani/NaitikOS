@@ -1,4 +1,4 @@
-import { Slot } from '@radix-ui/react-slot';
+import { Slot, Slottable } from '@radix-ui/react-slot';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 import { cn } from '../lib/cn';
@@ -83,7 +83,23 @@ export function Button({
       ) : iconStart !== undefined ? (
         <Icon name={iconStart} label={null} size={iconSize} />
       ) : null}
-      {children}
+      {/*
+        `Slottable` marks which child `Slot` should merge into, and without it
+        `asChild` does not work at all.
+        
+        The bug it fixes is worth recording, because the symptom pointed
+        somewhere else entirely. `Slot` requires exactly one element child; this
+        component always renders three slots — leading icon, children, trailing
+        icon — so with `asChild` it handed `Slot` `[null, <Link/>, false]` and
+        threw "Slot failed to slot onto its children". Every `asChild` call site
+        was affected (`not-found`, `/auth/error`, the Now panel), and it went
+        unnoticed until a *statically prerendered* page hit it at build time
+        rather than at request time.
+
+        `Slottable` renders as a fragment outside a `Slot`, so it costs nothing
+        on the ordinary `<button>` path.
+      */}
+      <Slottable>{children}</Slottable>
       {iconEnd !== undefined && !isLoading && <Icon name={iconEnd} label={null} size={iconSize} />}
     </Component>
   );

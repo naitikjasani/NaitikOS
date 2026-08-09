@@ -28,6 +28,16 @@ const UNGUARDED_PREFIXES: readonly string[] = [
   '/manifest.webmanifest',
   '/icons',
   '/robots.txt',
+  /*
+   * The service worker.
+   *
+   * Not merely convenient — a redirect here breaks registration outright.
+   * `navigator.serviceWorker.register` requires a same-origin response with a
+   * JavaScript MIME type, and the guard's 307 to the sign-in page is neither.
+   * The symptom is silent: registration rejects, the offline shell never
+   * caches, and the failure is only visible in a gym basement.
+   */
+  '/sw.js',
 ];
 
 /** API routes that must work without a session — the sign-in endpoint itself. */

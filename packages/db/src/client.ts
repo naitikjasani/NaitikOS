@@ -23,6 +23,33 @@ import * as schema from './schema';
 
 export type Database = ReturnType<typeof createDatabase>;
 
+/**
+ * A transaction handle, as `db.transaction(async (tx) => …)` supplies it.
+ *
+ * Structurally *not* a {@link Database}: it has no `$client`, because a
+ * transaction does not own the connection it borrows. That distinction is
+ * correct and worth keeping, which is why {@link Executor} exists rather than
+ * `Database` being widened.
+ */
+export type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
+
+/**
+ * Anything that can run a query — a pooled client or a transaction.
+ *
+ * **A repository that only runs queries takes this, not `Database`.** One typed
+ * to `Database` cannot be handed a `tx`, which means multi-table writes either
+ * duplicate their SQL inline or silently escape the transaction. The Daily
+ * Close writes observations, a supersession, a medication event and a note as
+ * one unit (§5.7 depends on it), so this is load-bearing rather than tidy.
+ *
+ * **A repository that *opens* a transaction still takes `Database`.** Both
+ * members expose `.transaction()` — Drizzle maps the inner one to a SAVEPOINT —
+ * but postgres.js does not nest, so calling it on a `tx` fails at runtime.
+ * `createDailyCloseRepository` therefore asks for a `Database` and says so in
+ * its signature, which is the only place that distinction can be enforced.
+ */
+export type Executor = Database | Transaction;
+
 type ClientOptions = {
   /**
    * Connections in the pool. Defaults to 1.

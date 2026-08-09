@@ -246,7 +246,9 @@ export const config = {
    * because a positive list means a new route is unprotected until someone
    * remembers to add it. This way a new route is covered the moment it exists.
    */
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|icons/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)'],
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|icons/|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)',
+  ],
 };
 
 export { NONCE_HEADER };

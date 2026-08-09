@@ -11,6 +11,7 @@ import type { ReactNode } from 'react';
 import { ToastProvider, TooltipProvider } from '@naitikos/design-system';
 
 import { AppearanceProvider, ThemeScript } from '@/lib/providers/AppearanceProvider';
+import { ServiceWorkerRegistrar } from '@/lib/offline/ServiceWorkerRegistrar';
 import { NONCE_HEADER } from '@/proxy';
 
 import '../styles/globals.css';
@@ -53,6 +54,13 @@ export default async function RootLayout({ children }: { children: ReactNode }):
         <AppearanceProvider>
           <TooltipProvider>
             <ToastProvider>{children}</ToastProvider>
+            {/*
+              Mounted in the root layout rather than the protected one: the
+              offline shell has to be cached before sign-in, or a signed-out
+              visitor with no signal gets the browser's error page instead of
+              this app's.
+            */}
+            <ServiceWorkerRegistrar />
           </TooltipProvider>
         </AppearanceProvider>
       </body>

@@ -15,15 +15,15 @@
  */
 
 import { sql } from 'drizzle-orm';
+/* §4.0's cap. Imported rather than restated: the Close's form generator
+ * enforces the same number, and two copies of a budget is one copy too many. */
+import { DAILY_CLOSE_ELEMENT_BUDGET } from '@naitikos/core';
 
 import { createDatabase } from '../client';
 import { databaseUrl, isLocalDatabase } from '../env';
 import { metric } from '../schema/substrate';
 import { featureFlag } from '../schema/identity';
 import { DAILY_CLOSE_METRICS, MVP_METRICS } from './metrics';
-
-/** §4.0: "Never more than eleven interactive elements." */
-const DAILY_CLOSE_ELEMENT_BUDGET = 11;
 
 /**
  * Feature flags the application expects to exist.
@@ -89,10 +89,14 @@ async function main(): Promise<void> {
         description: m.description,
         valueType: m.valueType,
         canonicalUnit: m.canonicalUnit,
-        minValue: m.minValue ?? null,
-        maxValue: m.maxValue ?? null,
+        minValue: m.minValue,
+        maxValue: m.maxValue,
         aggregation: m.aggregation,
-        inDailyClose: m.inDailyClose ?? false,
+        // Written even though no MVP metric is categorical yet. A column the
+        // seeder never populates is one that is silently wrong the first time
+        // it matters, and the export reads it to decode ordinals (§9.10).
+        allowedValues: m.allowedValues,
+        inDailyClose: m.inDailyClose,
       })
       .onConflictDoUpdate({
         target: metric.key,
@@ -104,6 +108,7 @@ async function main(): Promise<void> {
           minValue: sql`excluded.min_value`,
           maxValue: sql`excluded.max_value`,
           aggregation: sql`excluded.aggregation`,
+          allowedValues: sql`excluded.allowed_values`,
           inDailyClose: sql`excluded.in_daily_close`,
           updatedAt: sql`now()`,
         },

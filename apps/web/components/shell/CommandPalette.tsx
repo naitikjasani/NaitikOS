@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { Icon, Text } from '@naitikos/design-system';
 
+import { QUICK_CAPTURE_CHORDS } from '@/features/capture';
 import { PRIMARY_NAV, showsUnbuiltRoutes } from '@/lib/navigation/config';
 import { useAppearanceStore } from '@/lib/stores/appearance.store';
 import { useNavigationStore } from '@/lib/stores/navigation.store';
@@ -36,6 +37,7 @@ export function CommandPalette(): ReactNode {
   const isOpen = useNavigationStore((state) => state.isCommandPaletteOpen);
   const setOpen = useNavigationStore((state) => state.setCommandPaletteOpen);
   const setSettingsOpen = useNavigationStore((state) => state.setSettingsOpen);
+  const openCapture = useNavigationStore((state) => state.openCapture);
   const theme = useAppearanceStore((state) => state.theme);
   const setTheme = useAppearanceStore((state) => state.setTheme);
 
@@ -92,6 +94,32 @@ export function CommandPalette(): ReactNode {
                   not built
                 </span>
               )}
+            </Command.Item>
+          ))}
+        </Command.Group>
+
+        {/*
+          §3.3(4): quick capture is "keyboard-shortcut driven on desktop (`c`
+          then a domain key)". A chord nobody can discover is a chord nobody
+          uses, so the palette lists them — it is the only surface in the app
+          that a person opens *looking* for what is possible.
+
+          Selecting one opens the same sheet the chord does, because both go
+          through the shell store rather than through component state.
+        */}
+        <Command.Group heading="Quick capture" className="palette__group">
+          {QUICK_CAPTURE_CHORDS.map((chord) => (
+            <Command.Item
+              key={chord.chord}
+              value={`capture ${chord.label}`}
+              onSelect={() => {
+                openCapture(chord.metricKey);
+              }}
+              className="palette__item"
+            >
+              <Icon name="action.add" label={null} size="sm" />
+              <span>{chord.label}</span>
+              <kbd className="palette__hint">{chord.chord}</kbd>
             </Command.Item>
           ))}
         </Command.Group>

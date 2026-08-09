@@ -395,3 +395,10 @@
 .page {
   padding-block: var(--space-2);
 }
+
+/* A keyboard chord shown beside a palette row. Monospace, so `c w` reads as
+   two keys rather than as a word. */
+kbd.palette__hint {
+  font-family: var(--font-family-mono);
+  letter-spacing: 0.04em;
+}

@@ -18,17 +18,18 @@
     "@naitikos/api": "workspace:*",
     "@naitikos/core": "workspace:*",
     "@naitikos/db": "workspace:*",
+    "@naitikos/design-system": "workspace:*",
     "@naitikos/shared": "workspace:*",
     "@supabase/ssr": "catalog:",
     "@supabase/supabase-js": "catalog:",
+    "@tanstack/react-query": "catalog:",
+    "cmdk": "catalog:",
     "next": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "server-only": "^0.0.1",
     "zod": "catalog:",
-    "@naitikos/design-system": "workspace:*",
-    "zustand": "catalog:",
-    "cmdk": "catalog:"
+    "zustand": "catalog:"
   },
   "devDependencies": {
     "@naitikos/config": "workspace:*",
@@ -38,6 +39,7 @@
     "@vitest/coverage-v8": "catalog:",
     "eslint": "catalog:",
     "eslint-config-next": "catalog:",
+    "fake-indexeddb": "^6.2.5",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

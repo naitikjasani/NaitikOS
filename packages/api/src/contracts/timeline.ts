@@ -21,6 +21,7 @@ import {
   TIMELINE_MAX_PAGE_SIZE,
   TIMELINE_PAGE_SIZE,
   isEventType,
+  isIanaZone,
 } from '@naitikos/core';
 
 /* =========================================================================
@@ -56,18 +57,16 @@ export const dayKeySchema = z
 /**
  * An IANA zone name.
  *
- * Validated against the runtime's own database rather than a regex, because a
- * syntactically plausible zone that `Intl` does not know silently mis-buckets
- * every entry captured in it.
+ * Delegates to `core`'s validator rather than probing `Intl` here, and the
+ * difference is not stylistic. This was an inline
+ * `new Intl.DateTimeFormat({ timeZone: value })` probe, which accepts far more
+ * than IANA zone names: `IST` (Indian, Irish *or* Israel Standard Time — ICU
+ * picks one), `EST` → America/Panama, and `+05:30` **as a zone**, which is
+ * precisely the offset-is-not-a-zone confusion §5.3 exists to prevent.
+ *
+ * One validator, in `core`, where the reasoning is recorded.
  */
-export const zoneSchema = z.string().refine((value) => {
-  try {
-    new Intl.DateTimeFormat('en-CA', { timeZone: value });
-    return true;
-  } catch {
-    return false;
-  }
-}, 'Not a recognised IANA time zone.');
+export const zoneSchema = z.string().refine(isIanaZone, 'Not a recognised IANA time zone.');
 
 export const eventTypeSchema = z
   .string()

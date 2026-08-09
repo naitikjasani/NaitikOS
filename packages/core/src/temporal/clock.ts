@@ -44,11 +44,11 @@ export type Clock = {
  */
 export const systemClock: Clock = Object.freeze({
   now(): Date {
-    // eslint-disable-next-line no-restricted-syntax -- The sanctioned clock (§11.3). Every other site injects a Clock instead.
+    // The sanctioned clock (§11.3). Every other site injects a Clock instead.
     return new Date();
   },
   nowMillis(): number {
-    // eslint-disable-next-line no-restricted-syntax -- As above.
+    // As above.
     return Date.now();
   },
 });
@@ -65,7 +65,7 @@ export function fixedClock(instant: Date): Clock {
   return Object.freeze({
     // A fresh Date each call, so a caller mutating the result cannot corrupt
     // the clock for everyone else.
-    // eslint-disable-next-line no-restricted-syntax -- Derived from an injected instant, not read from the wall clock. That is the distinction §11.3 cares about.
+    // Derived from an injected instant, not read from the wall clock. That is the distinction §11.3 cares about.
     now: () => new Date(millis),
     nowMillis: () => millis,
   });
@@ -80,7 +80,7 @@ export function fixedClock(instant: Date): Clock {
 export function manualClock(start: Date): Clock & { advance(ms: number): void } {
   let millis = start.getTime();
   return {
-    // eslint-disable-next-line no-restricted-syntax -- As in fixedClock: derived from an injected instant.
+    // As in fixedClock: derived from an injected instant.
     now: () => new Date(millis),
     nowMillis: () => millis,
     advance: (ms: number) => {
