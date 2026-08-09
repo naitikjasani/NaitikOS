@@ -27,7 +27,16 @@
  * is fabrication." The renderer must break the line here.
  */
 export type SeriesPoint = {
-  /** ISO 8601 instant. Charts format in the profile's zone, never the runtime's. */
+  /**
+   * A day key, `YYYY-MM-DD`, **already resolved in the observer's zone**.
+   *
+   * Not an instant, and the difference is load-bearing. §5.3 requires a day to
+   * be the day in the zone the observation was captured in; a renderer handed
+   * an instant would re-derive that in the *runtime's* zone, which files every
+   * Indian evening under the following date. `core`'s `dailyRollup` does the
+   * resolution, and the chart layer then contains no temporal logic at all —
+   * only integer arithmetic on calendar days (`charts/calendar.ts`).
+   */
   readonly at: string;
   readonly value: number | null;
   /**

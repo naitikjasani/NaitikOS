@@ -162,6 +162,40 @@ export function utcDaysBetween(from: Date, to: Date): number {
 }
 
 /**
+ * A day key's position on a fixed integer timeline.
+ *
+ * Days since 1970-01-01, so two calendar labels can be compared, subtracted and
+ * windowed with integer arithmetic instead of a `Date` per comparison. The
+ * moving average and the adherence grid both sweep thousands of these; parsing
+ * inside the loop is what makes a ninety-day chart feel slow on a phone.
+ *
+ * @returns `null` if `dayKey` is not a real date. Callers must not coerce that
+ *   to 0 — a malformed key is 1970 under any arithmetic that does.
+ */
+export function dayKeyIndex(dayKey: string): number | null {
+  const anchor = utcNoonOn(dayKey);
+  return anchor === null ? null : utcDaysBetween(DAY_INDEX_EPOCH, anchor);
+}
+
+/** The origin for {@link dayKeyIndex}. Noon, for the reason `utcNoonOn` gives. */
+const DAY_INDEX_EPOCH = utcNoonAt(1970, 1, 1);
+
+/**
+ * A day key shifted by whole days.
+ *
+ * `shiftDayKey('2026-03-29', 1)` is `'2026-03-30'` in every zone, including the
+ * ones where that day is 23 hours long — calendar labels have no duration, and
+ * that is precisely why the window arithmetic works on them rather than on
+ * instants.
+ *
+ * @returns `null` if `dayKey` is not a real date.
+ */
+export function shiftDayKey(dayKey: string, days: number): string | null {
+  const anchor = utcNoonOn(dayKey);
+  return anchor === null ? null : utcDayKey(addUtcDays(anchor, days));
+}
+
+/**
  * ISO-8601 day of week, Monday = 1 … Sunday = 7.
  *
  * `getUTCDay()` returns 0 for Sunday, which is wrong for every ISO week

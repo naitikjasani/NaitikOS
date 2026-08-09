@@ -31,7 +31,14 @@ export * from './components/Overlay';
 export * from './components/States';
 export * from './components/Toast';
 
-/* Charts — architecture only; the plot layer is V2 (§8.9). */
+/* Charts (§8.9). The plot layer is plain SVG — no charting library, by C2. */
 export * from './charts/types';
 export { ChartFrame } from './charts/ChartFrame';
 export type { ChartFrameProps } from './charts/ChartFrame';
+export { TrendChart } from './charts/TrendChart';
+export type { TrendChartProps } from './charts/TrendChart';
+export { BarChart } from './charts/BarChart';
+export type { BarChartProps, BarDatum } from './charts/BarChart';
+export { AdherenceGrid, levelFor } from './charts/AdherenceGrid';
+export type { AdherenceGridProps } from './charts/AdherenceGrid';
+export { dayIndex, dayKeyOf, weekdayOf, weekStartIndex, axisLabel, monthLabel } from './charts/calendar';

@@ -127,3 +127,102 @@ export function draftForClose(
     },
   } as EventDraft;
 }
+
+/* -------------------------------------------------------------------------
+ * Gym (§4.1)
+ * ---------------------------------------------------------------------- */
+
+/**
+ * A session began.
+ *
+ * The payload carries the program it belongs to and the block's *label*, and
+ * nothing else. A label is a permitted denormalisation for the same reason
+ * `MedicationEventPayload.substanceLabel` is: it is a name, not a measurement,
+ * so it cannot drift into disagreement about a number — and a renamed block
+ * leaves historical timeline rows reading as they did at the time, which is
+ * arguably more correct.
+ */
+export function draftForWorkoutStarted(
+  sessionId: string,
+  startedAt: string,
+  actorId: string,
+  programId?: string | null,
+  programBlockLabel?: string | null,
+): EventDraft {
+  return {
+    eventType: 'Workout.Started',
+    occurredAt: startedAt,
+    actorId,
+    source: 'user',
+    subject: { type: 'workout_session', id: sessionId },
+    payload: {
+      ...(programId === null || programId === undefined ? {} : { programId }),
+      ...(programBlockLabel === null || programBlockLabel === undefined
+        ? {}
+        : { programBlockLabel }),
+    },
+  } as EventDraft;
+}
+
+/**
+ * One set was recorded.
+ *
+ * Registered as `significance: 'detail'` so a forty-set session does not bury
+ * everything else on the timeline for that day. The payload carries no load and
+ * no reps — those are observations, subject-referenced to the set, and the
+ * timeline joins to them if it wants them.
+ *
+ * `isPersonalRecord` is a flag rather than a value, which ADR 0005 permits: it
+ * is a fact about the set, not a measurement of it, and the timeline needs it to
+ * decide whether to render a badge without a second query.
+ */
+export function draftForSetLogged(
+  set: { readonly id: string; readonly sessionId: string; readonly exerciseId: string; readonly orderIndex: number; readonly performedAt: string; readonly isPersonalRecord: boolean },
+  exerciseLabel: string,
+  actorId: string,
+): EventDraft {
+  return {
+    eventType: 'Workout.SetLogged',
+    occurredAt: set.performedAt,
+    actorId,
+    source: 'user',
+    subject: { type: 'workout_set', id: set.id },
+    payload: {
+      sessionId: set.sessionId,
+      exerciseId: set.exerciseId,
+      exerciseLabel,
+      orderIndex: set.orderIndex,
+      isPersonalRecord: set.isPersonalRecord,
+    },
+  } as EventDraft;
+}
+
+/**
+ * The session ended.
+ *
+ * Counts and a duration — "a count is a fact about the session, not a
+ * measurement", as the registry puts it. The *volume* is deliberately absent:
+ * it is a measured quantity, it lives in `gym.session.volume`, and restating it
+ * here would create the second source of truth ADR 0005 exists to prevent.
+ */
+export function draftForWorkoutCompleted(
+  sessionId: string,
+  endedAt: string,
+  setCount: number,
+  exerciseCount: number,
+  durationMinutes: number | null,
+  actorId: string,
+): EventDraft {
+  return {
+    eventType: 'Workout.Completed',
+    occurredAt: endedAt,
+    actorId,
+    source: 'user',
+    subject: { type: 'workout_session', id: sessionId },
+    payload: {
+      setCount,
+      exerciseCount,
+      ...(durationMinutes === null ? {} : { durationMinutes }),
+    },
+  } as EventDraft;
+}

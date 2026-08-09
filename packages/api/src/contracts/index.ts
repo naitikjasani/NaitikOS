@@ -6,3 +6,6 @@ export * from './timeline';
 
 /** The observation substrate and the Daily Close (§9.2, §4.0). */
 export * from './observations';
+
+/** Gym — sessions, sets, exercises, volume (§4.1). */
+export * from './gym';

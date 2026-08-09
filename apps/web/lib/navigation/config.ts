@@ -34,8 +34,8 @@ export type NavItem = {
   /**
    * Whether the route exists.
    *
-   * Everything except Today is `false` at this milestone — this build contains
-   * no features by scope.
+   * `false` means the route does not exist yet, and the shell omits it
+   * entirely in production rather than rendering it disabled (§3.3 R6).
    */
   readonly available: boolean;
   /** Roadmap phase, for the development-only affordance. */
@@ -59,7 +59,17 @@ export const PRIMARY_NAV: readonly NavItem[] = Object.freeze([
     available: true,
     phase: 'mvp',
   },
-  { id: 'body', label: 'Body', href: '/body', icon: 'nav.body', available: false, phase: 'mvp' },
+  {
+    id: 'body',
+    label: 'Body',
+    href: '/body',
+    icon: 'nav.body',
+    // Available from the Gym milestone: `/body`, `/body/gym` and its four views
+    // exist, plus `/body/composition`. Skin and Sleep arrive in week four and
+    // are absent until they do — §3.3 R6.
+    available: true,
+    phase: 'mvp',
+  },
   { id: 'mind', label: 'Mind', href: '/mind', icon: 'nav.mind', available: false, phase: 'mvp' },
   {
     id: 'timeline',

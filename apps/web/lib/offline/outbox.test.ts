@@ -17,12 +17,15 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
   MAX_ATTEMPTS,
+  type OutboxEntry,
   acknowledge,
   allEntries,
   backoffSeconds,
+  blockEntry,
   clearOutbox,
   enqueue,
   markSending,
+  orphanedEntries,
   outboxHealth,
   readyEntries,
   recordFailure,
@@ -218,5 +221,106 @@ describe('outboxHealth', () => {
   it('reports an empty queue as empty', async () => {
     const health = await outboxHealth();
     expect(health).toEqual({ pending: 0, sending: 0, blocked: 0, oldestPendingAgeMs: null });
+  });
+});
+
+/**
+ * Dependency ordering — the gym logger's requirement.
+ *
+ * A set references its session by foreign key. A session logged in a basement
+ * queues one start and a dozen sets, and the drain must not send a set until the
+ * server has confirmed the session it belongs to.
+ */
+describe('dependency ordering', () => {
+  const SESSION_BODY = { startedAt: '2026-08-17T12:00:00.000Z', zone: 'Asia/Kolkata' };
+
+  it('holds a dependant back until its dependency is acknowledged', async () => {
+    await enqueue({ id: 'session', endpoint: '/api/gym/sessions', body: SESSION_BODY, label: 'session' });
+    await enqueue({
+      id: 'set-1',
+      endpoint: '/api/gym/sets',
+      body: { sessionId: 'session' },
+      label: 'set 1',
+      dependsOn: 'session',
+    });
+
+    expect((await readyEntries()).map((entry) => entry.id)).toEqual(['session']);
+
+    await acknowledge('session');
+    expect((await readyEntries()).map((entry) => entry.id)).toEqual(['set-1']);
+  });
+
+  /**
+   * Ordering by `enqueuedAt` alone is not enough: the drain continues past a
+   * failure, so a session start that failed would let every set behind it try,
+   * fail, and burn an attempt each.
+   */
+  it('holds dependants back while the dependency is merely failing', async () => {
+    const session = await enqueue({
+      id: 'session',
+      endpoint: '/api/gym/sessions',
+      body: SESSION_BODY,
+      label: 'session',
+    });
+    await enqueue({
+      id: 'set-1',
+      endpoint: '/api/gym/sets',
+      body: { sessionId: 'session' },
+      label: 'set 1',
+      dependsOn: 'session',
+    });
+
+    await recordFailure(session, 'network');
+
+    // The session is backing off and the set is held. Nothing is ready.
+    expect(await readyEntries()).toEqual([]);
+  });
+
+  /**
+   * A dependency that gives up takes its dependants with it — visibly. Leaving
+   * them pending forever is the silent discard §5.7 forbids, arriving slowly.
+   */
+  it('reports dependants of a blocked entry as orphaned', async () => {
+    let session = await enqueue({
+      id: 'session',
+      endpoint: '/api/gym/sessions',
+      body: SESSION_BODY,
+      label: 'session',
+    });
+    await enqueue({
+      id: 'set-1',
+      endpoint: '/api/gym/sets',
+      body: { sessionId: 'session' },
+      label: 'set 1',
+      dependsOn: 'session',
+    });
+
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+      session = await recordFailure(session, 'rejected_400');
+    }
+    expect(session.status).toBe('blocked');
+
+    const orphans = await orphanedEntries();
+    expect(orphans.map((entry) => entry.id)).toEqual(['set-1']);
+    expect(await readyEntries()).toEqual([]);
+
+    await blockEntry(orphans[0] as OutboxEntry, 'dependency_blocked');
+    const health = await outboxHealth();
+    expect(health.blocked).toBe(2);
+    expect(health.pending).toBe(0);
+  });
+
+  it('leaves an entry with no dependency alone', async () => {
+    await enqueue({ id: 'close', endpoint: '/api/close', body: CLOSE_BODY, label: 'close' });
+    expect((await readyEntries()).map((entry) => entry.id)).toEqual(['close']);
+  });
+
+  it('retries a blocked orphan once the operator asks', async () => {
+    await enqueue({ id: 'set-1', endpoint: '/api/gym/sets', body: {}, label: 'set 1' });
+    const entry = (await allEntries())[0] as OutboxEntry;
+    await blockEntry(entry, 'dependency_blocked');
+
+    expect(await retryBlocked('set-1')).toBe(1);
+    expect((await readyEntries()).map((item) => item.id)).toEqual(['set-1']);
   });
 });

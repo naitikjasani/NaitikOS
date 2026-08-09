@@ -1052,6 +1052,210 @@
   border-radius: var(--radius-md);
 }
 
+/* --------------------------------------------------------------------------
+   The plot layer
+
+   Plain SVG at measured pixel width (charts/useElementWidth.ts), so type stays
+   at the size §8.3 says and a 1px axis stays 1px. Nothing here assumes a
+   viewport wider than 360px (§8.9(7)).
+   -------------------------------------------------------------------------- */
+
+.nos-plot {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  padding: var(--space-2);
+}
+
+.nos-plot__svg {
+  display: block;
+  /* Charts are scrubbed by dragging. Without this, the drag scrolls the page
+     on touch and the crosshair never moves. */
+  touch-action: none;
+}
+
+/* Recessive by §8.9: the data is the foreground, the scaffolding is not. */
+.nos-plot__tick {
+  fill: var(--color-text-tertiary);
+  font-size: var(--typography-caption-font-size);
+  font-variant-numeric: tabular-nums;
+}
+
+.nos-plot__label {
+  fill: var(--color-text-secondary);
+  font-size: var(--typography-caption-font-size);
+}
+
+/* §8.2/§8.9(5): values wear text tokens, never the series colour. A number in
+   the mark's own hue reads as a status. */
+.nos-plot__value {
+  fill: var(--color-text-primary);
+  font-size: var(--typography-caption-font-size);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-medium);
+}
+
+.nos-plot__readout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  padding-block-start: var(--space-1);
+  /* Reserved height, so scrubbing does not reflow the page under the finger. */
+  min-height: var(--space-5);
+}
+
+.nos-plot__readout-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.nos-plot__caveat {
+  display: block;
+  padding-block-start: var(--space-1);
+}
+
+/* --------------------------------------------------------------------------
+   Adherence grid — §8.9's calendar heatmap
+   -------------------------------------------------------------------------- */
+
+.nos-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  min-width: 0;
+}
+
+.nos-grid__months,
+.nos-grid__body {
+  display: grid;
+  gap: 2px;
+}
+
+.nos-grid__months {
+  font-size: var(--typography-caption-font-size);
+  color: var(--color-text-tertiary);
+  grid-auto-columns: 1fr;
+}
+
+.nos-grid__month {
+  grid-row: 1;
+  white-space: nowrap;
+}
+
+.nos-grid__weekday {
+  font-size: var(--typography-caption-font-size);
+  color: var(--color-text-tertiary);
+  padding-inline-end: var(--space-1);
+  line-height: 1;
+}
+
+.nos-grid__cell {
+  aspect-ratio: 1;
+  min-width: 8px;
+  border-radius: 2px;
+  background: var(--color-surface-sunken);
+}
+
+/*
+  The sequential ramp (§8.9(5)).
+
+  One hue, mixed toward the chart surface in OKLab. Lightness is monotone by
+  *construction* rather than by inspection — which is the property a sequential
+  scale must have and the one a hand-picked ramp usually misses. Because the mix
+  target is whichever surface is in force, this inverts correctly in dark mode
+  with no second palette.
+*/
+.nos-grid__cell--0 {
+  background: var(--color-surface-sunken);
+  /* An outline, so "no record" stays distinguishable from the surface in
+     forced-colours mode, where backgrounds are replaced. */
+  box-shadow: inset 0 0 0 1px var(--chart-grid);
+}
+.nos-grid__cell--1 { background: color-mix(in oklab, var(--color-data-1) 22%, var(--color-surface-raised)); }
+.nos-grid__cell--2 { background: color-mix(in oklab, var(--color-data-1) 45%, var(--color-surface-raised)); }
+.nos-grid__cell--3 { background: color-mix(in oklab, var(--color-data-1) 70%, var(--color-surface-raised)); }
+.nos-grid__cell--4 { background: var(--color-data-1); }
+
+/* Outside the requested range: nothing at all. A future Tuesday has not been
+   missed, and an empty cell says that it has. */
+.nos-grid__cell--out {
+  background: transparent;
+  box-shadow: none;
+}
+
+.nos-grid__legend {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-block-start: var(--space-1);
+}
+
+.nos-grid__legend .nos-grid__cell {
+  width: 10px;
+  min-width: 10px;
+}
+
+.nos-grid__legend-label {
+  font-size: var(--typography-caption-font-size);
+  color: var(--color-text-tertiary);
+  padding-inline: var(--space-1);
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   Two patterns the feature layer kept re-inventing
+   -------------------------------------------------------------------------- */
+
+/*
+  A link that fills its card.
+
+  §8.13 and the WCAG target-size rule both want the *whole* card tappable, not
+  just the words in it — a 14px link inside a 72px card is a 14px target. The
+  anchor carries the semantics (middle-click, open-in-new-tab, the browser's own
+  affordances) and the padding comes from the card, so the two do not fight.
+*/
+.nos-card__link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  /* Negative margin then equal padding: the hit area reaches the card's edge
+     without the text moving. */
+  margin: calc(var(--card-padding) * -1);
+  padding: var(--card-padding);
+  border-radius: var(--radius-md);
+}
+
+.nos-card__link:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: calc(var(--focus-ring-width) * -1);
+}
+
+/* A selectable row in a list — the exercise picker, and anything like it. */
+.nos-option-row {
+  display: block;
+  width: 100%;
+  min-height: var(--button-height);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.nos-option-row:hover {
+  background: var(--color-surface-raised);
+}
+
+.nos-option-row:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
 /* ==========================================================================
    Table (§8.11)
    ========================================================================== */

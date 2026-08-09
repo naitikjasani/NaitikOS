@@ -68,6 +68,20 @@ export type OutboxEntry = {
   readonly body: Record<string, unknown>;
   /** What this entry is, for the unsynced banner. "Daily Close, 3 August". */
   readonly label: string;
+  /**
+   * An entry that must be acknowledged before this one may be sent.
+   *
+   * **The gym logger is why this exists.** A set references its session by
+   * foreign key, so a set that reaches the server first is rejected — and a
+   * whole session logged in a basement drains in whatever order the sweep finds
+   * it. Ordering by `enqueuedAt` is not sufficient on its own: the drain
+   * continues past a failure, so one failed session start would let every set
+   * behind it try, fail, and burn an attempt each.
+   *
+   * A dependency is satisfied when the entry it names is *gone* — and since only
+   * {@link acknowledge} deletes, gone means the server has it.
+   */
+  readonly dependsOn: string | null;
   readonly status: OutboxStatus;
   readonly attempts: number;
   readonly enqueuedAt: number;
@@ -163,6 +177,8 @@ export type EnqueueInput = {
   readonly label: string;
   /** Supply one to make the enqueue itself idempotent. */
   readonly id?: string;
+  /** Hold this entry until the named one is acknowledged. See {@link OutboxEntry.dependsOn}. */
+  readonly dependsOn?: string;
 };
 
 /**
@@ -190,6 +206,7 @@ export async function enqueue(input: EnqueueInput): Promise<OutboxEntry> {
      */
     body: { ...input.body, idempotencyKey: id },
     label: input.label,
+    dependsOn: input.dependsOn ?? null,
     status: 'pending',
     attempts: 0,
     enqueuedAt: now,
@@ -302,8 +319,30 @@ export async function retryBlocked(id?: string): Promise<number> {
 export async function readyEntries(): Promise<readonly OutboxEntry[]> {
   const now = systemClock.nowMillis();
   const entries = await allEntries();
+
+  /*
+   * Anything still in the store is unacknowledged — only `acknowledge` deletes.
+   * So an entry whose dependency is still present has not had its prerequisite
+   * confirmed by the server, and sending it would be sending a set for a
+   * session that does not exist yet.
+   */
+  const outstanding = new Set(entries.map((entry) => entry.id));
+  const blocked = new Set(entries.filter((entry) => entry.status === 'blocked').map((entry) => entry.id));
+
   return entries
-    .filter((entry) => entry.status === 'pending' && entry.nextAttemptAt <= now)
+    .filter(
+      (entry) =>
+        entry.status === 'pending' &&
+        entry.nextAttemptAt <= now &&
+        /*
+         * A dependency that has given up takes its dependants with it. Leaving
+         * them pending forever would be a silent stall — §5.7's "surface it in a
+         * visible unsynced state" applies to the whole chain, not just the link
+         * that broke. `drainOutbox` blocks them explicitly.
+         */
+        (entry.dependsOn === null || !outstanding.has(entry.dependsOn)) &&
+        (entry.dependsOn === null || !blocked.has(entry.dependsOn)),
+    )
     /*
      * Oldest first, and it matters more than it looks. Two closes of the same
      * day queued offline must reach the server in the order they were made, or
@@ -311,6 +350,29 @@ export async function readyEntries(): Promise<readonly OutboxEntry[]> {
      * records the operator changing their mind backwards.
      */
     .sort((a, b) => a.enqueuedAt - b.enqueuedAt);
+}
+
+/**
+ * Entries held back because something they depend on has given up.
+ *
+ * Returned so the drain can block them rather than leaving them pending
+ * forever. A queue that never empties and never complains is the silent discard
+ * §5.7 forbids, arriving slowly.
+ */
+export async function orphanedEntries(): Promise<readonly OutboxEntry[]> {
+  const entries = await allEntries();
+  const blocked = new Set(entries.filter((entry) => entry.status === 'blocked').map((entry) => entry.id));
+
+  return entries.filter(
+    (entry) => entry.status === 'pending' && entry.dependsOn !== null && blocked.has(entry.dependsOn),
+  );
+}
+
+/** Move an entry straight to `blocked`, without spending its remaining attempts. */
+export async function blockEntry(entry: OutboxEntry, reason: string): Promise<void> {
+  await withStore('readwrite', (store) =>
+    store.put({ ...entry, status: 'blocked', lastError: reason.slice(0, 200) }),
+  );
 }
 
 /** For tests and for the "clear local data" path in settings. */

@@ -24,8 +24,10 @@ import {
   type EnqueueInput,
   type OutboxEntry,
   acknowledge,
+  blockEntry,
   enqueue,
   markSending,
+  orphanedEntries,
   readyEntries,
   recordFailure,
   recoverStalled,
@@ -37,6 +39,8 @@ const SWEEP_INTERVAL_MS = 30_000;
 export type DrainSummary = {
   readonly sent: number;
   readonly failed: number;
+  /** Entries blocked because something they depend on gave up. */
+  readonly orphaned: number;
 };
 
 /** Set while a drain is running, so two triggers cannot interleave. */
@@ -116,21 +120,46 @@ async function send(entry: OutboxEntry): Promise<'sent' | 'failed'> {
  * backwards. Parallelism would buy nothing at this volume anyway.
  */
 export async function drainOutbox(): Promise<DrainSummary> {
-  if (draining) return { sent: 0, failed: 0 };
+  if (draining) return { sent: 0, failed: 0, orphaned: 0 };
   draining = true;
 
   try {
-    const entries = await readyEntries();
     let sent = 0;
     let failed = 0;
 
-    for (const entry of entries) {
+    /*
+     * Re-read between sends rather than iterating one snapshot.
+     *
+     * A dependant becomes ready the instant its dependency is acknowledged, and
+     * a session start followed by twelve sets is the normal case — draining a
+     * stale snapshot would send the session, skip every set, and leave them for
+     * the next sweep thirty seconds later. The loop is bounded by the number of
+     * entries, because each pass either sends something or stops.
+     */
+    for (;;) {
+      const ready = await readyEntries();
+      const entry = ready[0];
+      if (entry === undefined) break;
+
       const outcome = await send(entry);
       if (outcome === 'sent') sent += 1;
       else failed += 1;
+
+      // A failure means this entry is no longer ready (it has a backoff), so
+      // the next pass moves on rather than retrying it immediately.
     }
 
-    return { sent, failed };
+    /*
+     * Whatever is left waiting on something that gave up. Blocked explicitly so
+     * it appears in the unsynced banner with a manual retry, rather than sitting
+     * pending forever — which would be §5.7's silent discard, arriving slowly.
+     */
+    const orphans = await orphanedEntries();
+    for (const orphan of orphans) {
+      await blockEntry(orphan, 'dependency_blocked');
+    }
+
+    return { sent, failed, orphaned: orphans.length };
   } finally {
     draining = false;
   }
@@ -173,7 +202,7 @@ export function startDrainLoop(onChange?: () => void): () => void {
     void drainOutbox().then((summary) => {
       // Only notify when something actually moved, so a banner does not
       // re-render every thirty seconds for the whole day.
-      if (summary.sent > 0 || summary.failed > 0) onChange?.();
+      if (summary.sent > 0 || summary.failed > 0 || summary.orphaned > 0) onChange?.();
     });
   };
 

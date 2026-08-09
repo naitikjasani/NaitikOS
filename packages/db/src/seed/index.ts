@@ -23,7 +23,9 @@ import { createDatabase } from '../client';
 import { databaseUrl, isLocalDatabase } from '../env';
 import { metric } from '../schema/substrate';
 import { featureFlag } from '../schema/identity';
+import { createExerciseRepository } from '../repositories/exercise.repository';
 import { DAILY_CLOSE_METRICS, MVP_METRICS } from './metrics';
+import { SEED_EXERCISES } from './exercises';
 
 /**
  * Feature flags the application expects to exist.
@@ -130,6 +132,18 @@ async function main(): Promise<void> {
       });
   }
   console.log(`  feature_flag        ${String(FEATURE_FLAGS.length)} rows`);
+
+  /* --- Exercise library (§12 week 3) ---------------------------------- */
+  /*
+   * Reference data, not fixtures. §4.1's logger is built around confirming
+   * numbers rather than typing them, and an empty library makes the first
+   * session forty minutes of data entry — the exact friction the module exists
+   * to remove. Idempotent on the slug; `form_notes` is never overwritten,
+   * because it is the operator's own column.
+   */
+  const exercises = await createExerciseRepository(db).upsert(SEED_EXERCISES);
+  if (!exercises.ok) throw new Error(`Exercise seed failed: ${exercises.error.message}`);
+  console.log(`  exercise            ${String(exercises.value)} rows`);
 
   if (isLocalDatabase(url)) {
     console.log('  synthetic data      not implemented yet (§5.15 local/preview only)');

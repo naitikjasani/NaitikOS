@@ -199,4 +199,19 @@ export const queryKeys = {
   close: (dayKey: string, zone: string) => ['close', dayKey, zone] as const,
   observations: (params: Record<string, unknown>) => ['observations', params] as const,
   timeline: (params: Record<string, unknown>) => ['timeline', params] as const,
+
+  /* --- Gym (§4.1) ----------------------------------------------------- */
+  gymSessions: () => ['gym', 'sessions'] as const,
+  gymExercises: () => ['gym', 'exercises'] as const,
+  /**
+   * Keyed by the *set position* as well as the exercise.
+   *
+   * The prefill is position-dependent — a third set of squats matches last
+   * week's third set, not their first — so a key that ignored the position
+   * would serve the first set's numbers for every set after it, from cache,
+   * and the operator would confirm the wrong weight without noticing.
+   */
+  gymProgression: (exerciseId: string, setIndex: number, excludeSessionId?: string) =>
+    ['gym', 'progression', exerciseId, setIndex, excludeSessionId ?? null] as const,
+  gymVolume: (from: string, to: string, zone: string) => ['gym', 'volume', from, to, zone] as const,
 } as const;

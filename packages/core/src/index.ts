@@ -50,6 +50,8 @@ export {
   addUtcDays,
   utcDayKey,
   utcDaysBetween,
+  dayKeyIndex,
+  shiftDayKey,
   isoWeekday,
   isoFromMillis,
   isoAfterSeconds,
@@ -181,6 +183,125 @@ export {
   planDailyClose,
   isEmptyPlan,
 } from './close/plan';
+
+/* -------------------------------------------------------------------------
+ * Statistics (§6.2) — trends and moving averages. Drawn, never stored.
+ * ---------------------------------------------------------------------- */
+export type { DailyValue, DailyEstimate, DailyBand } from './statistics/types';
+export type { MovingAverageOptions, TrendSummary } from './statistics/moving-average';
+export {
+  DEFAULT_TREND_WINDOW_DAYS,
+  collapseByDay,
+  movingAverage,
+  summariseTrend,
+} from './statistics/moving-average';
+
+export type { LinearFit, ProjectedPoint } from './statistics/trend';
+export {
+  TREND_CAVEAT,
+  MIN_TREND_POINTS,
+  MAX_PROJECTION_DAYS,
+  linearTrend,
+  trendBand,
+  projectForward,
+} from './statistics/trend';
+
+/* -------------------------------------------------------------------------
+ * Derivation (§6.2) — observations in, derived facts out.
+ * ---------------------------------------------------------------------- */
+export type { RollupOptions } from './derivation/rollup';
+export { aggregate, dailyRollup } from './derivation/rollup';
+
+/* -------------------------------------------------------------------------
+ * Gym (§4.1) — the first full domain.
+ * ---------------------------------------------------------------------- */
+export type {
+  MuscleGroup,
+  ExerciseMechanic,
+  EquipmentKind,
+  WorkoutSetKind,
+  Exercise,
+} from './domain/gym/exercise';
+export {
+  MUSCLE_GROUPS,
+  MUSCLE_GROUP_LABELS,
+  EQUIPMENT_KINDS,
+  WORKOUT_SET_KINDS,
+  VOLUME_BEARING_KINDS,
+  countsTowardsVolume,
+  exerciseSlug,
+  scoreExerciseMatch,
+  searchExercises,
+} from './domain/gym/exercise';
+
+export type {
+  WorkoutSession,
+  WorkoutSet,
+  SetSide,
+  SetLogInput,
+  SetLogContext,
+  PlannedSet,
+  SessionCloseContext,
+  SessionClosePlan,
+} from './domain/gym/session';
+export {
+  GYM_METRICS,
+  SET_SUBJECT_TYPE,
+  SESSION_SUBJECT_TYPE,
+  MAX_REPS,
+  MAX_REST_SECONDS,
+  RPE_STEP,
+  MIN_RPE,
+  MAX_RPE,
+  planSetLog,
+  sessionDurationMinutes,
+  planSessionClose,
+} from './domain/gym/session';
+
+export type { VolumeExclusion, SetVolume, SessionVolume, ExerciseLookup } from './domain/gym/volume';
+export {
+  SECONDARY_MUSCLE_SHARE,
+  effectiveLoad,
+  setVolume,
+  sessionVolume,
+  volumeByMuscle,
+  setsByMuscle,
+} from './domain/gym/volume';
+
+export type {
+  PersonalRecordKind,
+  ExerciseBest,
+  RecordCandidate,
+  RecordVerdict,
+} from './domain/gym/records';
+export {
+  MAX_ESTIMABLE_REPS,
+  NO_HISTORY,
+  NO_RECORD,
+  RECORD_LABELS,
+  estimateOneRepMax,
+  bestFrom,
+  detectRecords,
+  relativeStrength,
+} from './domain/gym/records';
+
+export type { HistoricalSet, SetPrefill, ProgressionPoint } from './domain/gym/progression';
+export {
+  EMPTY_PREFILL,
+  lastSessionFor,
+  prefillFor,
+  progressionBySession,
+  progressionSeries,
+} from './domain/gym/progression';
+
+export type {
+  Program,
+  ProgramBlock,
+  PrescribedExercise,
+  AdherenceWindow,
+  ProgramAdherence,
+} from './domain/gym/program';
+export { parsePrescription, programAdherence, nextBlock } from './domain/gym/program';
 
 /* -------------------------------------------------------------------------
  * Domain events (ADR 0005) — an integration log, not a system of record.

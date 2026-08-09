@@ -89,6 +89,47 @@ anything unrelated inside one silently closes it and every subsequent request
 throws `TransactionInactiveError`. Every transaction here builds its requests
 synchronously and resolves on `oncomplete`.
 
+### Dependency ordering
+
+*Added in the Gym milestone, because Gym is the first module whose writes depend
+on each other.*
+
+A `workout_set` references its session by foreign key. A session logged offline
+queues one start and a dozen sets, and a set that reaches the server first is
+rejected with `23503`.
+
+Sorting by `enqueuedAt` is **not sufficient**, and this is the part that is easy
+to get wrong: the drain continues past a failure, so one failed session start
+would let every set behind it try, fail, and burn one of its six attempts.
+
+So an entry may name a prerequisite:
+
+```ts
+await queueAndDrain({
+  endpoint: '/api/gym/sets',
+  body: { sessionId, set },
+  label: `Set · ${exerciseName}`,
+  dependsOn: sessionQueueEntryId,   //  ← held until that entry is acknowledged
+});
+```
+
+`readyEntries` withholds an entry while its dependency is still in the store —
+and since only `acknowledge` deletes, *still in the store* means *the server has
+not confirmed it*. The drain re-reads between sends rather than iterating one
+snapshot, so a set becomes ready the instant its session lands rather than
+waiting for the next sweep thirty seconds later.
+
+A dependency that exhausts its attempts takes its dependants with it, **visibly**:
+`orphanedEntries` finds them and the drain moves them to `blocked`, where §5.7
+wants them "surfaced in a visible unsynced state with a manual retry". Leaving
+them pending forever would be the silent discard §5.7 forbids, arriving slowly.
+
+The server carries the same guarantee independently. If an entry slips through
+without a declared dependency — a tab reloaded mid-session loses the in-memory
+mapping — the foreign-key violation is translated into a *retryable*
+`workout_session_missing` precondition rather than a permanent rejection. Belt on
+the client, braces on the server.
+
 ## Idempotency
 
 The server half. `withIdempotency` wraps every mutation, so a handler never sees

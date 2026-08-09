@@ -32,6 +32,15 @@ import { useNavigationStore } from '@/lib/stores/navigation.store';
  * The commands live here rather than in a feature because the palette is
  * platform infrastructure. Features will register into it; none exist yet.
  */
+/** Destinations one level below the pillar list. */
+const GYM_TARGETS: readonly { readonly href: string; readonly label: string }[] = [
+  { href: '/body/gym/log', label: 'Log a session' },
+  { href: '/body/gym/history', label: 'Session history' },
+  { href: '/body/gym/exercises', label: 'Exercise library' },
+  { href: '/body/gym/volume', label: 'Volume by muscle group' },
+  { href: '/body/composition', label: 'Bodyweight trend' },
+];
+
 export function CommandPalette(): ReactNode {
   const router = useRouter();
   const isOpen = useNavigationStore((state) => state.isCommandPaletteOpen);
@@ -94,6 +103,33 @@ export function CommandPalette(): ReactNode {
                   not built
                 </span>
               )}
+            </Command.Item>
+          ))}
+        </Command.Group>
+
+        {/*
+          Deep destinations, separate from the pillar list above.
+
+          §3.3(4) forbids capture requiring navigation, and a *set* is the one
+          thing on §3.2's capture list that genuinely cannot be captured without
+          one — a set belongs to a session, and a session is a place. So it is
+          here, as a destination, rather than in the quick-capture rail
+          pretending to be a three-tap log.
+        */}
+        <Command.Group heading="Gym" className="palette__group">
+          {GYM_TARGETS.map((target) => (
+            <Command.Item
+              key={target.href}
+              value={`gym ${target.label}`}
+              onSelect={() => {
+                run(() => {
+                  router.push(target.href);
+                });
+              }}
+              className="palette__item"
+            >
+              <Icon name="nav.body" label={null} size="sm" />
+              <span>{target.label}</span>
             </Command.Item>
           ))}
         </Command.Group>

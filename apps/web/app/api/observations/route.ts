@@ -166,6 +166,39 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           displayName: metric?.displayName ?? observation.metricKey,
         };
       }),
+
+      /*
+       * The registry entry for every metric in the response.
+       *
+       * §9.2's claim — "summing bodyweight over a week is nonsense and averaging
+       * training volume hides a taper; **the registry is what stops a chart from
+       * doing either**" — is only true if the chart can *see* the registry. The
+       * client holds none, so without this a client-side rollup would have to
+       * pick an aggregation itself, which is exactly the choice §9.2 removes.
+       *
+       * Only the fields a rollup needs. The full definition carries
+       * `description`, which is long and already travels in the export, where a
+       * reader in 2046 will actually look for it.
+       */
+      metrics: Object.fromEntries(
+        [...new Set(result.value.map((observation) => observation.metricKey))].flatMap((key) => {
+          const metric = registry.value.get(key);
+          return metric === null
+            ? []
+            : [
+                [
+                  key,
+                  {
+                    key: metric.key,
+                    displayName: metric.displayName,
+                    canonicalUnit: metric.canonicalUnit,
+                    valueType: metric.valueType,
+                    aggregation: metric.aggregation,
+                  },
+                ],
+              ];
+        }),
+      ),
     });
   } catch (error: unknown) {
     /*

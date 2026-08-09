@@ -43,6 +43,23 @@ export {
 } from './idempotency.repository';
 export type { IdempotencyRepository, IdempotencyClaim } from './idempotency.repository';
 
+/* --- Gym (§4.1) -------------------------------------------------------- */
+export { createExerciseRepository } from './exercise.repository';
+export type { ExerciseRepository, ExerciseDefinition } from './exercise.repository';
+
+export { createWorkoutRepository, SESSION_MISSING } from './workout.repository';
+export type {
+  WorkoutRepository,
+  WriteContext,
+  SessionSummary,
+  StartSessionInput,
+  LoggedSet,
+  ClosedSession,
+} from './workout.repository';
+
+export { createProgramRepository } from './program.repository';
+export type { ProgramRepository } from './program.repository';
+
 /* --- The export (§9.10) ------------------------------------------------ */
 export { createExportRepository, allTableNames } from './export.repository';
 export type { ExportRepository, ExportOptions } from './export.repository';
