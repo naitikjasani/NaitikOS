@@ -98,6 +98,15 @@ export type Logger = {
 export const METRIC_NAMES = [
   /** Cold start → observation persisted. The P1 budget. */
   'capture.latency',
+  /**
+   * The Close was opened.
+   *
+   * Paired with `daily_close.submitted` it is §12's "drop-off point" for the one
+   * flow that matters: a Close opened and left is the operator meeting the
+   * ritual and deciding against it, which is exactly the friction the V1
+   * validation window exists to find.
+   */
+  'daily_close.started',
   'daily_close.submitted',
   'daily_close.duration',
   'observation.written',

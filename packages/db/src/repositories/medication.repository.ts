@@ -36,7 +36,7 @@ import type {
 } from '@naitikos/core';
 
 import type { Database } from '../client';
-import { medication, medicationEvent, medicationSchedule } from '../schema/medical';
+import { medicalEvent, medication, medicationEvent, medicationSchedule } from '../schema/medical';
 
 function toMedication(row: typeof medication.$inferSelect): Medication {
   return {
@@ -231,4 +231,125 @@ export function createMedicationRepository(db: Database): MedicationRepository {
       return ok({ event: toEvent(existingById), written: false });
     },
   };
+}
+
+/* -------------------------------------------------------------------------
+ * Registration — §2.1's "no manual database intervention required"
+ * ---------------------------------------------------------------------- */
+
+export type RegisterMedicationInput = {
+  readonly id: string;
+  readonly medicalEventId: string;
+  readonly scheduleId: string;
+  readonly substance: string;
+  readonly brandName: string | null;
+  readonly form: string;
+  readonly strength: string | null;
+  readonly strengthUnit: string | null;
+  readonly indication: string | null;
+  readonly prescriber: string | null;
+  readonly startedAt: string;
+  readonly isPsychiatric: boolean;
+  readonly zone: string;
+  readonly dose: string;
+  readonly doseUnit: string;
+  readonly frequency: string;
+  readonly times: readonly string[];
+};
+
+/**
+ * Register a medication, its medical event, and its first schedule.
+ *
+ * ## Three rows, one transaction, and the order is forced
+ *
+ * `medication.medical_event_id` is a non-null foreign key, so §9.5's bitemporal
+ * event has to exist first. That is not incidental plumbing: §9.5 scopes
+ * bitemporality to `medical_event` and its subtypes precisely so "when did I
+ * start this, and when did the record learn it" stays answerable — and a
+ * medication row without its event would be a clinical fact with no history.
+ *
+ * ## `validFrom` is the start date, not now
+ *
+ * The operator registering Venlafaxine in September records a medication they
+ * began in February. `valid_from` is February — that is the *validity* axis,
+ * what was true in the world. `recorded_from` defaults to `now()`, which is the
+ * *transaction* axis: when the record learned it. Collapsing the two would make
+ * every backfilled medication look like it started the day it was typed in, and
+ * a mood chart's "started Escitalopram" marker would land in the wrong month.
+ */
+export async function registerMedication(
+  db: Database,
+  input: RegisterMedicationInput,
+): Promise<Result<Medication, DomainError>> {
+  return db.transaction(async (tx) => {
+    await tx
+      .insert(medicalEvent)
+      .values({
+        id: input.medicalEventId,
+        type: 'medication',
+        validFrom: input.startedAt,
+        zone: input.zone,
+        title: `Started ${input.brandName ?? input.substance}`,
+      })
+      .onConflictDoNothing({ target: medicalEvent.id });
+
+    await tx
+      .insert(medication)
+      .values({
+        id: input.id,
+        medicalEventId: input.medicalEventId,
+        substance: input.substance,
+        brandName: input.brandName,
+        form: input.form as typeof medication.$inferInsert.form,
+        strength: input.strength,
+        strengthUnit: input.strengthUnit,
+        indication: input.indication,
+        prescriber: input.prescriber,
+        startedAt: input.startedAt,
+        isPsychiatric: input.isPsychiatric,
+        validFrom: input.startedAt,
+      })
+      .onConflictDoUpdate({
+        target: medication.id,
+        set: {
+          substance: input.substance,
+          brandName: input.brandName,
+          strength: input.strength,
+          strengthUnit: input.strengthUnit,
+          indication: input.indication,
+          prescriber: input.prescriber,
+          isPsychiatric: input.isPsychiatric,
+          updatedAt: sql`now()`,
+          version: sql`${medication.version} + 1`,
+        },
+      });
+
+    /*
+     * `DO NOTHING` on the schedule, unlike the medication.
+     *
+     * §9.2: "a dose change is a new schedule rather than an edit that erases the
+     * old dose." Updating this row would destroy the answer to "was I on 75mg or
+     * 150mg when the side effects started?" — which the schema comment names as
+     * precisely the question a psychiatrist asks. A dose change writes a second
+     * row with its own validity interval; the GiST exclusion constraint from
+     * migration 0002 is what keeps the two from overlapping.
+     */
+    await tx
+      .insert(medicationSchedule)
+      .values({
+        id: input.scheduleId,
+        medicationId: input.id,
+        dose: input.dose,
+        doseUnit: input.doseUnit,
+        frequency: input.frequency,
+        times: [...input.times],
+        validFrom: input.startedAt,
+      })
+      .onConflictDoNothing({ target: medicationSchedule.id });
+
+    const rows = await tx.select().from(medication).where(eq(medication.id, input.id)).limit(1);
+    const row = rows[0];
+    if (row === undefined) throw new Error('medication_not_written');
+    return ok(toMedication(row));
+  });
 }

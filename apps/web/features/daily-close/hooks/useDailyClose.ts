@@ -16,12 +16,13 @@
  * answer and recorded forever as one.
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CloseField } from '@naitikos/core';
 import { systemClock } from '@naitikos/core';
 
 import { queryKeys } from '@/lib/query/QueryProvider';
+import { record, recordCaptureLatency } from '@/lib/telemetry/client';
 import {
   type CloseSnapshot,
   type SubmitAnswer,
@@ -118,11 +119,27 @@ export function useDailyClose(dayKey: string, zone: string): UseDailyClose {
   const queryClient = useQueryClient();
   const [edits, setEdits] = useState<Record<string, number | string | boolean>>({});
   const [queuedAt, setQueuedAt] = useState<number | null>(null);
+  const openedAt = useRef<number | null>(null);
 
   const query = useQuery({
     queryKey: queryKeys.close(dayKey, zone),
     queryFn: () => fetchClose(dayKey, zone),
   });
+
+  /*
+   * §12's V1 phase instruments "Daily Close completion" and "drop-off points",
+   * and a drop-off is only visible if the *opening* is recorded too. A Close
+   * opened and left is the operator meeting the ritual and deciding against it,
+   * which is precisely the friction the thirty days exist to find.
+   *
+   * Recorded once per mount, when the form is actually renderable — recording
+   * it on mount would count a load that failed as an abandonment.
+   */
+  useEffect(() => {
+    if (query.isLoading || openedAt.current !== null) return;
+    openedAt.current = systemClock.nowMillis();
+    record('daily_close.started', undefined, '/today/close');
+  }, [query.isLoading]);
 
   const snapshot = query.data;
 
@@ -165,7 +182,29 @@ export function useDailyClose(dayKey: string, zone: string): UseDailyClose {
       return submitClose(dayKey, zone, payload);
     },
     onSuccess: () => {
-      setQueuedAt(systemClock.nowMillis());
+      const now = systemClock.nowMillis();
+      setQueuedAt(now);
+
+      /*
+       * The completion, and how long the ritual took.
+       *
+       * §4.0 budgets the Close at sixty seconds and §1.5's anti-goal warns that
+       * the North Star "must never be pursued by making the Daily Close longer
+       * or richer" — a duration that climbs while Compounding Days climbs is
+       * exactly the gaming §1.5 describes, and `detectGaming` needs this number
+       * to see it.
+       */
+      record('daily_close.submitted', undefined, '/today/close');
+      if (openedAt.current !== null) {
+        record('daily_close.duration', now - openedAt.current, '/today/close');
+      }
+      /*
+       * The §1.4 health metric: cold start → fact persisted. Recorded here
+       * because the Close is the capture path the budget is written about, and
+       * `recordCaptureLatency` ignores every call after the first so a second
+       * submission in the same session cannot drag the median warm.
+       */
+      recordCaptureLatency('/today/close');
       /*
        * Invalidated, not optimistically patched.
        *

@@ -253,3 +253,137 @@ export async function loggedDays(
     .orderBy(desc(routineLog.occurredOn));
   return rows.map((row) => row.day);
 }
+
+/* -------------------------------------------------------------------------
+ * Definition — §2.1's "no manual database intervention required"
+ * ---------------------------------------------------------------------- */
+
+export type RoutineDefinition = {
+  readonly id: string;
+  readonly kind: RoutineKind;
+  readonly period: RoutinePeriod;
+  readonly name: string;
+  readonly isActive: boolean;
+  readonly expectedAt: string | null;
+  readonly steps: readonly {
+    readonly id: string;
+    readonly label: string;
+    readonly orderIndex: number;
+    readonly isOptional: boolean;
+    readonly instructions: string | null;
+  }[];
+};
+
+/**
+ * Create or replace a routine and its steps, atomically.
+ *
+ * ## Steps are soft-deleted, never removed
+ *
+ * A step dropped from the definition is tombstoned rather than deleted, and the
+ * reason is `routine_log`: completions reference `step_id` by foreign key, so a
+ * hard delete would either fail or orphan three months of adherence history.
+ *
+ * The consequence is that `requiredSteps` must only ever see live steps — which
+ * `stepsFor` guarantees with `isNull(deletedAt)`. A retired step therefore
+ * leaves *past* adherence intact and stops counting towards *future* ratios,
+ * which is the only reading of "I dropped the toner" that does not rewrite
+ * history.
+ *
+ * ## The order index is the natural key, so it is reassigned wholesale
+ *
+ * `routine_step_order_unique` is `(routineId, orderIndex)`. Swapping two steps
+ * by updating each in turn transiently violates it, so every surviving step is
+ * pushed past the end of the range first and then written to its final
+ * position — the standard two-phase renumber, in one transaction.
+ */
+export async function defineRoutine(
+  db: Database,
+  definition: RoutineDefinition,
+): Promise<Result<Routine, DomainError>> {
+  return db.transaction(async (tx) => {
+    await tx
+      .insert(routine)
+      .values({
+        id: definition.id,
+        kind: definition.kind,
+        period: definition.period,
+        name: definition.name,
+        isActive: definition.isActive,
+        expectedAt: definition.expectedAt,
+      })
+      .onConflictDoUpdate({
+        target: routine.id,
+        set: {
+          kind: definition.kind,
+          period: definition.period,
+          name: definition.name,
+          isActive: definition.isActive,
+          expectedAt: definition.expectedAt,
+          updatedAt: sql`now()`,
+          version: sql`${routine.version} + 1`,
+        },
+      });
+
+    const keptIds = new Set(definition.steps.map((step) => step.id));
+
+    const existing = await tx
+      .select({ id: routineStep.id })
+      .from(routineStep)
+      .where(and(eq(routineStep.routineId, definition.id), isNull(routineStep.deletedAt)));
+
+    /*
+     * Phase one: move every existing step out of the way.
+     *
+     * Negative indices, which nothing else uses, so the unique constraint
+     * cannot be violated part-way through the renumber below.
+     */
+    for (const [offset, row] of existing.entries()) {
+      await tx
+        .update(routineStep)
+        .set({ orderIndex: -1 - offset })
+        .where(eq(routineStep.id, row.id));
+    }
+
+    // Tombstone what the operator removed. See the header.
+    for (const row of existing) {
+      if (keptIds.has(row.id)) continue;
+      await tx
+        .update(routineStep)
+        .set({ deletedAt: sql`now()`, deleteReason: 'removed_from_routine' })
+        .where(eq(routineStep.id, row.id));
+    }
+
+    // Phase two: write every step at its final position.
+    for (const step of definition.steps) {
+      await tx
+        .insert(routineStep)
+        .values({
+          id: step.id,
+          routineId: definition.id,
+          orderIndex: step.orderIndex,
+          label: step.label,
+          isOptional: step.isOptional,
+          instructions: step.instructions,
+        })
+        .onConflictDoUpdate({
+          target: routineStep.id,
+          set: {
+            orderIndex: step.orderIndex,
+            label: step.label,
+            isOptional: step.isOptional,
+            instructions: step.instructions,
+            deletedAt: null,
+            updatedAt: sql`now()`,
+            version: sql`${routineStep.version} + 1`,
+          },
+        });
+    }
+
+    const rows = await tx.select().from(routine).where(eq(routine.id, definition.id)).limit(1);
+    const row = rows[0];
+    if (row === undefined) {
+      throw new Error('routine_not_written');
+    }
+    return ok(toRoutine(row));
+  });
+}

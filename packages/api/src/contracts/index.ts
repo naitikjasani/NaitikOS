@@ -15,3 +15,9 @@ export * from './mind';
 
 /** Skin, the routine engine, and the capture protocol (§4.2, §9.2, §9.8). */
 export * from './skin';
+
+/** Telemetry — §5.11's names-and-numbers-only contract. */
+export * from './telemetry';
+
+/** The authoring contracts — §2.1's "no manual database intervention". */
+export * from './registers';

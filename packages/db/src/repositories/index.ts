@@ -61,20 +61,20 @@ export { createProgramRepository } from './program.repository';
 export type { ProgramRepository } from './program.repository';
 
 /* --- Mind (§4.7) ------------------------------------------------------- */
-export { createMindRepository } from './mind.repository';
-export type { MindRepository, EpisodeWritten, PracticeWritten } from './mind.repository';
+export { createMindRepository, writeCrisisPlan } from './mind.repository';
+export type { MindRepository, EpisodeWritten, PracticeWritten, CrisisPlanInput } from './mind.repository';
 
 /* --- Skin (§4.2) ------------------------------------------------------- */
 export { createSkinRepository } from './skin.repository';
 export type { SkinRepository, SkinStateWritten } from './skin.repository';
 
 /* --- The routine engine (§9.2) ----------------------------------------- */
-export { createRoutineRepository, loggedDays } from './routine.repository';
-export type { RoutineRepository, LogStepInput } from './routine.repository';
+export { createRoutineRepository, defineRoutine, loggedDays } from './routine.repository';
+export type { RoutineRepository, LogStepInput, RoutineDefinition } from './routine.repository';
 
 /* --- The medication register (§4.4, §4.7) ------------------------------ */
-export { createMedicationRepository } from './medication.repository';
-export type { MedicationRepository, LogDoseInput } from './medication.repository';
+export { createMedicationRepository, registerMedication } from './medication.repository';
+export type { MedicationRepository, LogDoseInput, RegisterMedicationInput } from './medication.repository';
 
 /* --- The export (§9.10) ------------------------------------------------ */
 export { createExportRepository, allTableNames } from './export.repository';
@@ -92,6 +92,15 @@ export type {
   OutboxStatus,
   OutboxHealth,
 } from './upload-outbox.repository';
+
+/* --- Telemetry (§5.11) and the V1 validation window (§12) --------------- */
+export {
+  createTelemetryRepository,
+  closedDaysBetween,
+  retentionCutoff,
+  TELEMETRY_RETENTION_DAYS,
+} from './telemetry.repository';
+export type { TelemetryRepository, EventCounts } from './telemetry.repository';
 
 /* --- The nightly run's completion record (§5.16) ----------------------- */
 export {

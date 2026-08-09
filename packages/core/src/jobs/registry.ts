@@ -101,6 +101,16 @@ export const JOB_STEPS = [
   'prune-idempotency',
 
   /**
+   * §5.11's telemetry retention: "Ninety-day retention, then aggregate and
+   * discard."
+   *
+   * A nightly step rather than a database cron so the deletion appears in
+   * `job_run` like every other scheduled effect — a sweep nobody can see the
+   * result of is a sweep nobody notices has stopped running.
+   */
+  'prune-telemetry',
+
+  /**
    * Deferred work enqueued by event handlers.
    *
    * Last, so a task enqueued by an earlier step in the same run is picked up

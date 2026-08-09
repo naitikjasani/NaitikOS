@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { uuidV7 } from '@naitikos/shared';
 import { medicationLabel, systemClock } from '@naitikos/core';
@@ -15,6 +15,8 @@ import {
   Stack,
   Text,
 } from '@naitikos/design-system';
+
+import { MedicationRegisterForm } from '@/features/registers';
 
 import { fetchMedications, logDose } from '../services/mindClient';
 
@@ -55,6 +57,7 @@ export function MedicationScreen({
   readonly nowIso: string;
 }): ReactNode {
   const queryClient = useQueryClient();
+  const [adding, setAdding] = useState(false);
 
   const lens = useQuery({
     queryKey: ['medications', dayKey, zone, 'psychiatric'],
@@ -90,21 +93,49 @@ export function MedicationScreen({
   const data = lens.data;
   if (data === undefined) return null;
 
+  if (adding) {
+    return (
+      <MedicationRegisterForm
+        zone={zone}
+        onDone={() => {
+          setAdding(false);
+        }}
+      />
+    );
+  }
+
   if (data.medications.length === 0) {
     return (
       <EmptyState
         icon="domain.medication"
-        title="No psychiatric medications on file"
-        description="This view is a lens over the medication register. Nothing here is a second copy of it."
+        title="Nothing in the register yet"
+        description="This view is a lens over the medication register, not a second copy of it. Adherence starts counting from the moment a medication and its schedule exist."
+        action={{
+          label: 'Add a medication',
+          onAction: () => {
+            setAdding(true);
+          },
+        }}
       />
     );
   }
 
   return (
     <Stack gap="5">
-      <Text role="caption" tone="tertiary">
-        A filtered view of the register. Last {String(data.windowDays)} days.
-      </Text>
+      <Inline justify="between" align="center">
+        <Text role="caption" tone="tertiary">
+          A filtered view of the register. Last {String(data.windowDays)} days.
+        </Text>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            setAdding(true);
+          }}
+        >
+          Add
+        </Button>
+      </Inline>
 
       {data.medications.map((medication) => {
         const adherence = data.adherence.find((item) => item.medicationId === medication.id);

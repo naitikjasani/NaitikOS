@@ -28,7 +28,13 @@ import { NextResponse } from 'next/server';
 import { runJobSchema } from '@naitikos/api';
 import type { JobStep, JobStepName } from '@naitikos/core';
 import { JOB_STEPS, isoFromMillis, runNightly, systemClock } from '@naitikos/core';
-import { createJobRunRecorder, hasCompletedRunSince, lastJobRun } from '@naitikos/db';
+import {
+  createJobRunRecorder,
+  createTelemetryRepository,
+  hasCompletedRunSince,
+  lastJobRun,
+  retentionCutoff,
+} from '@naitikos/db';
 import { ok } from '@naitikos/shared';
 
 import {
@@ -43,9 +49,10 @@ import type { PlatformContext } from '../../../../lib/platform/context';
 /**
  * The registered steps.
  *
- * Two today, both operational rather than domain work: they keep the queues from
- * silently stranding rows, which is the failure §5.2's "safe to re-run" depends
- * on. Domain steps arrive with their domains.
+ * Three today, all operational rather than domain work: they keep the queues
+ * from silently stranding rows and the telemetry table from growing without
+ * bound, which is the failure §5.2's "safe to re-run" depends on. Domain steps
+ * arrive with their domains.
  */
 function stepsFor(platform: PlatformContext): readonly JobStep[] {
   // Six hours. Longer than any run's fifteen-minute budget by a wide margin, so a
@@ -92,6 +99,24 @@ function stepsFor(platform: PlatformContext): readonly JobStep[] {
         return ok({
           rowsAffected: stale.ok ? stale.value : 0,
           note: `${String(health.pending)} pending, ${String(health.failed)} failed`,
+        });
+      },
+    },
+    {
+      name: 'prune-telemetry',
+      describes: 'Discards app_event rows past the ninety-day retention (§5.11).',
+      /*
+       * Never halts the run. Telemetry is the least important thing in the
+       * system by construction — it exists to protect the metrics, not to be
+       * one — and a failed sweep must not stop the media integrity check.
+       */
+      haltOnFailure: false,
+      async run() {
+        const cutoff = retentionCutoff(systemClock.nowMillis());
+        const removed = await createTelemetryRepository(platform.db).pruneEvents(cutoff);
+        return ok({
+          rowsAffected: removed.ok ? removed.value : 0,
+          note: `retention cutoff ${cutoff.slice(0, 10)}`,
         });
       },
     },

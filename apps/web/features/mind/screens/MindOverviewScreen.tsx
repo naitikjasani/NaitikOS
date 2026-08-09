@@ -72,6 +72,37 @@ export function MindOverviewScreen({
       {/* First, always, and nothing above it. See the header. */}
       {data.crisis !== null && <CrisisCard plan={data.crisis.plan} />}
 
+      {/*
+        The invitation, and only on a settled stretch.
+
+        `core`'s `shouldInvitePlanning` returns true when there is no plan on
+        file *and* no current run of severe days — §4.7 wants the plan "entered
+        by them when well", and asking for calm anticipatory work during a bad
+        week converts a bad week into a bad week plus a form.
+
+        It links out to `/settings/profile` rather than opening a form here, so
+        the act of writing one is always deliberate.
+      */}
+      {data.invitePlanning && (
+        <Card variant="flat">
+          <CardBody>
+            <Stack gap="1">
+              <Text role="body-sm">
+                There is no crisis plan on file.
+              </Text>
+              <Text role="caption" tone="tertiary">
+                It is a page of your own words, shown back to you unchanged if a run of hard days is
+                recorded. Worth writing on a settled day like this one.{' '}
+                <Link className="nos-inline-link" href="/settings/profile">
+                  Write one
+                </Link>
+                .
+              </Text>
+            </Stack>
+          </CardBody>
+        </Card>
+      )}
+
       {!hasAnything ? (
         <EmptyState
           icon="data.chart"

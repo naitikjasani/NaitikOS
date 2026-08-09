@@ -18,6 +18,7 @@ import { SessionProvider } from '@/features/auth';
 import { AppShell } from '@/components/shell';
 import { QueryProvider } from '@/lib/query/QueryProvider';
 import { getAuthState } from '@/lib/auth/session';
+import { RouteTelemetry } from '@/lib/telemetry/RouteTelemetry';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { SIGN_IN_PATH } from '@/lib/auth/routes';
 
@@ -52,6 +53,12 @@ export default async function ProtectedLayout({
         would write an empty payload over a good one on every visit.
       */}
       <QueryProvider>
+        {/*
+          §5.11's telemetry, mounted inside the guard rather than at the root: a
+          signed-out visitor's navigation is not the operator's, and every §1.4
+          metric is about the operator's use.
+        */}
+        <RouteTelemetry />
         <AppShell account={{ email: actor.email, role: actor.role }} zone={DEFAULT_PROFILE_ZONE}>
           {children}
         </AppShell>

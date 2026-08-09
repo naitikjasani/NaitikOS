@@ -530,6 +530,37 @@ export type {
 export { BASELINE_DAYS, PRE_REGISTERED, baselineState, runBattery } from './detectors/battery';
 
 /* -------------------------------------------------------------------------
+ * Validation (§1.4, §1.5, §12 V1) — the metrics that protect the metrics.
+ * ---------------------------------------------------------------------- */
+export type { Distribution, MetricStatus, BudgetedMetric, TimedEvent, CompletionFunnel, GamingVerdict } from './validation/metrics';
+export {
+  EMPTY_DISTRIBUTION,
+  CAPTURE_LATENCY_BUDGET_MS,
+  TIME_IN_APP_CEILING_MINUTES,
+  CORRECTION_RATE_CEILING,
+  DERIVED_FACT_TARGET,
+  SESSION_GAP_MINUTES,
+  distributionOf,
+  captureLatency,
+  timeInApp,
+  correctionRate,
+  derivedFactRatio,
+  foregroundMinutesByDay,
+  closeFunnel,
+  detectGaming,
+} from './validation/metrics';
+
+export type { GateVerdict, GateEvaluation } from './validation/gate';
+export {
+  GATE_WINDOW_DAYS,
+  GATE_REQUIRED_DAYS,
+  VALIDATION_START_DAY,
+  VALIDATION_END_DAY,
+  evaluateGate,
+  gateWindowDays,
+} from './validation/gate';
+
+/* -------------------------------------------------------------------------
  * Domain events (ADR 0005) — an integration log, not a system of record.
  * ---------------------------------------------------------------------- */
 export type {

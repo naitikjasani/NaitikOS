@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { uuidV7 } from '@naitikos/shared';
 import { ROUTINE_PERIOD_LABELS, systemClock } from '@naitikos/core';
@@ -16,6 +16,8 @@ import {
   Stack,
   Text,
 } from '@naitikos/design-system';
+
+import { RoutineEditor } from '@/features/registers';
 
 import { clearRoutineStep, fetchRoutines, logRoutineStep } from '../services/skinClient';
 
@@ -58,6 +60,7 @@ export function RoutineScreen({
   readonly nowIso: string;
 }): ReactNode {
   const queryClient = useQueryClient();
+  const [editing, setEditing] = useState<string | null>(null);
 
   const routines = useQuery({
     queryKey: ['routines', dayKey, 'skincare'],
@@ -92,18 +95,71 @@ export function RoutineScreen({
   if (routines.isLoading) return <LoadingState label="Loading" />;
 
   const data = routines.data ?? [];
+
+  if (editing === 'new') {
+    return (
+      <RoutineEditor
+        onDone={() => {
+          setEditing(null);
+        }}
+      />
+    );
+  }
+
+  const beingEdited = data.find((view) => view.routine.id === editing);
+  if (beingEdited !== undefined) {
+    return (
+      <RoutineEditor
+        existing={{
+          id: beingEdited.routine.id,
+          name: beingEdited.routine.name,
+          period: beingEdited.routine.period,
+          expectedAt: beingEdited.routine.expectedAt,
+          steps: beingEdited.steps.map((step) => ({
+            id: step.id,
+            label: step.label,
+            isOptional: step.isOptional,
+          })),
+        }}
+        onDone={() => {
+          setEditing(null);
+        }}
+      />
+    );
+  }
+
   if (data.length === 0) {
     return (
-      <EmptyState
-        icon="domain.routine"
-        title="No routine defined"
-        description="A routine is a named list of steps with a period. Defining one is not built yet; rows are inserted directly for now."
-      />
+      <Stack gap="4">
+        <EmptyState
+          icon="domain.routine"
+          title="No routine defined"
+          description="A routine is a name, a period, and an ordered list of steps. Adherence starts counting from the moment one exists."
+          action={{
+            label: 'Define one',
+            onAction: () => {
+              setEditing('new');
+            },
+          }}
+        />
+      </Stack>
     );
   }
 
   return (
     <Stack gap="5">
+      <Inline justify="end">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            setEditing('new');
+          }}
+        >
+          Add a routine
+        </Button>
+      </Inline>
+
       {data.map((view) => (
         <Card key={view.routine.id} variant="raised">
           <CardBody>
@@ -117,6 +173,18 @@ export function RoutineScreen({
                   {view.routine.expectedAt === null ? '' : ` · ${view.routine.expectedAt}`}
                 </Text>
               </Stack>
+
+              <Inline justify="end">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setEditing(view.routine.id);
+                  }}
+                >
+                  Edit steps
+                </Button>
+              </Inline>
 
               <Stack gap="2">
                 {view.steps.map((step) => {
