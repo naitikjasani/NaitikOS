@@ -21,3 +21,9 @@ export * from './telemetry';
 
 /** The authoring contracts — §2.1's "no manual database intervention". */
 export * from './registers';
+
+/** Health core — vitals, labs, conditions, symptoms, appointments (§4.4). */
+export * from './health';
+
+/** The document vault and its extraction pipeline (§4.11, §9.9). */
+export * from './documents';

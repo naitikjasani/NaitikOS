@@ -50,6 +50,7 @@ import {
   FileText,
   Filter,
   Flame,
+  FolderArchive,
   Heart,
   HeartPulse,
   Home,
@@ -102,6 +103,9 @@ export const ICON_REGISTRY = {
   'nav.body': Activity,
   'nav.mind': Sparkles,
   'nav.timeline': Clock,
+  /* The Life pillar. An archive rather than a heart: what lives here is the
+     paperwork and the record of a life, not a sentiment about it. */
+  'nav.life': FolderArchive,
   'nav.library': BookOpen,
   'nav.settings': Settings,
   'nav.menu': Menu,

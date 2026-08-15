@@ -494,6 +494,150 @@ export {
 } from './domain/skin/protocol';
 
 /* -------------------------------------------------------------------------
+ * Health core (§4.4) — vitals, labs, conditions, symptoms, appointments.
+ * ---------------------------------------------------------------------- */
+export type { AnalyteDefinition, CanonicalFailure, CanonicalValue } from './domain/health/analyte';
+export {
+  ANALYTES,
+  LAB_METRIC_PREFIX,
+  analyteBySlug,
+  analyteFor,
+  analyteForMetricKey,
+  foldAnalyteName,
+  labMetricKey,
+  normaliseUnit,
+  toCanonical,
+} from './domain/health/analyte';
+
+export type {
+  LabFlag,
+  FlagSource,
+  EffectiveFlag,
+  PrintedRange,
+  RangedResult,
+  RangeShift,
+} from './domain/health/reference-range';
+export {
+  LAB_FLAGS,
+  LAB_FLAG_LABELS,
+  RANGE_CAVEAT,
+  classifyAgainstRange,
+  describeRange,
+  effectiveFlag,
+  formatMeasured,
+  isCritical,
+  isOutOfRange,
+  rangeShifts,
+} from './domain/health/reference-range';
+
+export type { VitalKind, VitalObservation, VitalReading, VitalReadingInput } from './domain/health/vitals';
+export {
+  VITAL_METRICS,
+  VITAL_LABELS,
+  VITAL_READING_SUBJECT_TYPE,
+  formatBloodPressure,
+  pairReadings,
+  planVitalReading,
+} from './domain/health/vitals';
+
+export type { Condition, ConditionInput, ConditionStatus } from './domain/health/condition';
+export {
+  CONDITION_STATUSES,
+  CONDITION_STATUS_LABELS,
+  CONDITION_STATUS_NOTES,
+  activeOn,
+  believedAt,
+  currentConditions,
+  describeOnset,
+  isConditionStatus,
+  validateCondition,
+} from './domain/health/condition';
+
+export type { Severity, Symptom, SymptomInput, PlannedSymptom } from './domain/health/symptom';
+export {
+  MAX_SYMPTOM_INTENSITY,
+  MIN_SYMPTOM_INTENSITY,
+  SEVERITIES,
+  SEVERITY_LABELS,
+  SYMPTOM_METRIC,
+  SYMPTOM_SUBJECT_TYPE,
+  openSymptoms,
+  planSymptom,
+  symptomDurationMinutes,
+  symptomFrequency,
+} from './domain/health/symptom';
+
+export type { SideEffect, SideEffectInput } from './domain/health/side-effect';
+export { ongoing, unreported, validateSideEffect } from './domain/health/side-effect';
+
+export type {
+  AdherenceHighlight,
+  Appointment,
+  AppointmentQuestion,
+  ConditionHighlight,
+  DerivedQuestions,
+  LabHighlight,
+  QuestionInput,
+  QuestionSource,
+  SideEffectHighlight,
+  SymptomHighlight,
+} from './domain/health/appointment';
+export {
+  ADHERENCE_MENTION_THRESHOLD,
+  MAX_QUESTIONS,
+  SUSPECTED_STALE_DAYS,
+  SYMPTOM_RECURRENCE_THRESHOLD,
+  awaitingNotes,
+  deriveQuestions,
+  describeWhen,
+  formatDay,
+  mergeQuestions,
+  nextAppointment,
+} from './domain/health/appointment';
+
+export { HEALTH_METRICS } from './domain/health/metrics';
+
+/* -------------------------------------------------------------------------
+ * Documents (§4.11, §9.9) — the vault, and the extraction pipeline.
+ * ---------------------------------------------------------------------- */
+export type {
+  CandidateLabResult,
+  ConfirmationDecision,
+  ConfirmedResult,
+  DocumentExtraction,
+  ExtractedField,
+  ExtractionMethod,
+  ParsedLabReport,
+} from './domain/document/extraction';
+export {
+  EXTRACTION_METHODS,
+  IMPLEMENTED_METHODS,
+  MAX_EXTRACTION_CONFIDENCE,
+  REVIEW_FLOOR,
+  confirmCandidates,
+  isPreAccepted,
+  overallConfidence,
+} from './domain/document/extraction';
+
+export {
+  MIN_LABEL_COVERAGE,
+  PARSER_ENGINE,
+  PARSER_VERSION,
+  findCollectionDate,
+  matchAnalyteLabel,
+  parseLabReport,
+} from './domain/document/lab-parser';
+
+export type { DocumentKind, VaultDocument, DocumentInput } from './domain/document/vault';
+export {
+  DOCUMENT_KINDS,
+  DOCUMENT_KIND_LABELS,
+  documentTier,
+  expiringSoon,
+  validateDocument,
+} from './domain/document/vault';
+
+/* -------------------------------------------------------------------------
  * Detectors (§10.6) — stage 1, deterministic. No model involvement.
  * ---------------------------------------------------------------------- */
 export { logGamma, logChoose, binomialTailBelow } from './statistics/binomial';

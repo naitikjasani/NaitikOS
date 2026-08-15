@@ -16,7 +16,11 @@
  * versus absent) and a JSON encoding for `allowedValues`.
  */
 
-import { MVP_METRICS as CORE_METRICS, DAILY_CLOSE_METRICS as CORE_DAILY_CLOSE } from '@naitikos/core';
+import {
+  MVP_METRICS as CORE_METRICS,
+  DAILY_CLOSE_METRICS as CORE_DAILY_CLOSE,
+  HEALTH_METRICS as CORE_HEALTH,
+} from '@naitikos/core';
 import type { MetricDefinition } from '@naitikos/core';
 
 import type { Aggregation, Domain, MetricValueType } from '../schema/enums';
@@ -63,6 +67,26 @@ function toRow(definition: MetricDefinition): MetricSeed {
 
 /** Every metric the MVP can write, as rows. */
 export const MVP_METRICS: readonly MetricSeed[] = CORE_METRICS.map(toRow);
+
+/**
+ * Health core's vocabulary (§4.4), as rows.
+ *
+ * A separate list because the two have different lifecycles: the MVP's is
+ * closed and budgeted against §4.0's eleven elements, while this one grows
+ * every time a laboratory reports an analyte the catalogue has not met. The
+ * concatenation below is the composition, and it belongs to this layer — the
+ * domain defines the vocabulary, the database inserts it.
+ */
+export const HEALTH_METRICS: readonly MetricSeed[] = CORE_HEALTH.map(toRow);
+
+/**
+ * Everything the metric table should contain.
+ *
+ * Asserted unique at seed time. Two definitions for one key would make the
+ * upsert order decide which unit a metric has, and a metric whose unit depends
+ * on insertion order is §6.2's failure with extra steps.
+ */
+export const REGISTERED_METRICS: readonly MetricSeed[] = [...MVP_METRICS, ...HEALTH_METRICS];
 
 /** The Daily Close subset, in presentation order. Asserted against §4.0's cap. */
 export const DAILY_CLOSE_METRICS: readonly MetricSeed[] = CORE_DAILY_CLOSE.map(toRow);

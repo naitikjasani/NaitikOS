@@ -32,6 +32,7 @@ import {
 } from '@naitikos/core';
 
 import { createDatabase } from '../client';
+import { resetDomainTables } from '../testing/reset';
 import { createMedicationRepository } from './medication.repository';
 import { createMetricRepository } from './metric.repository';
 import { createMindRepository } from './mind.repository';
@@ -77,24 +78,7 @@ suite('mind, skin, routine and medication repositories', () => {
   beforeEach(async () => {
     if (db === undefined) return;
 
-    await db.$client`alter table observation disable trigger observation_append_only`;
-    await db.$client`delete from observation`;
-    await db.$client`alter table observation enable trigger observation_append_only`;
-
-    await db.$client`delete from skin_region_state`;
-    await db.$client`delete from skin_state`;
-    await db.$client`delete from routine_log`;
-    await db.$client`delete from routine_step`;
-    await db.$client`delete from routine`;
-    await db.$client`delete from product_event`;
-    await db.$client`delete from skincare_product`;
-    await db.$client`delete from anxiety_episode`;
-    await db.$client`delete from journal_entry`;
-    await db.$client`delete from practice_session`;
-    await db.$client`delete from medication_event`;
-    await db.$client`delete from medication_schedule`;
-    await db.$client`delete from medication`;
-    await db.$client`delete from medical_event`;
+    await resetDomainTables(db.$client);
   });
 
   /* ---------------------------------------------------------------------

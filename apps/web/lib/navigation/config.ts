@@ -93,6 +93,17 @@ export const PRIMARY_NAV: readonly NavItem[] = Object.freeze([
     phase: 'mvp',
   },
   {
+    id: 'life',
+    label: 'Life',
+    href: '/life',
+    icon: 'nav.life',
+    // Available from the Health core milestone, and holding exactly one module:
+    // the document vault. Goals and Reviews stay absent under §3.3 R6 rather
+    // than appearing as empty rooms.
+    available: true,
+    phase: 'v2',
+  },
+  {
     id: 'library',
     label: 'Library',
     href: '/library',

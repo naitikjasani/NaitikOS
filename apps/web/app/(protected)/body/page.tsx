@@ -35,6 +35,11 @@ const MODULES = [
     title: 'Composition',
     description: 'Bodyweight and the seven-day trend.',
   },
+  {
+    href: '/body/health',
+    title: 'Health',
+    description: 'Vitals, labs, conditions, symptoms, appointments — and the questions worth taking to one.',
+  },
 ] as const;
 
 export default function BodyPage(): ReactNode {

@@ -13,6 +13,8 @@
  * atomicity impossible to express.
  */
 
+import { randomUUID } from 'node:crypto';
+
 import { and, asc, desc, eq, gte, inArray, isNull, lt, sql } from 'drizzle-orm';
 import type { Result } from '@naitikos/shared';
 import { err, ok } from '@naitikos/shared';
@@ -79,6 +81,13 @@ export type ObservationRepository = {
 
   /** Resolve or create the provenance row for a manual capture (§9.2). */
   manualSourceId(): Promise<Result<string, DomainError>>;
+
+  /** Resolve or create the provenance row for a document extraction (§9.9). */
+  extractionSourceId(
+    documentId: string,
+    engine: string,
+    engineVersion: string,
+  ): Promise<Result<string, DomainError>>;
 
   count(): Promise<number>;
 };
@@ -303,6 +312,59 @@ export function createObservationRepository(db: Executor): ObservationRepository
 
       manualSource = row.id;
       return ok(row.id);
+    },
+
+    /**
+     * §9.2's provenance row for "this number came off a document".
+     *
+     * One source per document, not one shared by every extraction.
+     * `observation_source` carries `documentId` precisely so a number can be
+     * traced back to the page it came from (§9.9), and a shared row would break
+     * that link the moment a second report was imported.
+     *
+     * `version` is the parser's and is never NULL, which means the unique index
+     * on `(kind, identifier, version)` actually fires — so this can be a plain
+     * `ON CONFLICT` rather than the `WHERE NOT EXISTS` dance `manualSourceId`
+     * needs for its null version.
+     */
+    async extractionSourceId(documentId, engine, engineVersion) {
+      const identifier = `${engine}:document:${documentId}`;
+
+      await db
+        .insert(observationSource)
+        .values({
+          id: randomUUID(),
+          kind: 'document_extraction',
+          identifier,
+          version: engineVersion,
+          documentId,
+        })
+        .onConflictDoNothing({
+          target: [observationSource.kind, observationSource.identifier, observationSource.version],
+        });
+
+      const rows = await db
+        .select({ id: observationSource.id })
+        .from(observationSource)
+        .where(
+          and(
+            eq(observationSource.kind, 'document_extraction'),
+            eq(observationSource.identifier, identifier),
+            eq(observationSource.version, engineVersion),
+          ),
+        )
+        .limit(1);
+
+      const found = rows[0];
+      if (found === undefined) {
+        return err(
+          conflictError('observation_source', 'invalid_state', {
+            code: 'observation_source_unavailable',
+            message: 'Could not resolve the extraction observation source.',
+          }),
+        );
+      }
+      return ok(found.id);
     },
 
     async count() {

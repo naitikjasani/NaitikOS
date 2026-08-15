@@ -93,6 +93,24 @@ export type {
   OutboxHealth,
 } from './upload-outbox.repository';
 
+/* --- Health core (§4.4) and the document vault (§4.11) ------------------ */
+export { createHealthRepository } from './health.repository';
+export type { HealthRepository, AppointmentInput, VisitNotesInput } from './health.repository';
+
+export { createLabRepository, panelsIn } from './lab.repository';
+export type {
+  LabRepository,
+  LabPanelRow,
+  LabResultRow,
+  PanelWithResults,
+  RecordPanelInput,
+  RecordPanelOutcome,
+  RecordResultInput,
+} from './lab.repository';
+
+export { createDocumentRepository } from './document.repository';
+export type { DocumentRepository, ExtractionInput } from './document.repository';
+
 /* --- Telemetry (§5.11) and the V1 validation window (§12) --------------- */
 export {
   createTelemetryRepository,

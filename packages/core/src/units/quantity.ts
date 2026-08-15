@@ -61,6 +61,31 @@ export type Dimension =
   | 'energy'
   | 'temperature'
   | 'pressure'
+  /**
+   * Events per unit time. Deliberately holds exactly one unit.
+   *
+   * Heart rate and respiratory rate are both counts per minute, which makes
+   * them look convertible — and `convertQuantity` converts freely inside a
+   * dimension. Sixty beats per minute silently becoming sixty breaths per
+   * minute is not a rounding error, it is a fabricated vital sign. So this
+   * dimension has one member, and a second rate unit requires its own
+   * dimension and a deliberate decision rather than another row in the table.
+   */
+  | 'rate'
+  /**
+   * International units per volume. One member, like `rate`.
+   *
+   * An international unit is a substance-specific amount fixed by convention:
+   * IU of one analyte never converts into IU of another, and never into mass at
+   * all. So there is nothing for a second member of this dimension to convert
+   * *to*, and the only reason one looked necessary is `mIU/L` — which is not a
+   * second unit. 1 µIU/mL **is** 1 mIU/L, exactly, which makes it a second
+   * spelling. It is handled where spellings belong, in
+   * `domain/health/analyte.ts`'s `normaliseUnit`, so the registry keeps its
+   * "exactly one base unit per dimension" invariant and every stored TSH shares
+   * one unit code (§6.2).
+   */
+  | 'iu_concentration'
   /** A pure proportion — adherence, body-fat percentage. */
   | 'ratio'
   /** Things that are counted, not measured: reps, lesions, doses. */
@@ -92,6 +117,8 @@ export type UnitCode =
   | 'kJ' | 'kcal'
   | 'celsius' | 'fahrenheit'
   | 'mmHg'
+  | 'bpm'
+  | 'uIU/mL'
   | 'ratio' | 'percent'
   | 'count'
   | 'mmol/L' | 'umol/L' | 'nmol/L'
@@ -200,6 +227,12 @@ export const UNITS: Readonly<Record<UnitCode, UnitDefinition>> = {
 
   /* --- pressure -------------------------------------------------------- */
   mmHg: { code: 'mmHg', dimension: 'pressure', displayName: 'millimetres of mercury', symbol: 'mmHg', toBase: exact('1') },
+
+  /* --- rate (one member, on purpose — see the `rate` dimension) --------- */
+  bpm: { code: 'bpm', dimension: 'rate', displayName: 'beats per minute', symbol: 'bpm', toBase: exact('1') },
+
+  /* --- international units per volume (base µIU/mL) --------------------- */
+  'uIU/mL': { code: 'uIU/mL', dimension: 'iu_concentration', displayName: 'micro-international units per millilitre', symbol: 'µIU/mL', toBase: exact('1') },
 
   /* --- proportion ------------------------------------------------------ */
   ratio: { code: 'ratio', dimension: 'ratio', displayName: 'ratio', symbol: '', toBase: exact('1') },

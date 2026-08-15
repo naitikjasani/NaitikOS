@@ -25,7 +25,7 @@ import { metric } from '../schema/substrate';
 import { featureFlag } from '../schema/identity';
 import { journalPrompt } from '../schema/mind';
 import { createExerciseRepository } from '../repositories/exercise.repository';
-import { DAILY_CLOSE_METRICS, MVP_METRICS } from './metrics';
+import { DAILY_CLOSE_METRICS, HEALTH_METRICS, MVP_METRICS, REGISTERED_METRICS } from './metrics';
 import { SEED_EXERCISES } from './exercises';
 import { SEED_PROMPTS } from './prompts';
 
@@ -83,7 +83,7 @@ async function main(): Promise<void> {
   console.log(`Seeding ${url.includes('localhost') ? 'local' : 'remote'} database.`);
 
   /* --- Metric registry ------------------------------------------------ */
-  for (const m of MVP_METRICS) {
+  for (const m of REGISTERED_METRICS) {
     await db
       .insert(metric)
       .values({
@@ -118,7 +118,9 @@ async function main(): Promise<void> {
         },
       });
   }
-  console.log(`  metric              ${String(MVP_METRICS.length)} rows`);
+  console.log(`  metric              ${String(REGISTERED_METRICS.length)} rows`);
+  console.log(`  ├─ MVP              ${String(MVP_METRICS.length)}`);
+  console.log(`  ├─ Health core      ${String(HEALTH_METRICS.length)}`);
   console.log(`  └─ in Daily Close   ${String(DAILY_CLOSE_METRICS.length)} of ${String(DAILY_CLOSE_ELEMENT_BUDGET)} budget`);
 
   /* --- Feature flags -------------------------------------------------- */
