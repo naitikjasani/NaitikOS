@@ -40,6 +40,11 @@ const MODULES = [
     title: 'Health',
     description: 'Vitals, labs, conditions, symptoms, appointments — and the questions worth taking to one.',
   },
+  {
+    href: '/body/teeth',
+    title: 'Teeth',
+    description: 'Per-tooth history, the hygiene routine, and how long since the last appointment.',
+  },
 ] as const;
 
 export default function BodyPage(): ReactNode {

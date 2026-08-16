@@ -161,6 +161,33 @@ export const visitNotesSchema = z.object({
 });
 
 /* =========================================================================
+ * Procedures (§4.5)
+ * ====================================================================== */
+
+export const procedureRequestSchema = z.object({
+  id: uuidSchema,
+  name: z.string().min(1).max(200),
+  /**
+   * FDI two-digit notation — `36` is the lower-left first molar (§9.2).
+   *
+   * Validated as a *shape* here and interpreted in `core`. A notation this
+   * system cannot read is still stored and still displayed; it simply gets no
+   * place on the chart, which is visibly different from being placed on the
+   * wrong one. So the pattern is permissive and `parseTooth` is the strict one.
+   */
+  toothNotation: z.string().max(10).nullish(),
+  performedBy: z.string().max(200).nullish(),
+  location: z.string().max(200).nullish(),
+  performedAt: instantSchema,
+  zone: zoneSchema,
+  outcome: z.string().max(500).nullish(),
+  complications: z.string().max(2000).nullish(),
+  /** Minor units — paise, cents. Never a float (§5.3). */
+  costMinor: z.number().int().min(0).max(1_000_000_000).nullish(),
+  currency: z.string().length(3).nullish(),
+});
+
+/* =========================================================================
  * Lab panels
  * ====================================================================== */
 
@@ -234,6 +261,7 @@ export const healthWriteSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('appointment'), appointment: appointmentRequestSchema }),
   z.object({ kind: z.literal('appointment_questions'), questions: appointmentQuestionsSchema }),
   z.object({ kind: z.literal('visit_notes'), notes: visitNotesSchema }),
+  z.object({ kind: z.literal('procedure'), procedure: procedureRequestSchema }),
   z.object({ kind: z.literal('lab_panel'), panel: labPanelRequestSchema }),
 ]);
 

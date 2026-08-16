@@ -47,7 +47,9 @@ import type {
   Severity,
   SideEffect,
   SideEffectInput,
+  DentalProcedure,
   Observation,
+  ProcedureInput,
   Symptom,
   VitalObservation,
 } from '@naitikos/core';
@@ -60,7 +62,7 @@ import {
 } from '@naitikos/core';
 
 import type { Database } from '../client';
-import { appointment, condition, medicalEvent, sideEffect, symptom } from '../schema/medical';
+import { appointment, condition, medicalEvent, procedure, sideEffect, symptom } from '../schema/medical';
 import { observation } from '../schema/substrate';
 import { createObservationRepository } from './observation.repository';
 import type { WriteContext } from './workout.repository';
@@ -114,6 +116,24 @@ function toSideEffect(row: typeof sideEffect.$inferSelect): SideEffect {
     resolvedAt: row.resolvedAt,
     reportedToPrescriber: row.reportedToPrescriber,
     note: row.note,
+  };
+}
+
+function toProcedure(row: typeof procedure.$inferSelect): DentalProcedure {
+  return {
+    id: row.id,
+    medicalEventId: row.medicalEventId,
+    name: row.name,
+    code: row.code,
+    performedBy: row.performedBy,
+    location: row.location,
+    toothNotation: row.toothNotation,
+    bodySite: row.bodySite,
+    performedAt: row.performedAt,
+    outcome: row.outcome,
+    complications: row.complications,
+    costMinor: row.costMinor,
+    currency: row.currency,
   };
 }
 
@@ -214,6 +234,11 @@ export type HealthRepository = {
   sideEffects(): Promise<Result<readonly SideEffect[], DomainError>>;
   recordSideEffect(input: SideEffectInput, nowIso: string): Promise<Result<SideEffect, DomainError>>;
   markReported(id: string): Promise<Result<void, DomainError>>;
+
+  /* --- procedures (§4.5) ---------------------------------------------- */
+  /** Every procedure, newest first. Dental and otherwise — the caller filters. */
+  procedures(): Promise<Result<readonly DentalProcedure[], DomainError>>;
+  recordProcedure(input: ProcedureInput, nowIso: string): Promise<Result<DentalProcedure, DomainError>>;
 
   /* --- appointments ------------------------------------------------- */
   appointments(): Promise<Result<readonly Appointment[], DomainError>>;
@@ -506,6 +531,64 @@ export function createHealthRepository(db: Database): HealthRepository {
         .set({ reportedToPrescriber: true, updatedAt: sql`now()` })
         .where(eq(sideEffect.id, id));
       return ok(undefined);
+    },
+
+    async procedures() {
+      const rows = await db
+        .select()
+        .from(procedure)
+        .where(and(isNull(procedure.deletedAt), isNull(procedure.recordedTo)))
+        .orderBy(desc(procedure.performedAt));
+      return ok(rows.map(toProcedure));
+    },
+
+    async recordProcedure(input, nowIso) {
+      const eventId = crypto.randomUUID();
+      const written = await db.transaction(async (tx) => {
+        /*
+         * The supertype first, as with every clinical subtype. §4.5 says Teeth
+         * "*writes* to the medical timeline", and that is what this insert is:
+         * a root canal appears on the medical timeline because `medical_event`
+         * is projected there, not because Teeth has its own timeline code.
+         */
+        await tx.insert(medicalEvent).values({
+          id: eventId,
+          type: 'procedure',
+          title:
+            input.toothNotation === undefined || input.toothNotation === null
+              ? input.name
+              : `${input.name}, tooth ${input.toothNotation}`,
+          validFrom: input.performedAt,
+          recordedFrom: nowIso,
+          zone: input.zone,
+        });
+
+        const rows = await tx
+          .insert(procedure)
+          .values({
+            id: input.id,
+            medicalEventId: eventId,
+            name: input.name,
+            performedBy: input.performedBy ?? null,
+            location: input.location ?? null,
+            toothNotation: input.toothNotation ?? null,
+            performedAt: input.performedAt,
+            outcome: input.outcome ?? null,
+            complications: input.complications ?? null,
+            costMinor: input.costMinor ?? null,
+            currency: input.currency ?? null,
+            validFrom: input.performedAt,
+            recordedFrom: nowIso,
+          })
+          .onConflictDoNothing()
+          .returning();
+        return rows[0];
+      });
+
+      if (written !== undefined) return ok(toProcedure(written));
+      const replayed = await db.select().from(procedure).where(eq(procedure.id, input.id)).limit(1);
+      const row = replayed[0];
+      return row === undefined ? { ok: false, error: notFoundError('procedure', input.id) } : ok(toProcedure(row));
     },
 
     async appointments() {

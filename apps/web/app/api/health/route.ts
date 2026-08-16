@@ -225,6 +225,28 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         return NextResponse.json({ recorded: true });
       }
 
+      case 'procedure': {
+        const input = parsed.data.procedure;
+        const result = await health.recordProcedure(
+          {
+            id: input.id,
+            name: input.name,
+            toothNotation: input.toothNotation ?? null,
+            performedBy: input.performedBy ?? null,
+            location: input.location ?? null,
+            performedAt: input.performedAt,
+            zone: input.zone,
+            outcome: input.outcome ?? null,
+            complications: input.complications ?? null,
+            costMinor: input.costMinor ?? null,
+            currency: input.currency ?? null,
+          },
+          nowIso,
+        );
+        if (!result.ok) return errorResponse(result.error, traceId);
+        return NextResponse.json({ procedure: result.value }, { status: 201 });
+      }
+
       default: {
         const input = parsed.data.panel;
         const registry = await createMetricRepository(platform.db).registry();
@@ -280,6 +302,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
  */
 const REGISTER_KINDS = new Set([
   'condition',
+  'procedure',
   'condition_status',
   'side_effect',
   'side_effect_reported',

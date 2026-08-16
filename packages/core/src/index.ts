@@ -598,6 +598,12 @@ export {
 export { HEALTH_METRICS } from './domain/health/metrics';
 
 /* -------------------------------------------------------------------------
+ * Teeth (§4.5) — FDI notation and per-tooth history. Reuses the routine engine.
+ * ---------------------------------------------------------------------- */
+export type { Quadrant, Tooth, ToothNotation, ToothPosition, DentalProcedure, ProcedureInput } from './domain/teeth/tooth';
+export { ARCHES, byTooth, parseTooth, toothLabel, totalCost } from './domain/teeth/tooth';
+
+/* -------------------------------------------------------------------------
  * Goals (§4.10) — a declaration plus a projection. No progress data of its own.
  * ---------------------------------------------------------------------- */
 export type { Goal, GoalInput, GoalComparator, GoalStatus, GoalTarget, GoalTargetInput } from './domain/goal/target';
