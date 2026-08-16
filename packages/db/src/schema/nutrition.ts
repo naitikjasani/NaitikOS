@@ -37,6 +37,7 @@ import {
 } from 'drizzle-orm/pg-core';
 
 import { entityColumns, ianaZone, instant, quantity, reference } from './columns';
+import { proteinSource } from './enums';
 
 /**
  * A food in the personal library.
@@ -68,6 +69,20 @@ export const food = pgTable(
     /** Relevant to a vegetarian-plus-eggs diet (§4.3). */
     isVegetarian: boolean(),
     isVegan: boolean(),
+
+    /**
+     * Which `nutrition.protein.from_*` key this food's protein contributes to.
+     *
+     * §4.3's "vegetarian-plus-eggs protein-source analysis" has to be a
+     * *computable* split rather than a screen, because §4.2 has Skin asking
+     * about whey and P3 says that question is answered through the metric
+     * vocabulary rather than by importing Nutrition.
+     *
+     * Nullable, and the null case is reported rather than absorbed: an
+     * unclassified food shows up as unclassified grams, not as `grain_other`.
+     * See the enum for why this sits on `food` and not on `food_version`.
+     */
+    proteinSource: proteinSource(),
   },
   (t) => [
     index('food_recent_idx')

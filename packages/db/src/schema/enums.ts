@@ -278,6 +278,34 @@ export const productEventKind = pgEnum('product_event_kind', [
 ]);
 
 /* =========================================================================
+ * Nutrition (§4.3)
+ * ====================================================================== */
+
+/**
+ * Where a food's protein comes from.
+ *
+ * §4.3 asks for "vegetarian-plus-eggs protein-source analysis", and §4.2 has
+ * Skin reading "dairy, sugar, whey". Under P3 those are cross-domain questions
+ * asked through the metric vocabulary, which means the split has to be
+ * *computable* — so each food carries its class, and a meal's protein is
+ * apportioned across the `nutrition.protein.from_*` keys on write.
+ *
+ * It lives on `food` rather than `food_version` because a reformulation does
+ * not turn paneer into an egg. The column is nullable on purpose: a food nobody
+ * has classified reports as unclassified rather than being silently attributed
+ * to whichever bucket happens to be first.
+ */
+export const proteinSource = pgEnum('protein_source', [
+  'dairy',
+  'egg',
+  'legume',
+  /** Whey, casein, plant isolates. §4.2 names whey specifically. */
+  'supplement',
+  /** Grains, nuts, seeds, vegetables — the remainder, named honestly. */
+  'grain_other',
+]);
+
+/* =========================================================================
  * Media and the photography protocol (§9.8)
  * ====================================================================== */
 
@@ -465,6 +493,7 @@ export type RoutineKind = (typeof routineKind.enumValues)[number];
 export type RoutinePeriod = (typeof routinePeriod.enumValues)[number];
 export type RoutineStepStatus = (typeof routineStepStatus.enumValues)[number];
 export type ProductEventKind = (typeof productEventKind.enumValues)[number];
+export type ProteinSource = (typeof proteinSource.enumValues)[number];
 export type MediaKind = (typeof mediaKind.enumValues)[number];
 export type StorageTier = (typeof storageTier.enumValues)[number];
 export type CaptureDistance = (typeof captureDistance.enumValues)[number];
