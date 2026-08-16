@@ -1,9 +1,9 @@
 /**
  * `/life` — the pillar overview.
  *
- * One module. §3.3 R6 keeps Goals and Reviews absent rather than listed and
- * empty: "A visible-but-empty module teaches the user that the system is a
- * graveyard." A pillar with one door is a pillar with one door.
+ * Two modules. §3.3 R6 keeps Reviews (V3) and People and Places absent rather
+ * than listed and empty: "A visible-but-empty module teaches the user that the
+ * system is a graveyard."
  */
 
 import type { ReactNode } from 'react';
@@ -16,6 +16,11 @@ export const metadata = { title: 'Life · NaitikOS' };
 
 const MODULES = [
   {
+    href: '/life/goals',
+    title: 'Goals',
+    description: 'A target over numbers you already record, and an honest projection of where the line goes.',
+  },
+  {
     href: '/life/documents',
     title: 'Documents',
     description: 'Where the paperwork is, what it says, and what it adds to your record.',
@@ -24,7 +29,7 @@ const MODULES = [
 
 export default function LifePage(): ReactNode {
   return (
-    <PageContainer title="Life" description="Where the paperwork is, and what it says.">
+    <PageContainer title="Life" description="What you said mattered, and where the paperwork is.">
       <Stack gap="2">
         {MODULES.map((module) => (
           <Card key={module.href} variant="interactive">

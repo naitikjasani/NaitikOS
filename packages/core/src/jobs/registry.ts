@@ -58,6 +58,21 @@ export const JOB_STEPS = [
   'refresh-rollups',
 
   /**
+   * A dated record of what each goal's trajectory looked like tonight (§4.10).
+   *
+   * After rollups, because the projection is fitted over them. §9.2 gives the
+   * reason the row exists at all, despite §4.10's "goals own no progress data":
+   * "Snapshots exist so the *trajectory as it was believed at the time* is
+   * preserved even after the underlying data is corrected." Progress is still
+   * derived on every read; this is history, not state.
+   *
+   * Nightly rather than on read, because "what did I believe on the 3rd" is a
+   * daily question, and a snapshot per page view would make the table a log of
+   * page views.
+   */
+  'snapshot-goal-progress',
+
+  /**
    * Deterministic detectors (§10.6).
    *
    * V2. Registered here so the ordering is settled: after rollups, because a

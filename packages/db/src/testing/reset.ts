@@ -62,6 +62,10 @@ export const RESET_ORDER: readonly string[] = Object.freeze([
   /* The document vault */
   'document_extraction',
   'document',
+  /* Goals — snapshots reference both, so they go first */
+  'goal_progress_snapshot',
+  'goal_target',
+  'goal',
 ]);
 
 /**

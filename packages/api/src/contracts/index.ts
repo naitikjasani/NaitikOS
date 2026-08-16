@@ -27,3 +27,6 @@ export * from './health';
 
 /** The document vault and its extraction pipeline (§4.11, §9.9). */
 export * from './documents';
+
+/** Goals — declarations and targets. Never progress (§4.10). */
+export * from './goals';

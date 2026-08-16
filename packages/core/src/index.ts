@@ -598,6 +598,36 @@ export {
 export { HEALTH_METRICS } from './domain/health/metrics';
 
 /* -------------------------------------------------------------------------
+ * Goals (§4.10) — a declaration plus a projection. No progress data of its own.
+ * ---------------------------------------------------------------------- */
+export type { Goal, GoalInput, GoalComparator, GoalStatus, GoalTarget, GoalTargetInput } from './domain/goal/target';
+export {
+  GOAL_COMPARATORS,
+  GOAL_STATUSES,
+  GOAL_STATUS_LABELS,
+  MIN_RATE_WINDOW_DAYS,
+  describeTarget,
+  isGoalComparator,
+  validateGoal,
+  validateTarget,
+} from './domain/goal/target';
+
+export type { GoalProgress, ProgressInput, ProgressStatus } from './domain/goal/progress';
+export {
+  MAX_ARRIVAL_DAYS,
+  PROGRESS_STATUS_LABELS,
+  deriveProgress,
+  explainProgress,
+  projectedArrival,
+} from './domain/goal/progress';
+
+export type { GoalTension, TensionKind } from './domain/goal/tension';
+export { ANTAGONISTIC_PAIRS, detectTensions } from './domain/goal/tension';
+
+export type { ProgressSnapshot } from './domain/goal/snapshot';
+export { planSnapshot, snapshotDrift } from './domain/goal/snapshot';
+
+/* -------------------------------------------------------------------------
  * Documents (§4.11, §9.9) — the vault, and the extraction pipeline.
  * ---------------------------------------------------------------------- */
 export type {

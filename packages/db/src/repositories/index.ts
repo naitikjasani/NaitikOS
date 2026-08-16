@@ -93,6 +93,10 @@ export type {
   OutboxHealth,
 } from './upload-outbox.repository';
 
+/* --- Goals (§4.10) — definitions and snapshots, never progress ---------- */
+export { createGoalRepository, snapshotsSince } from './goal.repository';
+export type { GoalRepository, CloseGoalInput } from './goal.repository';
+
 /* --- Health core (§4.4) and the document vault (§4.11) ------------------ */
 export { createHealthRepository } from './health.repository';
 export type { HealthRepository, AppointmentInput, VisitNotesInput } from './health.repository';
