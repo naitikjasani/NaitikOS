@@ -243,3 +243,83 @@ The third is the one a reader is least likely to think of and the most likely to
 be the actual explanation. A test asserts the word "causes" never appears in a
 finding's prose — §10.2 says no edge is ever labelled causal, and prose is an
 edge the reader traverses.
+
+## The inbox, and closing control 4
+
+Added December 2026, together with the `insight` repository.
+
+### The bug this commit fixed
+
+`lib/platform/insights.ts` used to carry this note:
+
+> So `heldFindingIds` is threaded through and passed as empty. The consequence
+> is stated plainly rather than hidden: **if an inferential detector were
+> enabled today, its findings would be held forever and never promoted.**
+
+The correlation detector is that detector. But closing the loop surfaced a
+second, deeper problem the note did not anticipate.
+
+**A finding's `id` contains its day key.** `runBattery` compared
+`heldFindingIds` against `finding.id`, so the same correlation detected on two
+consecutive nights produced two different ids — the comparison matched nothing,
+every inferential finding would have been held forever, and the inbox would have
+stayed empty in a way indistinguishable from a system with nothing to say.
+
+The battery's own test passed, because it re-ran with the *same* day key. That
+is a test confirming a behaviour production can never exhibit.
+
+The fix splits identity in two:
+
+- **`id`** — unique per night. What a stored row needs.
+- **`signature`** — `detector:subject:variant`, no day. What confirmation needs.
+
+The test now re-runs with a different day key, which is what the nightly job
+does, and asserts both that the signature matches and that the ids do not.
+
+For a correlation the lag is part of the signature. A relationship at two days
+and the same relationship at five are different claims, and confirming one with
+the other would be the confirmation control confirming nothing.
+
+### What is stored, and what is not
+
+| Kind | Stored? | Why |
+|---|---|---|
+| Confirmed / exploratory | Yes, `disposition: 'new'`, `surfaced_at` set | The inbox |
+| Held, awaiting confirmation | Yes, `disposition: 'archived'`, `surfaced_at` null | Control 4's memory; **never displayed** |
+| Descriptive counts | **No** | Recomputed correctly on every read, and true of a different window each night — storing them would put a near-identical row in the inbox every morning, which is the feed §3.3 rules out |
+
+`heldSignatures` is bounded to thirty days. A finding held eleven months ago and
+not seen since is not "confirmed by subsequent data"; it is a coincidence that
+happened twice, a year apart, and promoting it would be the control approving
+exactly what it exists to reject.
+
+### One open row per signature
+
+`ON CONFLICT` cannot help: the primary key is a fresh uuid on every run, so
+nothing ever conflicts. The natural key is the signature and there is no unique
+index on it (that would be a migration). So the check is explicit — and it is
+the right product rule regardless. A re-run of the nightly job must not put a
+second copy of the same finding in front of a person, because two cards read as
+two independent pieces of evidence for one thing.
+
+A **dismissed** signature is allowed to return. The operator said the finding
+was not useful in December; the same association still holding in March is a
+different fact about the world, and suppressing it forever would let one
+dismissal silence a signal permanently.
+
+### Why the detectors run in the nightly job and not on a page render
+
+Control 4 confirms a finding by seeing it in a *second independent window*. A
+control that a page refresh can satisfy is not a control — opening `/today`
+twice in an evening must not produce two nights of evidence. So `run-detectors`
+is a registered job step, and `loadInsights` is a pure read.
+
+### The inbox shows its own denominator
+
+Every card renders `doesNotProve` unconditionally — §10.6 makes it a required
+field, and a limitation behind a chevron is a limitation nobody reads. The page
+footer prints how many statistical tests ran last night and were corrected
+together. An insight surface that hid the size of its own correction would be
+asking for trust it had not shown.
+
+Most nights the inbox is empty. That is the system working.

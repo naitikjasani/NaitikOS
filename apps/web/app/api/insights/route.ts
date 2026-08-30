@@ -16,6 +16,9 @@
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
+import { z } from 'zod';
+import { isoFromMillis, systemClock } from '@naitikos/core';
+import { createInsightRepository } from '@naitikos/db';
 
 import {
   errorResponse,
@@ -24,6 +27,7 @@ import {
   isGuardFailure,
 } from '@/lib/platform/context';
 import { loadInsights, topFinding } from '@/lib/platform/insights';
+import { parseJson } from '@/lib/platform/context';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,6 +68,56 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     platform.observability.logger.error('unhandled error in insights.get', {
       traceId,
       component: 'insights.get',
+      identifiers: { name: error instanceof Error ? error.name : 'unknown' },
+    });
+    return internalErrorResponse(traceId);
+  }
+}
+
+/**
+ * A disposition — §4.13's "dismissals train the ranking".
+ *
+ * There is no field here for anything the operator *thinks* about the finding
+ * beyond a free-text reason, and no field at all for editing its content. An
+ * insight is a record of what a detector found on a night; a surface that let it
+ * be rewritten would make the audit trail a record of what the operator later
+ * preferred it to have found.
+ */
+const dispositionSchema = z.object({
+  id: z.string().uuid(),
+  disposition: z.enum(['seen', 'acted_on', 'dismissed']),
+  reason: z.string().max(500).nullish(),
+});
+
+export async function POST(request: NextRequest): Promise<NextResponse> {
+  /*
+   * `observation:write`, not `settings:write`. Marking an insight acted-on is a
+   * statement about what happened, and §12's V2 gate is measured on exactly
+   * this — "at least one insight the operator acted on" — so it belongs with
+   * the permission that records facts rather than the one that changes
+   * configuration.
+   */
+  const guarded = await guard(request, 'observation:write');
+  if (isGuardFailure(guarded)) return guarded.response;
+  const { traceId, platform } = guarded.context;
+
+  const parsed = await parseJson(request, dispositionSchema, traceId);
+  if ('response' in parsed) return parsed.response;
+
+  try {
+    const updated = await createInsightRepository(platform.db).setDisposition({
+      id: parsed.data.id,
+      disposition: parsed.data.disposition,
+      reason: parsed.data.reason ?? null,
+      nowIso: isoFromMillis(systemClock.nowMillis()),
+    });
+    if (!updated.ok) return errorResponse(updated.error, traceId);
+
+    return NextResponse.json({ updated: updated.value });
+  } catch (error: unknown) {
+    platform.observability.logger.error('unhandled error in insights.post', {
+      traceId,
+      component: 'insights.post',
       identifiers: { name: error instanceof Error ? error.name : 'unknown' },
     });
     return internalErrorResponse(traceId);

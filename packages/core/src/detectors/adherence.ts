@@ -38,7 +38,7 @@
 
 import { binomialTailBelow } from '../statistics/binomial';
 import type { DetectorOutcome, Finding, FindingEvidence, InsufficientData } from './types';
-import { findingId } from './types';
+import { findingId, findingSignature } from './types';
 
 /** Recorded days needed in the recent window before a report is produced. */
 export const MIN_RECORDED_DAYS = 7;
@@ -124,6 +124,7 @@ export function detectAdherence(
     const ratio = recentTotals.completed / recentTotals.expected;
     findings.push({
       id: findingId('adherence', series.subject, dayKey, 'report'),
+      signature: findingSignature('adherence', series.subject, 'report'),
       detector: 'adherence',
       subject: series.subject,
       dayKey,
@@ -171,6 +172,7 @@ export function detectAdherence(
 
   findings.push({
     id: findingId('adherence', series.subject, dayKey, 'deviation'),
+    signature: findingSignature('adherence', series.subject, 'deviation'),
     detector: 'adherence',
     subject: series.subject,
     dayKey,

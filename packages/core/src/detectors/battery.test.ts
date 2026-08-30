@@ -83,7 +83,7 @@ describe('runBattery', () => {
     expect(outcome.surfaced.every((finding) => finding.pValue === null)).toBe(true);
   });
 
-  it('promotes it to confirmed once a previous run held the same id', () => {
+  it('promotes it to confirmed once a previous run held the same signature', () => {
     const input = {
       dayKey: TODAY,
       daysOfHistory: 120,
@@ -91,7 +91,17 @@ describe('runBattery', () => {
       streaks: [] as StreakSeries[],
     };
     const first = runBattery(input);
-    const second = runBattery({ ...input, heldFindingIds: first.held.map((finding) => finding.id) });
+    /*
+     * A *different* day, which is what the nightly job passes. Rerunning with
+     * the same day would pass while the control was inoperative — a finding's
+     * id contains the day key, so two consecutive nights produce two different
+     * ids and a comparison on ids matches nothing.
+     */
+    const second = runBattery({
+      ...input,
+      dayKey: '2026-11-16',
+      heldSignatures: first.held.map((finding) => finding.signature),
+    });
 
     expect(second.held).toEqual([]);
     const confirmed = second.surfaced.find((finding) => finding.confidence === 'confirmed');
@@ -143,7 +153,11 @@ describe('runBattery', () => {
       streaks: [] as StreakSeries[],
     };
     const first = runBattery(input);
-    const second = runBattery({ ...input, heldFindingIds: first.held.map((finding) => finding.id) });
+    const second = runBattery({
+      ...input,
+      dayKey: '2026-11-16',
+      heldSignatures: first.held.map((finding) => finding.signature),
+    });
     const order = second.surfaced.map((finding) => finding.confidence);
     expect(order[0]).toBe('confirmed');
     expect(order.slice(1).every((confidence) => confidence === 'descriptive')).toBe(true);
@@ -201,9 +215,26 @@ describe('battery with correlation', () => {
     expect(first.surfaced).toHaveLength(0);
     expect(first.held).toHaveLength(1);
 
-    const second = runBattery({ ...input, heldFindingIds: first.held.map((f) => f.id) });
+    /*
+     * **A different day key**, which is what the nightly job actually passes.
+     *
+     * An earlier version of this test reran with the same day and passed while
+     * the control was inoperative: a finding's id contains the day key, so two
+     * consecutive nights produce two different ids and a comparison on ids
+     * matches nothing. Every inferential finding would have been held forever
+     * and the inbox would have stayed empty, indistinguishable from a system
+     * with nothing to say.
+     */
+    const second = runBattery({
+      ...input,
+      dayKey: '2026-06-02',
+      heldSignatures: first.held.map((f) => f.signature),
+    });
     expect(second.surfaced).toHaveLength(1);
     expect(second.surfaced[0]?.confidence).toBe('confirmed');
+    /* And the two nights are distinct rows, which is what `id` is for. */
+    expect(second.surfaced[0]?.id).not.toBe(first.held[0]?.id);
+    expect(second.surfaced[0]?.signature).toBe(first.held[0]?.signature);
   });
 
   it('counts the correlation in the same FDR correction as everything else', () => {

@@ -27,7 +27,7 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { runJobSchema } from '@naitikos/api';
 import type { JobStep, JobStepName } from '@naitikos/core';
-import { JOB_STEPS, isoFromMillis, runNightly, systemClock } from '@naitikos/core';
+import { JOB_STEPS, dayKeyInZone, isoFromMillis, runNightly, systemClock } from '@naitikos/core';
 import {
   createJobRunRecorder,
   createTelemetryRepository,
@@ -45,14 +45,20 @@ import {
   traceIdFor,
 } from '../../../../lib/platform/context';
 import type { PlatformContext } from '../../../../lib/platform/context';
+import { loadInsights, recordInsightNight } from '../../../../lib/platform/insights';
 
 /**
  * The registered steps.
  *
- * Three today, all operational rather than domain work: they keep the queues
- * from silently stranding rows and the telemetry table from growing without
- * bound, which is the failure §5.2's "safe to re-run" depends on. Domain steps
- * arrive with their domains.
+ * Three are operational — they keep the queues from silently stranding rows and
+ * the telemetry table from growing without bound, which is the failure §5.2's
+ * "safe to re-run" depends on.
+ *
+ * `run-detectors` is the first domain step, and it is here rather than on a page
+ * render for a specific reason: §10.6 control 4 confirms a finding by seeing it
+ * in a *second independent window*, and a control that a page refresh can
+ * satisfy is not a control. Opening `/today` twice in an evening must not
+ * produce two nights of evidence.
  */
 function stepsFor(platform: PlatformContext): readonly JobStep[] {
   // Six hours. Longer than any run's fifteen-minute budget by a wide margin, so a
@@ -117,6 +123,31 @@ function stepsFor(platform: PlatformContext): readonly JobStep[] {
         return ok({
           rowsAffected: removed.ok ? removed.value : 0,
           note: `retention cutoff ${cutoff.slice(0, 10)}`,
+        });
+      },
+    },
+    {
+      name: 'run-detectors',
+      describes: 'Runs the §10.6 battery and records what it surfaced and what it is holding.',
+      /*
+       * Does not halt the run. A detector failure is a missing insight, and
+       * §10.6's own position is that an absent insight costs far less than a
+       * wrong one — stopping the integrity check over it would invert that.
+       */
+      haltOnFailure: false,
+      async run() {
+        const nowIso = isoFromMillis(systemClock.nowMillis());
+        const todayDayKey = dayKeyInZone(nowIso, platform.zone);
+
+        const outcome = await loadInsights(platform.db, { toDayKey: todayDayKey, zone: platform.zone });
+        if (!outcome.ok) return outcome;
+
+        const recorded = await recordInsightNight(platform.db, outcome.value, nowIso);
+        if (!recorded.ok) return recorded;
+
+        return ok({
+          rowsAffected: recorded.value.surfaced + recorded.value.held,
+          note: `${String(recorded.value.surfaced)} surfaced, ${String(recorded.value.held)} held for confirmation, ${String(outcome.value.comparisons)} comparisons`,
         });
       },
     },

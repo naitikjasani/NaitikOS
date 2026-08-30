@@ -52,6 +52,24 @@ export type Finding = {
    * *same* finding across two runs — which it does by this id.
    */
   readonly id: string;
+  /**
+   * The finding's identity **across nights** — detector, subject, variant, and
+   * no day.
+   *
+   * §10.6 control 4 works by recognising the same finding in a later window:
+   * "a correlation is not surfaced on first detection. It is held, and
+   * re-tested against subsequent data."
+   *
+   * {@link id} cannot do that job, because it contains the day key — the same
+   * correlation on two consecutive nights has two different ids, so a
+   * comparison on `id` matches nothing and every inferential finding is held
+   * forever. That is a silent failure: the surface stays empty and looks like a
+   * system with nothing to say.
+   *
+   * So identity is split. `id` is unique per night, which is what a stored row
+   * needs; `signature` is stable, which is what confirmation needs.
+   */
+  readonly signature: string;
   readonly detector: DetectorId;
   /** `medication:<uuid>` or `routine:<uuid>`. */
   readonly subject: string;
@@ -104,7 +122,18 @@ export const EMPTY_OUTCOME: DetectorOutcome = Object.freeze({
   insufficient: Object.freeze([]),
 });
 
-/** Stable finding id. Same detector, same subject, same window, same id. */
+/** A finding's id for one night. Unique per night, which is what a row needs. */
 export function findingId(detector: DetectorId, subject: string, dayKey: string, variant: string): string {
   return `${detector}:${subject}:${variant}:${dayKey}`;
+}
+
+/**
+ * A finding's identity across nights, for §10.6 control 4.
+ *
+ * Deliberately excludes the day. Two nights that both detect the same
+ * association between the same pair at the same lag produce the same signature
+ * and different ids, which is exactly the distinction confirmation needs.
+ */
+export function findingSignature(detector: DetectorId, subject: string, variant: string): string {
+  return `${detector}:${subject}:${variant}`;
 }

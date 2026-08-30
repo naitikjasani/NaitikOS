@@ -29,7 +29,7 @@
 
 import { dayKeyIndex } from '../temporal/instant';
 import type { DetectorOutcome, Finding, InsufficientData } from './types';
-import { findingId } from './types';
+import { findingId, findingSignature } from './types';
 
 /**
  * The shortest run worth mentioning.
@@ -81,6 +81,7 @@ export function detectStreak(series: StreakSeries, dayKey: string): DetectorOutc
   if (current.length >= MIN_STREAK_DAYS) {
     findings.push({
       id: findingId('streak', series.subject, dayKey, 'current'),
+      signature: findingSignature('streak', series.subject, 'current'),
       detector: 'streak',
       subject: series.subject,
       dayKey,
@@ -108,6 +109,7 @@ export function detectStreak(series: StreakSeries, dayKey: string): DetectorOutc
 
   findings.push({
     id: findingId('streak', series.subject, ended.endDayKey, 'ended'),
+    signature: findingSignature('streak', series.subject, 'ended'),
     detector: 'streak',
     subject: series.subject,
     dayKey,

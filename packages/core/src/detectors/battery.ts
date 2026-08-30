@@ -15,7 +15,7 @@
  * | 1. Minimum-N gates | in each detector, reported as `InsufficientData` |
  * | 2. Benjamini–Hochberg across the battery | {@link runBattery}, over every p-valued finding |
  * | 3. Pre-registered hypotheses | {@link PRE_REGISTERED} — see below |
- * | 4. Out-of-sample confirmation | {@link runBattery}, via `heldFindingIds` |
+ * | 4. Out-of-sample confirmation | {@link runBattery}, via `heldSignatures` |
  * | 5. No insights before day 60 | {@link baselineState} |
  *
  * ## Control 5 does not apply to a count, and this is a deliberate reading
@@ -198,13 +198,19 @@ export type BatteryInput = {
   /** Overridable so a test can register a pair without editing the registry. */
   readonly pairs?: readonly CorrelationPair[];
   /**
-   * Finding ids held by the previous run.
+   * Finding **signatures** held by previous runs.
    *
    * §10.6 control 4: "A correlation is not surfaced on first detection. It is
    * held, and re-tested against subsequent data. Only a finding that survives a
    * second independent window is promoted to the inbox."
+   *
+   * Signatures, not ids, and the difference is the whole control. A finding's
+   * id contains the day key, so the same correlation on two consecutive nights
+   * has two different ids — comparing on ids matches nothing, every inferential
+   * finding is held forever, and the inbox stays empty in a way that is
+   * indistinguishable from a system with nothing to say.
    */
-  readonly heldFindingIds?: readonly string[];
+  readonly heldSignatures?: readonly string[];
   readonly alpha?: number;
 };
 
@@ -224,7 +230,7 @@ export type BatteryOutcome = {
 
 export function runBattery(input: BatteryInput): BatteryOutcome {
   const baseline = baselineState(input.daysOfHistory);
-  const held = new Set(input.heldFindingIds ?? []);
+  const held = new Set(input.heldSignatures ?? []);
 
   const produced: Finding[] = [];
   const insufficient: InsufficientData[] = [];
@@ -282,11 +288,11 @@ export function runBattery(input: BatteryInput): BatteryOutcome {
       continue;
     }
     /*
-     * Control 4. A finding is promoted only if the same finding id was held by
-     * a previous run — that is, it was detected on data that did not include
-     * today's window alone.
+     * Control 4. A finding is promoted only if the same *signature* was held by
+     * a previous run — that is, the same claim was detected on a window that
+     * was not today's.
      */
-    if (held.has(finding.id)) surfaced.push({ ...finding, confidence: 'confirmed' });
+    if (held.has(finding.signature)) surfaced.push({ ...finding, confidence: 'confirmed' });
     else holding.push(finding);
   }
 

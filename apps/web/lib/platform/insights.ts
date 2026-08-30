@@ -15,19 +15,23 @@
  * nothing, and an insight surface is the easiest place in a health application
  * to violate it.
  *
- * ## Out-of-sample confirmation needs somewhere to keep what it held
+ * ## Out-of-sample confirmation, now closed
  *
  * §10.6 control 4 holds an inferential finding until a second window confirms
- * it, which means the battery has to be told what the previous run held. That
- * store does not exist yet — `insight` is a table in §9.2 and it is not written
- * to in the MVP, because the MVP's findings are all descriptive and none of
- * them is held.
+ * it, which means the battery has to be told what previous runs held. This file
+ * used to pass an empty set and record the consequence: *"if an inferential
+ * detector were enabled today, its findings would be held forever and never
+ * promoted."*
  *
- * So `heldFindingIds` is threaded through and passed as empty. The consequence
- * is stated plainly rather than hidden: **if an inferential detector were
- * enabled today, its findings would be held forever and never promoted.** That
- * is the safe direction to fail in, and the fix is the `insight` repository that
- * V2's inbox needs anyway.
+ * The correlation detector is that detector, so the loop is now closed:
+ * `insightRepository.heldSignatures` supplies the set, and
+ * {@link recordInsightNight} writes the night's held findings back. Held
+ * findings are archived rows that are never surfaced — §10.6 keeps a finding
+ * awaiting confirmation out of the inbox.
+ *
+ * **Signatures, not ids.** A finding's id contains the day key, so the same
+ * correlation on two nights has two different ids; comparing on ids would match
+ * nothing and reproduce the very bug this paragraph used to describe.
  */
 
 import 'server-only';
@@ -50,9 +54,13 @@ import {
   windowDayKeys,
   medicationLabel,
   routineDayAdherence,
+  shiftDayKey,
 } from '@naitikos/core';
 import type { Database } from '@naitikos/db';
+import type { InsightRow } from '@naitikos/db';
 import {
+  HELD_WINDOW_DAYS,
+  createInsightRepository,
   createMedicationRepository,
   createObservationRepository,
   createRoutineRepository,
@@ -155,7 +163,65 @@ export async function loadInsights(
    */
   const daysOfHistory = Math.min(BATTERY_WINDOW_DAYS * 4, Math.floor(historyCount / 3));
 
-  return ok(runBattery({ dayKey: options.toDayKey, daysOfHistory, adherence, streaks, heldFindingIds: [] }));
+  const heldSince = zonedDayBounds(shiftDayKey(options.toDayKey, -HELD_WINDOW_DAYS) ?? options.toDayKey, options.zone);
+  const held = await createInsightRepository(db).heldSignatures(heldSince?.start ?? bounds.start);
+  if (!held.ok) return held;
+
+  return ok(
+    runBattery({
+      dayKey: options.toDayKey,
+      daysOfHistory,
+      adherence,
+      streaks,
+      heldSignatures: held.value,
+    }),
+  );
+}
+
+/**
+ * Persist a night's outcome.
+ *
+ * Called by the nightly job, not by a page render. A read that wrote would mean
+ * opening `/today` twice in an evening produced two nights of confirmation
+ * evidence — which would let control 4 be satisfied by refreshing a page, and a
+ * control that a refresh can satisfy is not a control.
+ */
+export async function recordInsightNight(
+  db: Database,
+  outcome: BatteryOutcome,
+  nowIso: string,
+): Promise<Result<{ readonly surfaced: number; readonly held: number }, DomainError>> {
+  return createInsightRepository(db).recordNight({
+    /*
+     * Descriptive findings are not stored.
+     *
+     * A count — "the evening routine was logged on 24 of the last 30 days" — is
+     * recomputed correctly on every read and is true of a different window each
+     * night. Storing it would put a new, nearly-identical row in the inbox every
+     * morning, which is the feed §3.3 rules out and the fastest way to make a
+     * person stop reading the one surface that occasionally matters.
+     */
+    surfaced: outcome.surfaced.filter((finding) => finding.confidence !== 'descriptive'),
+    held: outcome.held,
+    nowIso,
+    newId: () => crypto.randomUUID(),
+  });
+}
+
+/**
+ * The inbox — surfaced insights that have not been dismissed.
+ *
+ * Read from `insight` rather than recomputed from the battery, and the
+ * distinction matters. The battery's `surfaced` set is what *tonight's* data
+ * supports; the inbox is what was surfaced on the night it was confirmed and
+ * has not been dealt with since. An insight that stopped holding yesterday is
+ * still the thing the operator was shown, and silently removing it would mean
+ * the surface disagreed with the notification that pointed at it.
+ */
+export async function loadInsightInbox(
+  db: Database,
+): Promise<Result<readonly InsightRow[], DomainError>> {
+  return createInsightRepository(db).inbox();
 }
 
 /**
@@ -169,3 +235,5 @@ export async function loadInsights(
 export function topFinding(outcome: BatteryOutcome): Finding | null {
   return outcome.surfaced[0] ?? null;
 }
+
+export type { InsightRow };

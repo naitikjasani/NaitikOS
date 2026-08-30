@@ -21,6 +21,11 @@ const MODULES = [
     description: 'A target over numbers you already record, and an honest projection of where the line goes.',
   },
   {
+    href: '/life/insights',
+    title: 'Insights',
+    description: 'The few findings that survived the statistics, each with what it does not prove. Usually empty, which is the system working.',
+  },
+  {
     href: '/life/documents',
     title: 'Documents',
     description: 'Where the paperwork is, what it says, and what it adds to your record.',

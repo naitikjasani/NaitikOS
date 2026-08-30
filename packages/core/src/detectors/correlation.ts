@@ -33,7 +33,7 @@
 import type { DailyPair } from '../statistics/correlation';
 import { MIN_CORRELATION_N, bestLaggedCorrelation } from '../statistics/correlation';
 import type { DetectorOutcome, Finding, InsufficientData } from './types';
-import { findingId } from './types';
+import { findingId, findingSignature } from './types';
 
 /**
  * The most days a lag search will look ahead.
@@ -148,6 +148,10 @@ export function detectCorrelation(input: CorrelationInput): DetectorOutcome {
 
   findings.push({
     id: findingId('correlation', subject, input.dayKey, `lag${String(best.lagDays)}`),
+    /* The lag is part of the identity: a relationship at two days and the same
+     * relationship at five days are different claims, and confirming one with
+     * the other would be the confirmation control confirming nothing. */
+    signature: findingSignature('correlation', subject, `lag${String(best.lagDays)}`),
     detector: 'correlation',
     subject,
     dayKey: input.dayKey,

@@ -74,6 +74,9 @@ export const RESET_ORDER: readonly string[] = Object.freeze([
   'goal_progress_snapshot',
   'goal_target',
   'goal',
+  /* Insights — evidence references the insight */
+  'insight_evidence',
+  'insight',
   /* The knowledge graph — edges reference nodes on both ends */
   'graph_edge',
   'graph_node',
