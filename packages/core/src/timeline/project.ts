@@ -91,6 +91,9 @@ const RENDERERS: Partial<Record<EventType, (event: DomainEvent) => Rendered>> = 
     };
   },
   'SkinState.Logged': () => ({ title: 'Skin state recorded', detail: null }),
+  /* No macro totals in the title. The timeline says a meal happened; what was
+   * in it is a click away, in the table that actually holds it. */
+  'Meal.Logged': () => ({ title: 'Meal logged', detail: null }),
 
   // Mood, journal, and anxiety render with NO content and no value.
   // §4.7 gives Mind the highest duty of care; a timeline that displays "Mood: 2"

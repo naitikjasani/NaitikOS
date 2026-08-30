@@ -30,6 +30,8 @@ import type {
 import {
   captureLatency,
   closeFunnel,
+  mealLogLatency,
+  mealTierMix,
   correctionRate,
   derivedFactRatio,
   detectGaming,
@@ -41,7 +43,7 @@ import {
   zonedDayBounds,
 } from '@naitikos/core';
 import type { Database } from '@naitikos/db';
-import { closedDaysBetween, createTelemetryRepository } from '@naitikos/db';
+import { closedDaysBetween, createMealRepository, createTelemetryRepository } from '@naitikos/db';
 
 /** The trailing window the health metrics are computed over. */
 export const HEALTH_WINDOW_DAYS = 30;
@@ -60,6 +62,17 @@ export type ValidationReport = {
   readonly derivedFacts: BudgetedMetric;
   readonly closeFunnel: CompletionFunnel;
   readonly gaming: GamingVerdict;
+
+  /**
+   * §2.2's ten-second rule for Nutrition, as two figures.
+   *
+   * The mix leads and the latency lags: when the ranking, the templates or the
+   * parser stop working, hand entry rises first and the median follows it up
+   * within a week. Reading only the median would report a healthy system right
+   * up to the point it was not.
+   */
+  readonly mealLogLatency: BudgetedMetric;
+  readonly mealTierMix: BudgetedMetric;
 
   /** Raw counts, so the dashboard can show what is and is not being emitted. */
   readonly eventCounts: Readonly<Record<string, number>>;
@@ -102,6 +115,7 @@ export async function loadValidationReport(
     sources,
     corrections,
     closedInGate,
+    tiers,
   ] = await Promise.all([
     telemetry.valuesFor('capture.latency', current.start, current.end),
     telemetry.valuesFor('capture.latency', prior.start, prior.end),
@@ -112,6 +126,7 @@ export async function loadValidationReport(
     telemetry.observationsBySource(current.start, current.end),
     telemetry.correctionCounts(current.start, current.end),
     closedDaysBetween(db, gateBounds.start, gateBounds.end, zone),
+    createMealRepository(db).tierMix(current.start, current.end),
   ]);
 
   for (const result of [
@@ -123,6 +138,7 @@ export async function loadValidationReport(
     priorCounts,
     sources,
     corrections,
+    tiers,
   ]) {
     if (!result.ok) return err(result.error);
   }
@@ -134,7 +150,8 @@ export async function loadValidationReport(
     !counts.ok ||
     !priorCounts.ok ||
     !sources.ok ||
-    !corrections.ok
+    !corrections.ok ||
+    !tiers.ok
   ) {
     return err({ kind: 'validation', code: 'telemetry_unavailable', message: 'Telemetry unavailable.', issues: [] });
   }
@@ -144,6 +161,9 @@ export async function loadValidationReport(
 
   const latency = captureLatency(latencyNow.value);
   const foreground = timeInApp(minutesNow);
+
+  const mealLatency = await telemetry.valuesFor('nutrition.log.duration', current.start, current.end);
+  if (!mealLatency.ok) return err(mealLatency.error);
 
   const started = counts.value['daily_close.started'] ?? 0;
   const submitted = counts.value['daily_close.submitted'] ?? 0;
@@ -160,6 +180,8 @@ export async function loadValidationReport(
     correctionRate: correctionRate(corrections.value.total, corrections.value.corrected),
     derivedFacts: derivedFactRatio(sources.value),
     closeFunnel: closeFunnel(started, submitted),
+    mealLogLatency: mealLogLatency(mealLatency.value),
+    mealTierMix: mealTierMix(tiers.value),
     gaming: detectGaming({
       /*
        * Compounding Days over each window, approximated by the Close-submitted

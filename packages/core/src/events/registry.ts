@@ -216,6 +216,7 @@ export type EventPayloadMap = {
   'Sleep.Recorded': SleepPayload;
   'SkinRoutine.Completed': SkinRoutinePayload;
   'SkinState.Logged': ObservationRecordedPayload;
+  'Meal.Logged': SubjectOnly;
 
   /* --- Mind ----------------------------------------------------------- */
   'Mood.Logged': ObservationRecordedPayload;
@@ -361,6 +362,25 @@ export const EVENT_REGISTRY = {
     significance: 'primary',
     clinical: true,
     describes: 'A daily skin state was recorded.',
+  },
+  /**
+   * One meal, one entry — the reason this event exists at all.
+   *
+   * A meal writes around ten observations, and `capture-events.ts` maps each
+   * one to a timeline entry unless told otherwise. Without this event and the
+   * filter beside it, one breakfast is ten rows on the timeline. `SubjectOnly`
+   * for the same reason `Sleep.Recorded` is: the meal row is the system of
+   * record and joining to it is one query.
+   *
+   * Not clinical. A meal is a fact about a day, not about a diagnosis, and
+   * §10.7's medical timeline would be unreadable with four entries per day.
+   */
+  'Meal.Logged': {
+    version: 1,
+    category: 'body',
+    significance: 'primary',
+    clinical: false,
+    describes: 'A meal was logged.',
   },
 
   'Mood.Logged': {

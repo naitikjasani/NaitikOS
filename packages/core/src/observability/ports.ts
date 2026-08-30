@@ -127,6 +127,16 @@ export const METRIC_NAMES = [
   'api.request.duration',
   'api.request.failed',
   'route.transition',
+  /**
+   * Meal-picker open → meal durably queued. §4.3's ten-second rule, made
+   * falsifiable.
+   *
+   * §2.2 states the rule as a ship gate — "if logging a meal takes longer than
+   * ten seconds, the module has failed" — and a gate nobody measures is a
+   * sentence in a document. This is the measurement, and
+   * `validation/metrics.ts` is where it is read back against the budget.
+   */
+  'nutrition.log.duration',
 ] as const;
 
 export type MetricName = (typeof METRIC_NAMES)[number];

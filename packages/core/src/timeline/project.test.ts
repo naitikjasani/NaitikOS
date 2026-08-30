@@ -79,6 +79,7 @@ const SAMPLE_PAYLOADS: Readonly<Record<EventType, unknown>> = Object.freeze({
   'Sleep.Recorded': {},
   'SkinRoutine.Completed': { routineId: 'rt-1', period: 'pm', stepsCompleted: 4, stepsRequired: 5 },
   'SkinState.Logged': { metricKey: 'skin.state' },
+  'Meal.Logged': {},
   'Mood.Logged': { metricKey: 'mind.mood' },
   'Journal.Created': { hasPrompt: true },
   'Journal.Updated': { hasPrompt: false },

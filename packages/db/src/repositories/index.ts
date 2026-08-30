@@ -93,6 +93,16 @@ export type {
   OutboxHealth,
 } from './upload-outbox.repository';
 
+/* --- Nutrition (§4.3) — the ten-second rule ----------------------------- */
+export { createFoodRepository, USAGE_SAMPLE_LIMIT } from './food.repository';
+export type { FoodRepository, CreateFoodInput } from './food.repository';
+
+export { createMealRepository, MEAL_SUBJECT_TYPE } from './meal.repository';
+export type { MealRepository, MealRow, MealItemRow, LogMealInput, LoggedMeal } from './meal.repository';
+
+export { createNutritionTargetRepository } from './nutrition-target.repository';
+export type { NutritionTargetRepository, SetTargetInput } from './nutrition-target.repository';
+
 /* --- Goals (§4.10) — definitions and snapshots, never progress ---------- */
 export { createGoalRepository, snapshotsSince } from './goal.repository';
 export type { GoalRepository, CloseGoalInput } from './goal.repository';

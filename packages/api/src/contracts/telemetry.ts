@@ -55,6 +55,7 @@ export const telemetryNameSchema = z.enum([
   'api.request.duration',
   'api.request.failed',
   'route.transition',
+  'nutrition.log.duration',
 ]);
 
 export type TelemetryName = z.infer<typeof telemetryNameSchema>;

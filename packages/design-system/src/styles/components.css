@@ -1498,3 +1498,69 @@
     border-width: 2px;
   }
 }
+
+/* -------------------------------------------------------------------------
+ * Food tile — §4.3's ten-second surface
+ *
+ * A full-bleed button rather than an interactive Card. §8.10 puts the touch
+ * target floor at 44 px and this grid is tapped in a hurry with one thumb, so
+ * the tile is the target: there is no inner hit area, no chevron, and nothing
+ * to aim at. `touch-action: none` because the tile owns a long press, and
+ * without it the browser's own long-press (text selection, context menu) fires
+ * first on Android and the gesture never arrives.
+ * ---------------------------------------------------------------------- */
+
+.nos-food-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-block-size: 4rem;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+  text-align: start;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.nos-food-tile:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.nos-food-tile__name {
+  font-size: var(--typography-body-sm-font-size);
+  line-height: var(--typography-body-sm-line-height);
+}
+
+.nos-food-tile__quantity {
+  color: var(--color-text-tertiary);
+  font-size: var(--typography-caption-font-size);
+  font-variant-numeric: tabular-nums;
+}
+
+.nos-food-tile--selected {
+  border-color: var(--color-accent);
+  background: color-mix(in oklab, var(--color-accent) 8%, var(--color-surface-raised));
+}
+
+/* The tick, not the colour, is what says "selected" — §8.13 forbids information
+ * carried by colour alone, and this grid is read at a glance. */
+.nos-food-tile__mark {
+  position: absolute;
+  inset-block-start: var(--space-2);
+  inset-inline-end: var(--space-2);
+  color: var(--color-accent);
+  font-size: var(--typography-caption-font-size);
+}
+
+@media (forced-colors: active) {
+  .nos-food-tile--selected {
+    border-width: 2px;
+  }
+}

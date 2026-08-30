@@ -62,6 +62,14 @@ export const RESET_ORDER: readonly string[] = Object.freeze([
   /* The document vault */
   'document_extraction',
   'document',
+  /* Nutrition — items before meals, versions before foods */
+  'meal_item',
+  'meal',
+  'meal_template',
+  'nutrition_target',
+  'food_nutrient',
+  'food_version',
+  'food',
   /* Goals — snapshots reference both, so they go first */
   'goal_progress_snapshot',
   'goal_target',

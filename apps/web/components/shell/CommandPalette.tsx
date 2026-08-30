@@ -41,6 +41,23 @@ const GYM_TARGETS: readonly { readonly href: string; readonly label: string }[] 
   { href: '/body/composition', label: 'Bodyweight trend' },
 ];
 
+/**
+ * Nutrition destinations.
+ *
+ * `Log a meal` is first and is the reason this group exists. §2.2 gates the
+ * module on ten seconds, and on a keyboard the palette is the shortest path
+ * there — shorter than the quick-capture rail could be, because the log route
+ * arrives server-rendered with the suggestion ranking already in the response.
+ */
+const NUTRITION_TARGETS: readonly { readonly href: string; readonly label: string }[] = [
+  { href: '/body/nutrition/log', label: 'Log a meal' },
+  { href: '/body/nutrition', label: 'Today against target' },
+  { href: '/body/nutrition/foods', label: 'Food library' },
+  { href: '/body/nutrition/meals', label: 'Saved meals' },
+  { href: '/body/nutrition/targets', label: 'Nutrition targets' },
+  { href: '/body/nutrition/trends', label: 'Macro trends' },
+];
+
 export function CommandPalette(): ReactNode {
   const router = useRouter();
   const isOpen = useNavigationStore((state) => state.isCommandPaletteOpen);
@@ -121,6 +138,24 @@ export function CommandPalette(): ReactNode {
             <Command.Item
               key={target.href}
               value={`gym ${target.label}`}
+              onSelect={() => {
+                run(() => {
+                  router.push(target.href);
+                });
+              }}
+              className="palette__item"
+            >
+              <Icon name="nav.body" label={null} size="sm" />
+              <span>{target.label}</span>
+            </Command.Item>
+          ))}
+        </Command.Group>
+
+        <Command.Group heading="Nutrition" className="palette__group">
+          {NUTRITION_TARGETS.map((target) => (
+            <Command.Item
+              key={target.href}
+              value={`nutrition ${target.label}`}
               onSelect={() => {
                 run(() => {
                   router.push(target.href);

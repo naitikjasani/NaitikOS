@@ -106,6 +106,9 @@ const PAYLOAD_SPECS: Readonly<Record<EventType, PayloadSpec>> = Object.freeze({
   'Weight.Logged': OBSERVATION_SPEC,
   'BodyMeasurement.Recorded': { site: ref('string') },
   'Sleep.Recorded': EMPTY_SPEC,
+  /* No fields at all: the meal row is the system of record, and a payload
+   * carrying a calorie count would be a measured value in an event log. */
+  'Meal.Logged': EMPTY_SPEC,
   'SkinRoutine.Completed': {
     routineId: ref('string'),
     period: ref('string'),

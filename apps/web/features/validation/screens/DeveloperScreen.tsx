@@ -134,6 +134,34 @@ export function DeveloperScreen({ report }: { readonly report: ValidationReport 
         </CardBody>
       </Card>
 
+      {/* --- §2.2's ten-second rule ----------------------------------- */}
+      <Card variant="outlined">
+        <CardBody>
+          <Stack gap="4">
+            <Stack gap="1">
+              <Text role="title-3" as="h2">
+                The ten-second rule
+              </Text>
+              {/*
+                §2.2 states this as a ship gate on the module — "if logging a
+                meal takes longer than ten seconds, the module has failed" — so
+                it is reported here beside the other budgets rather than on a
+                Nutrition screen. It is a fact about the interface, and putting
+                it in front of the operator at the table would be the system
+                grading them on their own dinner.
+              */}
+              <Text role="caption" tone="tertiary">
+                §2.2 gates Nutrition on this. The mix leads; the latency lags.
+              </Text>
+            </Stack>
+
+            <MetricRow label="Median meal-log duration" metric={report.mealLogLatency} />
+            <Divider />
+            <MetricRow label="Meals logged without hand entry" metric={report.mealTierMix} />
+          </Stack>
+        </CardBody>
+      </Card>
+
       {/* --- §1.5's anti-goal ----------------------------------------- */}
       {report.gaming.gamed && (
         <Card variant="outlined">

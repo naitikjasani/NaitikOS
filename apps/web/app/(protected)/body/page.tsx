@@ -31,6 +31,11 @@ const MODULES = [
     description: 'Daily state per region, routine adherence, the product register, photography.',
   },
   {
+    href: '/body/nutrition',
+    title: 'Nutrition',
+    description: 'Meals in ten seconds, macros against a target, and what the protein is made of.',
+  },
+  {
     href: '/body/composition',
     title: 'Composition',
     description: 'Bodyweight and the seven-day trend.',

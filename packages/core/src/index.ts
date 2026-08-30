@@ -598,6 +598,77 @@ export {
 export { HEALTH_METRICS } from './domain/health/metrics';
 
 /* -------------------------------------------------------------------------
+ * Nutrition (§4.3) — the ten-second rule, and the vocabulary behind it.
+ * ---------------------------------------------------------------------- */
+export type { NutrientDefinition, NutrientCanonicalFailure, NutrientCanonicalResult, ProteinSource } from './domain/nutrition/nutrient';
+export {
+  NUTRIENTS,
+  NUTRIENT_TO_ANALYTE,
+  NUTRITION_METRIC_PREFIX,
+  PROTEIN_SOURCES,
+  PROTEIN_SOURCE_LABELS,
+  foldNutrientName,
+  fromInternationalUnits,
+  normaliseNutrientUnit,
+  nutrientByKey,
+  nutrientFor,
+  nutrientForMetricKey,
+  nutritionMetricKey,
+  proteinSourceMetricKey,
+  toCanonicalNutrient,
+  toInternationalUnits,
+} from './domain/nutrition/nutrient';
+
+export { NUTRITION_METRICS } from './domain/nutrition/metrics';
+
+export type { Food, FoodNutrient, FoodSearchResult, FoodVersion } from './domain/nutrition/food';
+export { currentFoodVersion, foodLabel, scoreFoodMatch, searchFoods, versionAt } from './domain/nutrition/food';
+
+export type {
+  FoodVersionFacts,
+  MealItemFacts,
+  MealTotals,
+  NutrientRow,
+  NutrientTotal,
+  ProteinSplit,
+  UnresolvedItem,
+} from './domain/nutrition/nutrients';
+export { PSEUDO_UNITS, basisMultiple, isPseudoUnit, mealTotals, proteinBySource } from './domain/nutrition/nutrients';
+
+export type { FoodUsage, MealSlot, SuggestOptions, Suggestion, TemplateUsage } from './domain/nutrition/ranking';
+export {
+  DEFAULT_SLOTS,
+  HALF_LIFE_DAYS,
+  MAX_SUGGESTIONS,
+  MAX_TEMPLATE_SUGGESTIONS,
+  rankTemplates,
+  slotForLocalTime,
+  suggestFoods,
+} from './domain/nutrition/ranking';
+
+export type { LoggedItem, MealTemplate, ResolvedItem, ResolvedTemplate, TemplateItem } from './domain/nutrition/template';
+export {
+  MIN_MEALS_FOR_DRIFT,
+  parseTemplateItems,
+  resolveTemplate,
+  templateDrift,
+  templateFromMeal,
+} from './domain/nutrition/template';
+
+export type { NutritionTarget, TargetEvaluation, TargetStatus } from './domain/nutrition/targets';
+export { TARGET_STATUS_LABELS, activeTargets, evaluateTargets, phaseFor } from './domain/nutrition/targets';
+
+export type { LabelField, ParsedLabel, ParsedMeal, ParsedMealItem } from './domain/nutrition/parser';
+export {
+  LABEL_REVIEW_FLOOR,
+  MAX_PARSE_CONFIDENCE,
+  MIN_FOOD_MATCH_SCORE,
+  matchNutrientLabel,
+  parseMealText,
+  parseNutritionLabel,
+} from './domain/nutrition/parser';
+
+/* -------------------------------------------------------------------------
  * Teeth (§4.5) — FDI notation and per-tooth history. Reuses the routine engine.
  * ---------------------------------------------------------------------- */
 export type { Quadrant, Tooth, ToothNotation, ToothPosition, DentalProcedure, ProcedureInput } from './domain/teeth/tooth';
@@ -712,7 +783,7 @@ export { BASELINE_DAYS, PRE_REGISTERED, baselineState, runBattery } from './dete
 /* -------------------------------------------------------------------------
  * Validation (§1.4, §1.5, §12 V1) — the metrics that protect the metrics.
  * ---------------------------------------------------------------------- */
-export type { Distribution, MetricStatus, BudgetedMetric, TimedEvent, CompletionFunnel, GamingVerdict } from './validation/metrics';
+export type { Distribution, MetricStatus, BudgetedMetric, TimedEvent, CompletionFunnel, GamingVerdict, MealTier } from './validation/metrics';
 export {
   EMPTY_DISTRIBUTION,
   CAPTURE_LATENCY_BUDGET_MS,
@@ -720,7 +791,12 @@ export {
   CORRECTION_RATE_CEILING,
   DERIVED_FACT_TARGET,
   SESSION_GAP_MINUTES,
+  NUTRITION_LOG_BUDGET_MS,
+  MEAL_TIERS,
+  ASSISTED_TIER_FLOOR,
   distributionOf,
+  mealLogLatency,
+  mealTierMix,
   captureLatency,
   timeInApp,
   correctionRate,

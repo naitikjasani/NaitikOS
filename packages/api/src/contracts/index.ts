@@ -30,3 +30,6 @@ export * from './documents';
 
 /** Goals — declarations and targets. Never progress (§4.10). */
 export * from './goals';
+
+/** Nutrition — meals, foods, templates, targets (§4.3). */
+export * from './nutrition';

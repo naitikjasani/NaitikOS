@@ -65,6 +65,20 @@ export function draftsForObservations(
 ): readonly EventDraft[] {
   return observations
     .filter((observation) => observation.metricKey !== 'system.daily_close.completed')
+    /*
+     * Nutrition is filtered out for the same reason the completion marker is,
+     * and it is a sharper case: one meal writes around ten observations, so a
+     * single breakfast would become ten `Observation.Recorded` entries on the
+     * timeline. `meal.repository.ts` emits one `Meal.Logged` instead.
+     *
+     * Hydration is the exception inside the exception — `nutrition.water` is
+     * captured on its own, with no meal row to emit an event for it, so it
+     * keeps the generic draft.
+     */
+    .filter(
+      (observation) =>
+        !observation.metricKey.startsWith('nutrition.') || observation.metricKey === 'nutrition.water',
+    )
     .map((observation) => {
       const eventType = eventTypeFor(observation.metricKey);
 

@@ -25,8 +25,10 @@ import { metric } from '../schema/substrate';
 import { featureFlag } from '../schema/identity';
 import { journalPrompt } from '../schema/mind';
 import { createExerciseRepository } from '../repositories/exercise.repository';
-import { DAILY_CLOSE_METRICS, HEALTH_METRICS, MVP_METRICS, REGISTERED_METRICS } from './metrics';
+import { createFoodRepository } from '../repositories/food.repository';
+import { DAILY_CLOSE_METRICS, HEALTH_METRICS, MVP_METRICS, NUTRITION_METRICS, REGISTERED_METRICS } from './metrics';
 import { SEED_EXERCISES } from './exercises';
+import { SEED_FOODS, SEED_SOURCE_NOTE } from './foods';
 import { SEED_PROMPTS } from './prompts';
 
 /**
@@ -121,6 +123,7 @@ async function main(): Promise<void> {
   console.log(`  metric              ${String(REGISTERED_METRICS.length)} rows`);
   console.log(`  ├─ MVP              ${String(MVP_METRICS.length)}`);
   console.log(`  ├─ Health core      ${String(HEALTH_METRICS.length)}`);
+  console.log(`  ├─ Nutrition        ${String(NUTRITION_METRICS.length)}`);
   console.log(`  └─ in Daily Close   ${String(DAILY_CLOSE_METRICS.length)} of ${String(DAILY_CLOSE_ELEMENT_BUDGET)} budget`);
 
   /* --- Feature flags -------------------------------------------------- */
@@ -148,6 +151,43 @@ async function main(): Promise<void> {
   const exercises = await createExerciseRepository(db).upsert(SEED_EXERCISES);
   if (!exercises.ok) throw new Error(`Exercise seed failed: ${exercises.error.message}`);
   console.log(`  exercise            ${String(exercises.value)} rows`);
+
+  /* --- The starter food library (§4.3) --------------------------------- */
+  /*
+   * The highest-leverage item in Nutrition, and it is unglamorous data entry.
+   * On day one tiers 1–3 are empty and every meal costs a minute per new food,
+   * which is §13.1's *fatal* abandonment risk arriving through the module most
+   * likely to trigger it. This turns day one into day thirty for the majority
+   * of intake. See `seed/foods.ts` for where the numbers come from.
+   */
+  const foods = createFoodRepository(db);
+  let foodsCreated = 0;
+  for (const entry of SEED_FOODS) {
+    const created = await foods.upsertSeed({
+      id: crypto.randomUUID(),
+      name: entry.name,
+      brand: entry.brand,
+      isVegetarian: entry.isVegetarian,
+      isVegan: entry.isVegan,
+      proteinSource: entry.proteinSource,
+      version: {
+        id: crypto.randomUUID(),
+        basisQuantity: entry.basisQuantity,
+        basisUnit: entry.basisUnit,
+        servingQuantity: entry.servingQuantity,
+        servingUnit: entry.servingUnit,
+        servingLabel: entry.servingLabel,
+        /* Epoch, so a back-dated meal always resolves to a seeded version
+         * rather than falling through to the earliest-version fallback. */
+        effectiveFrom: '1970-01-01T00:00:00.000Z',
+        sourceNote: SEED_SOURCE_NOTE,
+        nutrients: entry.nutrients,
+      },
+    });
+    if (!created.ok) throw new Error(`Food seed failed: ${created.error.message}`);
+    if (created.value) foodsCreated += 1;
+  }
+  console.log(`  food                ${String(SEED_FOODS.length)} rows (${String(foodsCreated)} new)`);
 
   /* --- Journal prompts (§12 week 4) ----------------------------------- */
   /*

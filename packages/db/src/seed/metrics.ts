@@ -20,6 +20,7 @@ import {
   MVP_METRICS as CORE_METRICS,
   DAILY_CLOSE_METRICS as CORE_DAILY_CLOSE,
   HEALTH_METRICS as CORE_HEALTH,
+  NUTRITION_METRICS as CORE_NUTRITION,
 } from '@naitikos/core';
 import type { MetricDefinition } from '@naitikos/core';
 
@@ -79,6 +80,9 @@ export const MVP_METRICS: readonly MetricSeed[] = CORE_METRICS.map(toRow);
  */
 export const HEALTH_METRICS: readonly MetricSeed[] = CORE_HEALTH.map(toRow);
 
+/** Nutrition's vocabulary (§4.3), as rows. */
+export const NUTRITION_METRICS: readonly MetricSeed[] = CORE_NUTRITION.map(toRow);
+
 /**
  * Everything the metric table should contain.
  *
@@ -86,7 +90,7 @@ export const HEALTH_METRICS: readonly MetricSeed[] = CORE_HEALTH.map(toRow);
  * upsert order decide which unit a metric has, and a metric whose unit depends
  * on insertion order is §6.2's failure with extra steps.
  */
-export const REGISTERED_METRICS: readonly MetricSeed[] = [...MVP_METRICS, ...HEALTH_METRICS];
+export const REGISTERED_METRICS: readonly MetricSeed[] = [...MVP_METRICS, ...HEALTH_METRICS, ...NUTRITION_METRICS];
 
 /** The Daily Close subset, in presentation order. Asserted against §4.0's cap. */
 export const DAILY_CLOSE_METRICS: readonly MetricSeed[] = CORE_DAILY_CLOSE.map(toRow);

@@ -191,3 +191,32 @@ export function recordCaptureLatency(route: string): void {
 export function resetCaptureLatency(): void {
   coldCaptureRecorded = false;
 }
+
+/* -------------------------------------------------------------------------
+ * The ten-second rule — §2.2's ship gate for Nutrition
+ * ---------------------------------------------------------------------- */
+
+/**
+ * Meal-picker open → meal durably queued, in milliseconds.
+ *
+ * The clock starts when the picker mounts rather than at `timeOrigin`, and that
+ * is a deliberate departure from {@link recordCaptureLatency}. §2.2's claim is
+ * about *the picker*: "logging a meal takes longer than ten seconds" is a
+ * statement about the interaction, and folding a cold boot into it would make
+ * the number a measure of Next.js rather than of §4.3's design.
+ *
+ * The end is the queue, not the server. §5.7 makes the write durable in
+ * IndexedDB before the network is involved, and the operator is finished at
+ * that point — waiting for a round trip would measure their signal.
+ *
+ * Every meal is recorded, not just the first of a session. Unlike a cold start,
+ * a second meal at lunch is exactly as interesting as the first: the whole
+ * design assumes repeats, and the repeats are where the ten seconds are won.
+ */
+export function recordMealLogDuration(startedAtMs: number, route: string): void {
+  if (typeof window === 'undefined') return;
+
+  const elapsed = performance.now() - startedAtMs;
+  if (!Number.isFinite(elapsed) || elapsed < 0) return;
+  record('nutrition.log.duration', elapsed, route);
+}

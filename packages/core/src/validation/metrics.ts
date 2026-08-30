@@ -233,6 +233,103 @@ export function derivedFactRatio(bySource: Readonly<Record<string, number>>): Bu
 }
 
 /* -------------------------------------------------------------------------
+ * §4.3's ten-second rule, made falsifiable
+ * ---------------------------------------------------------------------- */
+
+/**
+ * §2.2's ship gate for Nutrition, in milliseconds.
+ *
+ * "If logging a meal takes longer than ten seconds, the module has failed."
+ * That is a gate on a *module*, not on a person, and it is stated as a hard
+ * number — so it is checkable, and this is the number it is checked against.
+ *
+ * Not to be confused with §14.1's ten-second *fallback*, which is a one-tap
+ * degraded Close. Same duration, unrelated ideas; they are kept apart on
+ * purpose because conflating them would turn a ship gate into a UI affordance.
+ */
+export const NUTRITION_LOG_BUDGET_MS = 10_000;
+
+/**
+ * Median meal-log duration against §2.2's gate.
+ *
+ * Measured p50 rather than p90, because the gate is about whether the *habit*
+ * is sustainable. A ninetieth-percentile meal is a new food being entered by
+ * hand, which §4.3 already calls tier 3 and never claimed would take ten
+ * seconds.
+ */
+export function mealLogLatency(samplesMs: readonly number[]): BudgetedMetric {
+  const distribution = distributionOf(samplesMs);
+  const value = distribution.p50;
+
+  if (value === null) {
+    return {
+      value: null,
+      budget: NUTRITION_LOG_BUDGET_MS,
+      status: 'unknown',
+      n: 0,
+      sentence: 'No meals logged in this window.',
+    };
+  }
+
+  return {
+    value,
+    budget: NUTRITION_LOG_BUDGET_MS,
+    status: value <= NUTRITION_LOG_BUDGET_MS ? 'within' : 'over',
+    n: distribution.count,
+    sentence: `Median ${formatSeconds(value)} over ${String(distribution.count)} meals, against §2.2's gate of ${formatSeconds(NUTRITION_LOG_BUDGET_MS)}. p90 ${formatSeconds(distribution.p90 ?? value)}.`,
+  };
+}
+
+/**
+ * §4.3's capture tiers.
+ *
+ * - `template` — one tap on a saved meal.
+ * - `suggestion` — taps on ranked food tiles, quantities already defaulted.
+ * - `parsed` — a typed line resolved against the library.
+ * - `manual` — a food entered or edited by hand, with confirmation.
+ */
+export const MEAL_TIERS = Object.freeze(['template', 'suggestion', 'parsed', 'manual'] as const);
+
+export type MealTier = (typeof MEAL_TIERS)[number];
+
+/**
+ * The share of meals logged without hand entry.
+ *
+ * §4.3's design assumes the overwhelming majority of meals are repeats. If they
+ * are not — if `manual` is more than a fifth of the log — then the ranking, the
+ * templates and the parser are all failing at the same time and the latency
+ * figure will follow them down within a week. This is the leading indicator;
+ * {@link mealLogLatency} is the lagging one.
+ */
+export const ASSISTED_TIER_FLOOR = 0.8;
+
+export function mealTierMix(tiers: readonly MealTier[]): BudgetedMetric {
+  if (tiers.length === 0) {
+    return {
+      value: null,
+      budget: ASSISTED_TIER_FLOOR,
+      status: 'unknown',
+      n: 0,
+      sentence: 'No meals logged in this window.',
+    };
+  }
+
+  const manual = tiers.filter((tier) => tier === 'manual').length;
+  const value = (tiers.length - manual) / tiers.length;
+
+  return {
+    value,
+    budget: ASSISTED_TIER_FLOOR,
+    /* A floor, like `derivedFactRatio` — but unlike that one this is checked,
+     * because the assisted path exists today and a low figure is a real defect
+     * rather than a feature that has not been built. */
+    status: value >= ASSISTED_TIER_FLOOR ? 'within' : 'over',
+    n: tiers.length,
+    sentence: `${String(tiers.length - manual)} of ${String(tiers.length)} meals logged from a template, a suggestion or a parsed line (${(value * 100).toFixed(0)}%), against a floor of ${String(Math.round(ASSISTED_TIER_FLOOR * 100))}%.`,
+  };
+}
+
+/* -------------------------------------------------------------------------
  * Sessionising, for the counter-metric
  * ---------------------------------------------------------------------- */
 
