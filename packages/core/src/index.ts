@@ -788,6 +788,27 @@ export type {
 } from './detectors/battery';
 export { BASELINE_DAYS, PRE_REGISTERED, CORRELATION_PAIRS, baselineState, runBattery } from './detectors/battery';
 
+/* -------------------------------------------------------------------------
+ * The knowledge graph (§10.2) — association and precedence, never cause.
+ * ---------------------------------------------------------------------- */
+export type {
+  EdgeType,
+  EdgeOrigin,
+  EdgeStatistics,
+  GraphEdge,
+  EdgeRejection,
+  EdgeResult,
+} from './graph/edges';
+export { EDGE_TYPES, PERMITTED_ORIGINS, edgeOriginFor, buildEdge, edgeKey } from './graph/edges';
+
+export type { StoredEdge, Reconciliation } from './graph/reconcile';
+export {
+  EDGE_RETENTION_WEIGHT,
+  UNSUPPORTED_NIGHTS_BEFORE_REMOVAL,
+  reconcileEdges,
+  edgesForCorrelation,
+} from './graph/reconcile';
+
 export type { CorrelationPair, MetricSeries, CorrelationInput } from './detectors/correlation';
 export {
   MAX_LAG_DAYS,

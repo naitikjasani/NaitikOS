@@ -105,6 +105,9 @@ export type { NutritionTargetRepository, SetTargetInput } from './nutrition-targ
 
 /* --- Goals (§4.10) — definitions and snapshots, never progress ---------- */
 export { createGoalRepository, snapshotsSince } from './goal.repository';
+
+export type { GraphRepository, GraphNodeRow, UpsertNodeInput } from './graph.repository';
+export { createGraphRepository } from './graph.repository';
 export type { GoalRepository, CloseGoalInput } from './goal.repository';
 
 /* --- Health core (§4.4) and the document vault (§4.11) ------------------ */
