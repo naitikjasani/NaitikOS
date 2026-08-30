@@ -151,9 +151,17 @@ export function HealthOverviewScreen({
                   ? 'No questions prepared yet.'
                   : `${String(overview.nextAppointment.preVisitQuestions.length)} questions ready.`}
               </Text>
-              <Link className="nos-inline-link" href="/body/health/appointments">
-                Prepare for it
-              </Link>
+              <Inline gap="3" wrap>
+                <Link className="nos-inline-link" href="/body/health/appointments">
+                  Prepare for it
+                </Link>
+                {/* §10.7's payoff, one link from the appointment it exists
+                    for. A pack reachable only from a settings menu is a pack
+                    nobody prints on the morning of a consultation. */}
+                <Link className="nos-inline-link" href="/body/health/pack">
+                  Build a consultation pack
+                </Link>
+              </Inline>
             </Stack>
           </CardBody>
         </Card>

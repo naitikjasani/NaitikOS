@@ -186,3 +186,91 @@ like a feature that found nothing.
 | Treatment courses, procedures | Tables exist and are populated by nothing. Isotretinoin and the root canals are the operator's real history and both belong here; neither is on §12's October list. |
 | Editing a lab result | §9.1 makes corrections supersessions, and the supersession UI does not exist for labs. A wrong value is currently corrected by re-confirming — which appends. This is the sharpest remaining edge. |
 | Symptom ↔ medication correlation | December, and behind §10.6's five statistical controls. Not a UI gap. |
+
+## The Consultation Pack
+
+Added December 2026. §10.7, and V2's stated highest-value deliverable —
+December's gate is "at least one Consultation Pack taken to an actual
+appointment".
+
+### It is deterministic, and that is the design
+
+§10.11 routes "Consultation Pack synthesis" to Opus at `xhigh`, and what that
+call contributes is the *phrasing* of the questions and the connective prose.
+Every fact on the page — every medication, every lab value, every date — is
+assembled by `lib/platform/consultation-pack.ts` from the record, because §10.0
+puts the model outside the path of any number a person reads.
+
+The consequence is that the pack works with no model, no API key and no budget
+remaining. That is not a degraded mode. A document taken into a consultation
+must not depend on a third party being up, and a pack that produced nothing on
+the one morning it mattered would be worse than not having one.
+
+### Filter what leads, never what is included
+
+A pack containing everything would be forty pages and read in none of the ten
+minutes available. A pack that filtered hard would omit the interaction the
+clinician needed.
+
+The rule: **everything in the window is in the pack; relevance decides the
+order.** Anything judged irrelevant is demoted to an "also on record" block
+rather than dropped. The cost of burying a record is a clinician reading one
+more line; the cost of omitting it is a drug interaction nobody mentioned.
+Those are not comparable, so the design does not trade between them.
+
+`SPECIALTY_WORDS` is a hand-written keyword list — the same technique the Teeth
+module uses — with the same honest limitation: it will miss things. That is
+*why* nothing is dropped. A classifier that removed records would need to be
+right; one that only reorders needs to be useful.
+
+Two overrides on top of the keyword match:
+
+- **An out-of-range lab leads regardless of specialty.** A flagged value is the
+  one thing on the page a clinician of any discipline wants to see, and burying
+  it behind a word list that did not happen to contain the analyte's name would
+  be the filter causing the harm it exists to avoid.
+- **A stopped medication does not lead**, whatever it matches. §10.7's section
+  is "current medications"; a drug stopped two years ago belongs in the pack —
+  a prescriber needs to know it was tried — but not at the top of the page.
+
+### The adherence wording is load-bearing
+
+`adherenceNote` produces "52 of 62 scheduled doses were logged (84%). An
+unlogged day may be a dose taken and not recorded."
+
+"84% adherence" would be a claim about behaviour. This is a claim about
+logging, and a prescriber will hear the first unless it is said the second way.
+§4.7's rule that an unlogged day is not a missed dose matters most here,
+because this is the one surface where the reader can act on it.
+
+An as-needed medication gets no figure at all, and a window with nothing
+scheduled says so rather than reporting 0%. 0/0 is not 0%, and a denominator
+invented to avoid a blank would be the system reporting non-adherence it never
+observed.
+
+### The limitation is printed
+
+`PACK_LIMITATION` is the first thing under the heading, on paper and on screen.
+A document that looked like a medical record without saying it was
+self-recorded would be presenting itself as something it is not — to someone
+with thirty seconds to decide how much to trust it. It also states that
+adherence counts *logged* doses, and that a derived lab flag was computed from
+the printed range rather than printed by the laboratory.
+
+### One question list, not two
+
+The pack calls `deriveQuestions` — the same function `/body/health/appointments/[id]`
+uses, with the same inputs. Two implementations of "what should I ask" would be
+two things to keep in step, and the one that got stale would be the one printed
+and carried into the room.
+
+Editing happens on the appointment screen, which owns the saved list. The pack
+has no editor for the same reason.
+
+### Print
+
+`components.css` carries the print rules. Controls are `.nos-no-print`;
+sections avoid page breaks; the text drops to black ink. Nothing in the pack
+conveys meaning through background colour, so `print-color-adjust` is
+deliberately not forced — a pack that needed colour would fail §8.13 on paper
+as surely as on screen.

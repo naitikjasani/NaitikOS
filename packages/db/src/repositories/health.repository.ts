@@ -62,7 +62,15 @@ import {
 } from '@naitikos/core';
 
 import type { Database } from '../client';
-import { appointment, condition, medicalEvent, procedure, sideEffect, symptom } from '../schema/medical';
+import {
+  appointment,
+  condition,
+  medicalEvent,
+  procedure,
+  sideEffect,
+  symptom,
+  treatmentCourse,
+} from '../schema/medical';
 import { observation } from '../schema/substrate';
 import { createObservationRepository } from './observation.repository';
 import type { WriteContext } from './workout.repository';
@@ -206,6 +214,28 @@ export type VisitNotesInput = {
   readonly followUpDue: string | null;
 };
 
+/**
+ * A course of treatment, as the Consultation Pack reads it.
+ *
+ * `cumulativeDose` is carried because it is clinically meaningful for the drugs
+ * this operator has actually taken — a total isotretinoin exposure is a number a
+ * dermatologist asks for by name, and reconstructing it from a dosing note in
+ * the room is not a thing anybody does.
+ */
+export type TreatmentCourseRow = {
+  readonly id: string;
+  readonly name: string;
+  readonly conditionId: string | null;
+  readonly medicationId: string | null;
+  readonly startedAt: string | null;
+  readonly endedAt: string | null;
+  readonly cumulativeDose: string | null;
+  readonly cumulativeDoseUnit: string | null;
+  readonly outcome: string | null;
+  readonly outcomeNote: string | null;
+  readonly prescriber: string | null;
+};
+
 export type HealthRepository = {
   /* --- vitals ------------------------------------------------------- */
   vitalsBetween(from: string, until: string): Promise<Result<readonly VitalObservation[], DomainError>>;
@@ -238,6 +268,16 @@ export type HealthRepository = {
   /* --- procedures (§4.5) ---------------------------------------------- */
   /** Every procedure, newest first. Dental and otherwise — the caller filters. */
   procedures(): Promise<Result<readonly DentalProcedure[], DomainError>>;
+  /**
+   * Treatment courses, current beliefs only.
+   *
+   * §10.7 asks a Consultation Pack for "treatments already attempted **with
+   * outcomes**", which is the section a clinician reads to avoid suggesting
+   * something that was tried and did not work. `recordedTo IS NULL` keeps this
+   * to what is currently believed — §9.5's transaction axis — because a
+   * superseded record of a course is a record of a mistake, not of a treatment.
+   */
+  treatmentCourses(): Promise<Result<readonly TreatmentCourseRow[], DomainError>>;
   recordProcedure(input: ProcedureInput, nowIso: string): Promise<Result<DentalProcedure, DomainError>>;
 
   /* --- appointments ------------------------------------------------- */
@@ -531,6 +571,30 @@ export function createHealthRepository(db: Database): HealthRepository {
         .set({ reportedToPrescriber: true, updatedAt: sql`now()` })
         .where(eq(sideEffect.id, id));
       return ok(undefined);
+    },
+
+    async treatmentCourses() {
+      const rows = await db
+        .select()
+        .from(treatmentCourse)
+        .where(and(isNull(treatmentCourse.deletedAt), isNull(treatmentCourse.recordedTo)))
+        .orderBy(desc(treatmentCourse.startedAt));
+
+      return ok(
+        rows.map((row) => ({
+          id: row.id,
+          name: row.name,
+          conditionId: row.conditionId,
+          medicationId: row.medicationId,
+          startedAt: row.startedAt,
+          endedAt: row.endedAt,
+          cumulativeDose: row.cumulativeDose,
+          cumulativeDoseUnit: row.cumulativeDoseUnit,
+          outcome: row.outcome,
+          outcomeNote: row.outcomeNote,
+          prescriber: row.prescriber,
+        })),
+      );
     },
 
     async procedures() {

@@ -15,3 +15,4 @@ export { ConditionsScreen } from './screens/ConditionsScreen';
 export { SymptomsScreen } from './screens/SymptomsScreen';
 export { AppointmentsScreen } from './screens/AppointmentsScreen';
 export { AppointmentPrepScreen } from './screens/AppointmentPrepScreen';
+export { ConsultationPackScreen } from './screens/ConsultationPackScreen';

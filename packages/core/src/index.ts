@@ -789,6 +789,32 @@ export type {
 export { BASELINE_DAYS, PRE_REGISTERED, CORRELATION_PAIRS, baselineState, runBattery } from './detectors/battery';
 
 /* -------------------------------------------------------------------------
+ * The Consultation Pack (§10.7) — V2's highest-value deliverable.
+ * ---------------------------------------------------------------------- */
+export type {
+  PackSpecialty,
+  PackSection,
+  PackConditionRow,
+  PackMedicationRow,
+  PackLabRow,
+  PackSymptomRow,
+  PackTreatmentRow,
+  ConsultationPackDocument,
+} from './domain/health/consultation-pack';
+export {
+  PACK_SPECIALTIES,
+  PACK_SECTIONS,
+  PACK_SECTION_TITLES,
+  PACK_LIMITATION,
+  specialtyFor,
+  isRelevantTo,
+  orderSection,
+  leadCount,
+  adherenceNote,
+  sideEffectLeads,
+} from './domain/health/consultation-pack';
+
+/* -------------------------------------------------------------------------
  * The knowledge graph (§10.2) — association and precedence, never cause.
  * ---------------------------------------------------------------------- */
 export type {

@@ -1564,3 +1564,102 @@
     border-width: 2px;
   }
 }
+
+/* -------------------------------------------------------------------------
+ * The Consultation Pack — §10.7
+ *
+ * A printed document, not a dashboard. No cards, no charts, no colour-coded
+ * status: a clinician gets ten minutes and reads a page, and the artifact §10.7
+ * asks for is one that gets handed across a desk.
+ *
+ * The print rules matter more than the screen ones here, because the screen
+ * version is a preview of the thing that actually gets used. `print-color-adjust`
+ * is deliberately *not* forced — a pack that relied on background colour to
+ * carry meaning would fail §8.13 on paper as surely as on screen, so nothing
+ * here does.
+ * ---------------------------------------------------------------------- */
+
+.nos-pack {
+  max-inline-size: 46rem;
+  color: var(--color-text-primary);
+}
+
+.nos-pack__header {
+  margin-block-end: var(--space-5);
+}
+
+.nos-pack__limitation {
+  margin-block-start: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  font-size: var(--typography-caption-font-size);
+  line-height: var(--typography-caption-line-height);
+}
+
+.nos-pack__section {
+  margin-block-end: var(--space-5);
+  /* Keep a heading with at least the first rows beneath it. A section title
+   * alone at the foot of a page is the classic printed-document defect. */
+  break-inside: avoid-page;
+}
+
+.nos-pack__list {
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nos-pack__list > li {
+  margin-block-end: var(--space-3);
+  break-inside: avoid;
+}
+
+.nos-pack__line {
+  margin: 0;
+  font-size: var(--typography-body-sm-font-size);
+  line-height: var(--typography-body-sm-line-height);
+}
+
+.nos-pack__detail,
+.nos-pack__empty,
+.nos-pack__aside {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--typography-caption-font-size);
+  line-height: var(--typography-caption-line-height);
+}
+
+.nos-pack__aside {
+  margin-block: var(--space-2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+@media print {
+  /* Controls are not part of the document. */
+  .nos-no-print {
+    display: none !important;
+  }
+
+  .nos-pack {
+    max-inline-size: none;
+  }
+
+  /* Ink, not screen contrast. A pack printed on a practice's laser printer
+   * should read as a document rather than as a screenshot of an app. */
+  .nos-pack,
+  .nos-pack__line,
+  .nos-pack__detail,
+  .nos-pack__limitation,
+  .nos-pack__aside,
+  .nos-pack__empty {
+    color: #000;
+    background: transparent;
+  }
+
+  .nos-pack__section {
+    page-break-inside: avoid;
+  }
+}
