@@ -64,6 +64,13 @@
       "when": 1786903547261,
       "tag": "0008_food_protein_source",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1788101231229,
+      "tag": "0009_meal_capture_tier",
+      "breakpoints": true
     }
   ]
 }

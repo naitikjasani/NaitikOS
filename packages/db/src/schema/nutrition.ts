@@ -37,7 +37,7 @@ import {
 } from 'drizzle-orm/pg-core';
 
 import { entityColumns, ianaZone, instant, quantity, reference } from './columns';
-import { proteinSource } from './enums';
+import { mealCaptureTier, proteinSource } from './enums';
 
 /**
  * A food in the personal library.
@@ -174,6 +174,14 @@ export const meal = pgTable(
 
     /** Set when logged from a template, for the one-tap path (§4.3). */
     templateId: reference(),
+
+    /**
+     * How this meal reached the log. §2.2's ten-second rule is a gate on the
+     * assisted tiers, and without this column the mix cannot be measured —
+     * only the latency, which would look fine on a day of three template taps
+     * and one twenty-minute hand entry.
+     */
+    captureTier: mealCaptureTier(),
   },
   (t) => [index('meal_eaten_idx').on(t.eatenAt.desc())],
 );

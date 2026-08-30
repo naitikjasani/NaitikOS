@@ -295,6 +295,29 @@ export const productEventKind = pgEnum('product_event_kind', [
  * has classified reports as unclassified rather than being silently attributed
  * to whichever bucket happens to be first.
  */
+/**
+ * How a meal reached the log — §4.3's capture tiers.
+ *
+ * Stored on the meal rather than emitted as telemetry because §5.11's
+ * `app_event` is deliberately anaemic: names and numbers, no dimensions. The
+ * tier is also a fact about the meal in its own right — "this was a template
+ * tap" is the kind of thing worth knowing in year three, and telemetry is
+ * discarded after ninety days.
+ *
+ * Nullable, because every meal written before this column existed was captured
+ * somehow and this system does not invent an answer for them (P5).
+ */
+export const mealCaptureTier = pgEnum('meal_capture_tier', [
+  /** One tap on a saved meal. */
+  'template',
+  /** Taps on ranked food tiles, quantities already defaulted. */
+  'suggestion',
+  /** A typed line resolved against the library. */
+  'parsed',
+  /** Entered or edited by hand. The tier the ten-second rule does not cover. */
+  'manual',
+]);
+
 export const proteinSource = pgEnum('protein_source', [
   'dairy',
   'egg',
@@ -494,6 +517,7 @@ export type RoutinePeriod = (typeof routinePeriod.enumValues)[number];
 export type RoutineStepStatus = (typeof routineStepStatus.enumValues)[number];
 export type ProductEventKind = (typeof productEventKind.enumValues)[number];
 export type ProteinSource = (typeof proteinSource.enumValues)[number];
+export type MealCaptureTier = (typeof mealCaptureTier.enumValues)[number];
 export type MediaKind = (typeof mediaKind.enumValues)[number];
 export type StorageTier = (typeof storageTier.enumValues)[number];
 export type CaptureDistance = (typeof captureDistance.enumValues)[number];
