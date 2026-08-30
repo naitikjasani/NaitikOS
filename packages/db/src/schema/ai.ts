@@ -146,6 +146,25 @@ export const graphEdge = pgTable(
 
     /** Observation IDs supporting this edge. */
     observationIds: jsonb().notNull().default(sql`'[]'::jsonb`),
+
+    /**
+     * The statistics behind the edge, and its decay counter.
+     *
+     * §10.2 requires an edge to store "the observations that support it **and
+     * the statistical method that produced it**" — `observationIds` covers the
+     * first and this covers the second. An edge built by Spearman over ranked
+     * taps and one built by a binomial test over doses are different claims,
+     * and a reader who cannot tell which is which cannot audit either.
+     *
+     * It also carries `unsupportedNights`, which is what makes §10.2's "edges
+     * are removed when they no longer meet threshold" implementable: an
+     * accumulating graph never errors, it just quietly gets worse.
+     *
+     * Jsonb rather than columns because neither field is filtered on. If the
+     * decay counter is ever swept by a query rather than read per edge, it
+     * earns a column.
+     */
+    properties: jsonb().notNull().default(sql`'{}'::jsonb`),
   },
   (t) => [
     index('graph_edge_source_idx').on(t.sourceNodeId, t.relation),

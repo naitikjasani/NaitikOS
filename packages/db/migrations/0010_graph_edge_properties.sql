@@ -1,0 +1,1 @@
+ALTER TABLE "graph_edge" ADD COLUMN "properties" jsonb DEFAULT '{}'::jsonb NOT NULL;
