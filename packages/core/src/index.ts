@@ -748,6 +748,14 @@ export {
  * Detectors (§10.6) — stage 1, deterministic. No model involvement.
  * ---------------------------------------------------------------------- */
 export { logGamma, logChoose, binomialTailBelow } from './statistics/binomial';
+export type { PairedSample, DailyPair, Correlation, LaggedCorrelation } from './statistics/correlation';
+export {
+  MIN_CORRELATION_N,
+  spearman,
+  bestLaggedCorrelation,
+  pairOnDayKey,
+} from './statistics/correlation';
+
 export type { FdrResult } from './statistics/fdr';
 export { DEFAULT_ALPHA, benjaminiHochberg } from './statistics/fdr';
 
@@ -778,7 +786,16 @@ export type {
   BatteryInput,
   BatteryOutcome,
 } from './detectors/battery';
-export { BASELINE_DAYS, PRE_REGISTERED, baselineState, runBattery } from './detectors/battery';
+export { BASELINE_DAYS, PRE_REGISTERED, CORRELATION_PAIRS, baselineState, runBattery } from './detectors/battery';
+
+export type { CorrelationPair, MetricSeries, CorrelationInput } from './detectors/correlation';
+export {
+  MAX_LAG_DAYS,
+  MIN_PAIRED_OBSERVATIONS,
+  MIN_REPORTABLE_RHO,
+  DOES_NOT_PROVE,
+  detectCorrelation,
+} from './detectors/correlation';
 
 /* -------------------------------------------------------------------------
  * Validation (§1.4, §1.5, §12 V1) — the metrics that protect the metrics.

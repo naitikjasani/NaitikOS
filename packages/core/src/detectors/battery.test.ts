@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import type { AdherenceDay, AdherenceSeries } from './adherence';
 import type { StreakSeries } from './streak';
-import { BASELINE_DAYS, PRE_REGISTERED, baselineState, runBattery } from './battery';
+import { shiftDayKey } from '../temporal/instant';
+import { BASELINE_DAYS, CORRELATION_PAIRS, PRE_REGISTERED, baselineState, runBattery } from './battery';
 
 function days(count: number, completed: number, offset = 0): AdherenceDay[] {
   return Array.from({ length: count }, (_, index) => ({
@@ -151,5 +152,121 @@ describe('runBattery', () => {
   it('is inert with nothing to look at', () => {
     const outcome = runBattery({ dayKey: TODAY, daysOfHistory: 400, adherence: [], streaks: [] });
     expect(outcome).toMatchObject({ surfaced: [], held: [], discarded: [], comparisons: 0, fdrThreshold: null });
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * Correlation in the battery — where the five controls interact
+ * ---------------------------------------------------------------------- */
+
+describe('battery with correlation', () => {
+  const PAIR = {
+    id: 'test.pair',
+    x: 'metric.x',
+    y: 'metric.y',
+    mechanism: 'A declared mechanism, so control 3 is satisfied by construction in this test.',
+    provenance: 'pre_registered' as const,
+  };
+
+  function series(metricKey: string, label: string, values: readonly number[]) {
+    return {
+      metricKey,
+      label,
+      points: values.map((value, index) => ({ dayKey: shiftDayKey('2026-01-01', index) ?? '2026-01-01', value })),
+    };
+  }
+
+  function relatedSeries(n: number) {
+    const xs = Array.from({ length: n }, (_, index) => 5 + ((index * 3) % 5));
+    return [series('metric.x', 'X', xs), series('metric.y', 'Y', xs.map((v, i) => v * 2 + (i % 2)))];
+  }
+
+  it('holds a correlation on first detection and surfaces it on the second', () => {
+    /*
+     * §10.6 control 4, end to end: "A correlation is not surfaced on first
+     * detection. It is held, and re-tested against subsequent data." This
+     * single rule eliminates the large majority of spurious findings, and it is
+     * the one most easily broken by an innocent refactor of the id.
+     */
+    const input = {
+      dayKey: '2026-06-01',
+      daysOfHistory: 200,
+      adherence: [],
+      streaks: [],
+      series: relatedSeries(120),
+      pairs: [PAIR],
+    };
+
+    const first = runBattery(input);
+    expect(first.surfaced).toHaveLength(0);
+    expect(first.held).toHaveLength(1);
+
+    const second = runBattery({ ...input, heldFindingIds: first.held.map((f) => f.id) });
+    expect(second.surfaced).toHaveLength(1);
+    expect(second.surfaced[0]?.confidence).toBe('confirmed');
+  });
+
+  it('counts the correlation in the same FDR correction as everything else', () => {
+    /*
+     * §10.6 control 2: "Benjamini–Hochberg across the full nightly detector
+     * battery, **not per-detector**." A correlation tested in its own family
+     * would be cheaper than one tested alongside adherence, which is exactly
+     * the accounting the control exists to prevent.
+     */
+    const outcome = runBattery({
+      dayKey: '2026-06-01',
+      daysOfHistory: 200,
+      adherence: [],
+      streaks: [],
+      series: relatedSeries(120),
+      pairs: [PAIR],
+    });
+
+    expect(outcome.comparisons).toBeGreaterThan(0);
+  });
+
+  it('suppresses correlations entirely before day 60', () => {
+    const outcome = runBattery({
+      dayKey: '2026-02-15',
+      daysOfHistory: 45,
+      adherence: [],
+      streaks: [],
+      series: relatedSeries(120),
+      pairs: [PAIR],
+    });
+
+    expect(outcome.surfaced).toHaveLength(0);
+    expect(outcome.held).toHaveLength(0);
+    expect(outcome.insufficient.some((entry) => entry.detector === 'correlation')).toBe(true);
+  });
+
+  it('skips a pair whose metrics are not recorded, silently', () => {
+    /*
+     * A metric the operator does not record is not a gap in their data; it is a
+     * module they do not use. Reporting it nightly would be the system asking
+     * for more logging, which P6 rules out.
+     */
+    const outcome = runBattery({
+      dayKey: '2026-06-01',
+      daysOfHistory: 200,
+      adherence: [],
+      streaks: [],
+      series: [],
+      pairs: [PAIR],
+    });
+
+    expect(outcome.insufficient).toHaveLength(0);
+    expect(outcome.surfaced).toHaveLength(0);
+  });
+
+  it('registers every pair with a mechanism worth arguing with', () => {
+    /* Control 3's real test: "these are both numbers I have" is not a
+     * mechanism, and a short registry is what keeps the FDR correction from
+     * punishing the pairs that matter. */
+    for (const pair of CORRELATION_PAIRS) {
+      expect(pair.mechanism.length).toBeGreaterThan(60);
+      expect(pair.provenance).toBe('pre_registered');
+    }
+    expect(CORRELATION_PAIRS.length).toBeLessThanOrEqual(10);
   });
 });

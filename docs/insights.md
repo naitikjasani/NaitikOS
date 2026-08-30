@@ -169,3 +169,77 @@ Findings are ordered confirmed → exploratory → descriptive, and deliberately
 **not** by p-value. Ranking an insight list by significance teaches the operator
 to read the top item as the most important thing, and a p-value is a statement
 about surprise, not about importance.
+
+## The correlation detector
+
+Added December 2026. §10.6's headline detector, and the one its
+statistical-honesty argument was written about.
+
+### Spearman, not Pearson
+
+Every metric this system correlates is either a 1–5 tap scale (mood, energy,
+anxiety, skin state) or a bounded quantity with a long tail. Pearson's r on a
+five-point scale assumes an interval scale that a tap does not have — the
+distance between "2" and "3" is not the distance between "4" and "5" in any
+sense the operator meant when they tapped it.
+
+Spearman's rho is Pearson on the ranks, which is exactly the assumption the data
+supports: a higher tap means more, and nothing about how much more. It is also
+robust to the single outlier day an n=1 series is full of, and one catastrophic
+Tuesday should not create a correlation.
+
+Ties are averaged and the tie-corrected formula is used. A 1–5 scale over ninety
+days is *mostly* ties, and ranking by position would make rho a function of the
+sort order — a stable, plausible, entirely fictional correlation.
+
+### The lag search is a multiple comparison, and is priced as one
+
+§4.9's motivating case is "skin flares typically lag a trigger by 48–72 hours",
+so a zero-lag-only correlation would miss most of the interesting relationships.
+But searching eight lags and reporting the winner's raw p-value is eight tests
+reported as one, which is precisely the dishonesty §10.6 exists to prevent.
+
+The returned p-value is Šidák-adjusted for the number of lags searched
+(`1 − (1 − p)^k`). This slightly over-corrects, because adjacent lags are not
+independent — which is the direction to err in. Benjamini–Hochberg across the
+battery then runs on top of it.
+
+### The trivial-effect gate, which is not one of the five controls
+
+`MIN_REPORTABLE_RHO = 0.3`. At n in the hundreds a rho of 0.15 clears any
+significance threshold and describes about two percent of the variation: true,
+uninteresting, and indistinguishable to a reader from something that matters.
+No amount of FDR control addresses this — FDR is about *false* positives, and
+this is a different problem.
+
+The gate runs **before** the p-value is considered, so trivial findings never
+reach the battery and never inflate its comparison count. Inflating it would
+make Benjamini–Hochberg harsher on the findings that do matter.
+
+### The registry is short on purpose
+
+`CORRELATION_PAIRS` holds six pairs. Every comparison is paid for by every other
+finding through the FDR correction, so adding a seventh pair makes the other six
+harder to detect. That is the correct incentive, and it is why a registry beats
+all-pairs exploration.
+
+Each entry names a mechanism someone could argue with. "These are both numbers I
+have" is not a mechanism. The three §10.6 names explicitly — sleep/mood, training
+volume/skin state, nutrition/energy — are there; the other three are ones this
+operator's record supports, including two where the sign is genuinely unknown in
+advance, which is what makes them worth testing rather than assuming.
+
+### The three-part caveat
+
+Every correlation finding carries the same `doesNotProve`, and it has three parts
+because they fail differently:
+
+1. Association is not causation.
+2. One person's data, with nothing held constant.
+3. **Both figures were recorded by the same person on the same day.** A day that
+   felt bad can move both readings without either affecting the other.
+
+The third is the one a reader is least likely to think of and the most likely to
+be the actual explanation. A test asserts the word "causes" never appears in a
+finding's prose — §10.2 says no edge is ever labelled causal, and prose is an
+edge the reader traverses.

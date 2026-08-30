@@ -32,7 +32,7 @@
  * here because it is a decision about the battery, not about the type.
  */
 
-export type DetectorId = 'adherence' | 'streak';
+export type DetectorId = 'adherence' | 'streak' | 'correlation';
 
 export type FindingConfidence = 'descriptive' | 'exploratory' | 'confirmed';
 
