@@ -92,6 +92,23 @@ export {
 export type { CrisisRouting, DayReading } from './guardrails/crisis';
 
 /* -------------------------------------------------------------------------
+ * The Context Engine (§10.4) — "the highest-value engineering in the AI layer"
+ * ---------------------------------------------------------------------- */
+export {
+  DEFAULT_QUESTION_KIND,
+  RETRIEVAL_PLAN,
+  DEFAULT_WINDOW_DAYS,
+  classifyQuestion,
+  resolveWindowDays,
+} from './context/classify';
+
+export type { DailyPoint, SeriesSummary } from './context/summarise';
+export { summariseSeries, estimateTokens } from './context/summarise';
+
+export type { ContextItem, RankedItem, ContextPack, AssembleInput, AssembleResult } from './context/assemble';
+export { RANK_WEIGHTS, scoreItem, stableBlockProblems, assemble } from './context/assemble';
+
+/* -------------------------------------------------------------------------
  * Routing (§10.11)
  * ---------------------------------------------------------------------- */
 export { MODELS, AI_TASKS, ROUTES, PRICING, TASK_PURPOSE } from './client/routing';
