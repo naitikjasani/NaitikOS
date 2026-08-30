@@ -16,6 +16,7 @@
     "clean": "rm -rf .turbo coverage"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "catalog:",
     "@naitikos/core": "workspace:*",
     "@naitikos/shared": "workspace:*",
     "zod": "catalog:"

@@ -109,7 +109,22 @@ export type { ContextItem, RankedItem, ContextPack, AssembleInput, AssembleResul
 export { RANK_WEIGHTS, scoreItem, stableBlockProblems, assemble } from './context/assemble';
 
 /* -------------------------------------------------------------------------
- * Routing (§10.11)
+ * The model boundary (§10.10, §10.11)
  * ---------------------------------------------------------------------- */
 export { MODELS, AI_TASKS, ROUTES, PRICING, TASK_PURPOSE } from './client/routing';
 export type { AiTask, Effort, ModelId, Pricing, Route } from './client/routing';
+
+export { UNCONFIGURED_TRANSPORT, ZERO_USAGE } from './client/transport';
+export type {
+  Transport,
+  TransportRequest,
+  TransportResponse,
+  TransportFailure,
+  TokenUsage,
+} from './client/transport';
+
+export { invoke } from './client/invoke';
+export type { InvokeInput, InvokeOutcome, InvokeFailureReason, InteractionRecord } from './client/invoke';
+
+export { createAnthropicTransport, transportFromEnv } from './client/anthropic';
+export type { AnthropicTransportOptions } from './client/anthropic';

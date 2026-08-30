@@ -27,6 +27,12 @@ allowBuilds:
 # in a package does not." The same reasoning applies to versions — one bump here
 # updates every consumer, so React can never be two versions in two packages.
 catalog:
+  # --- Runtime: the model -----------------------------------------------------
+  # Pinned like everything else. §5.14 treats an unpinned dependency as an
+  # unreviewed change to a machine holding medical data, and this one talks to
+  # the network on behalf of the most sensitive text in the system.
+  '@anthropic-ai/sdk': 0.122.0
+
   # --- Runtime: UI -----------------------------------------------------------
   next: 16.2.12
   react: 19.2.8
