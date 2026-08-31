@@ -97,6 +97,41 @@ export function hourInZone(instant: string, zone: string): number {
   }
 }
 
+/**
+ * The minute-of-hour, 0–59, a timestamp falls on for a given zone.
+ *
+ * The companion to {@link hourInZone}, and it exists because §4.6's sleep
+ * midpoint needs minute resolution: half an hour is a meaningful difference in
+ * a sleep midpoint, and an hour-only accessor would quantise every night to the
+ * hour before the consistency figure ever saw it.
+ *
+ * Separate from `hourInZone` rather than returning a pair, because almost every
+ * other caller wants only the hour and a tuple would make those call sites
+ * destructure something they discard. The two `Intl` constructions cost
+ * microseconds on a per-night loop that runs at most a few hundred times.
+ *
+ * Not every zone is a whole number of hours from UTC — Asia/Kolkata is +05:30,
+ * which is exactly why this cannot be derived from the UTC minute.
+ */
+export function minuteInZone(instant: string, zone: string): number {
+  const parsed = parseInstant(instant);
+  if (parsed === null) return 0;
+
+  try {
+    const minute = new Intl.DateTimeFormat('en-CA', {
+      timeZone: zone,
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).format(parsed);
+    const value = Number.parseInt(minute, 10);
+    return Number.isNaN(value) ? 0 : value % 60;
+  } catch {
+    // An unrecognised IANA zone. UTC is the honest fallback: it is what the
+    // instant literally says, rather than a guess at what the operator meant.
+    return parsed.getUTCMinutes();
+  }
+}
+
 /** ISO week key, `2026-W32`. */
 export function weekKeyInZone(instant: string, zone: string): string {
   const dayKey = dayKeyInZone(instant, zone);

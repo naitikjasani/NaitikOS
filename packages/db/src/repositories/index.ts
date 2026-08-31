@@ -159,6 +159,10 @@ export type {
   ProgressInput as LearningProgressInput,
 } from './learning.repository';
 
+/* --- Sleep (§4.6) ------------------------------------------------------- */
+export { createSleepRepository } from './sleep.repository';
+export type { SleepRepository } from './sleep.repository';
+
 /* --- Telemetry (§5.11) and the V1 validation window (§12) --------------- */
 export {
   createTelemetryRepository,
@@ -187,3 +191,12 @@ export {
   createAuditHook,
 } from './observability.repository';
 export type { ObservabilityOptions } from './observability.repository';
+
+/* --- Reviews (§4.12) --- */
+export { createReviewRepository } from './review.repository';
+export type {
+  ReviewRepository,
+  ReviewRow,
+  UpsertDraftInput,
+  SaveEditInput,
+} from './review.repository';

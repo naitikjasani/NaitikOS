@@ -36,6 +36,11 @@ const MODULES = [
     description: 'Meals in ten seconds, macros against a target, and what the protein is made of.',
   },
   {
+    href: '/body/sleep',
+    title: 'Sleep',
+    description: 'Duration, quality, timing and consistency — the variable §4.6 calls the highest-leverage one in the system.',
+  },
+  {
     href: '/body/composition',
     title: 'Composition',
     description: 'Bodyweight and the seven-day trend.',

@@ -39,3 +39,9 @@ export * from './work';
 
 /** Learning, the calendar import, and focus sessions (§4.8). */
 export * from './learning';
+
+/** Sleep — nights, timing, and disturbances (§4.6). */
+export * from './sleep';
+
+/** Reviews — weekly, monthly, quarterly, annual (§4.12). */
+export * from './reviews';

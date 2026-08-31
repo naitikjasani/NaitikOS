@@ -1,9 +1,9 @@
 /**
  * `/life` — the pillar overview.
  *
- * Two modules. §3.3 R6 keeps Reviews (V3) and People and Places absent rather
- * than listed and empty: "A visible-but-empty module teaches the user that the
- * system is a graveyard."
+ * Four modules. §3.3 R6 keeps People and Places absent rather than listed and
+ * empty: "A visible-but-empty module teaches the user that the system is a
+ * graveyard." Reviews joined the list when it acquired a surface.
  */
 
 import type { ReactNode } from 'react';
@@ -24,6 +24,11 @@ const MODULES = [
     href: '/life/insights',
     title: 'Insights',
     description: 'The few findings that survived the statistics, each with what it does not prove. Usually empty, which is the system working.',
+  },
+  {
+    href: '/life/reviews',
+    title: 'Reviews',
+    description: 'What actually happened, drafted from the record. The draft is the labour saved; the editing is the point.',
   },
   {
     href: '/life/documents',

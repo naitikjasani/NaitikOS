@@ -826,6 +826,27 @@ export {
 } from './domain/document/vault';
 
 /* -------------------------------------------------------------------------
+ * Sleep (§4.6) — a night is an entity; consistency is why.
+ * ---------------------------------------------------------------------- */
+export type { SleepNight, SleepNightInput, SleepDisturbance } from './domain/sleep/night';
+export {
+  SLEEP_DISTURBANCES,
+  SLEEP_DISTURBANCE_LABELS,
+  describeNight,
+  sleepEfficiency,
+  timeInBedHours,
+  validateSleepNight,
+} from './domain/sleep/night';
+
+export type { NightPoint, ConsistencyReport, SleepDebt } from './domain/sleep/consistency';
+export {
+  MIN_CONSISTENCY_NIGHTS,
+  consistencyOver,
+  sleepDebt,
+  sleepMidpointMinutes,
+} from './domain/sleep/consistency';
+
+/* -------------------------------------------------------------------------
  * Detectors (§10.6) — stage 1, deterministic. No model involvement.
  * ---------------------------------------------------------------------- */
 export { logGamma, logChoose, binomialTailBelow } from './statistics/binomial';
@@ -1027,6 +1048,7 @@ export { projectEvent, projectEvents, renderedEventTypes } from './timeline/proj
 export {
   dayKeyInZone,
   hourInZone,
+  minuteInZone,
   weekKeyInZone,
   monthKeyInZone,
   groupEntries,
@@ -1139,3 +1161,26 @@ export {
   buildDecryptionGuide,
   buildExportBundle,
 } from './export/bundle';
+
+/* --- Reviews (§4.12) --- */
+export type { ReviewKind, ReviewState, ReviewPeriod } from './domain/review/period';
+export {
+  REVIEW_KINDS,
+  REVIEW_KIND_LABELS,
+  REVIEW_STATES,
+  isReviewKind,
+  isReviewState,
+  periodContaining,
+  previousPeriod,
+  isPeriodClosed,
+  recentPeriods,
+} from './domain/review/period';
+
+export type { ReviewInputs, DraftSection, ReviewDraft } from './domain/review/draft';
+export {
+  REVIEW_PROMPTS,
+  EMPTY_RECORD_HEADING,
+  assembleDraft,
+  draftToMarkdown,
+  isReviewComplete,
+} from './domain/review/draft';
