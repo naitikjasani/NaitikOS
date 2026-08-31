@@ -740,6 +740,45 @@ export {
   validateProject,
 } from './domain/work/project';
 
+export type { LearningItem, LearningItemInput, LearningKind, LearningStatus, SkillCrossover } from './domain/work/learning';
+export {
+  DEFAULT_UNIT_LABEL,
+  LEARNING_KINDS,
+  LEARNING_KIND_LABELS,
+  LEARNING_STATUSES,
+  LEARNING_STATUS_LABELS,
+  describeProgress,
+  isLearningKind,
+  isLearningStatus,
+  learningProgress,
+  queueOrder,
+  skillCrossover,
+  validateLearningItem,
+} from './domain/work/learning';
+
+export type { LoadDay, LoadEvent, LoadSession } from './domain/work/load';
+export {
+  HEAVY_MEETING_MINUTES,
+  bestFocusDays,
+  dailyLoad,
+  meanOver,
+  minutesBetween,
+  withinWindow,
+} from './domain/work/load';
+
+export type { FocusSession, FocusSessionInput, HourBand } from './domain/work/focus';
+export {
+  MIN_FOCUS_MINUTES,
+  busiestHours,
+  focusByHour,
+  totalFocusMinutes,
+  validateFocusSession,
+} from './domain/work/focus';
+
+export type { IcsEvent, IcsParse } from './domain/work/ics';
+export { TRAVEL_WORDS, looksLikeTravel, parseIcs, parseIcsInstant } from './domain/work/ics';
+
+
 export type { GoalTension, TensionKind } from './domain/goal/tension';
 export { ANTAGONISTIC_PAIRS, detectTensions } from './domain/goal/tension';
 
@@ -987,6 +1026,7 @@ export { TIMELINE_PAGE_SIZE, TIMELINE_MAX_PAGE_SIZE, normaliseQuery } from './ti
 export { projectEvent, projectEvents, renderedEventTypes } from './timeline/project';
 export {
   dayKeyInZone,
+  hourInZone,
   weekKeyInZone,
   monthKeyInZone,
   groupEntries,

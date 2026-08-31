@@ -149,6 +149,16 @@ export type { DocumentRepository, ExtractionInput } from './document.repository'
 export { createWorkRepository, projectsIn } from './work.repository';
 export type { WorkRepository, CloseTaskInput } from './work.repository';
 
+export { createLearningRepository, LEARNING_NOTE_ENTITY } from './learning.repository';
+export type {
+  LearningRepository,
+  LearningNote,
+  CalendarEventRow,
+  ImportEventInput,
+  ImportOutcome,
+  ProgressInput as LearningProgressInput,
+} from './learning.repository';
+
 /* --- Telemetry (§5.11) and the V1 validation window (§12) --------------- */
 export {
   createTelemetryRepository,

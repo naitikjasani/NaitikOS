@@ -65,6 +65,38 @@ export function dayKeyInZone(instant: string, zone: string): string {
   }
 }
 
+/**
+ * The hour, 0–23, a timestamp falls in for a given zone.
+ *
+ * Same reasoning and same mechanism as {@link dayKeyInZone}: `Intl` rather than
+ * offset arithmetic, because a fixed offset cannot express a DST transition and
+ * hand-rolled offset maths is wrong twice a year in every zone that observes
+ * one. This is what §4.8's "energy mapping across the day" is drawn from, and a
+ * chart whose morning peak moves by an hour in March would be worse than no
+ * chart.
+ *
+ * `hourCycle: 'h23'` is pinned: without it `en-CA` renders midnight as `24`,
+ * which is a valid ISO hour and an out-of-range array index.
+ */
+export function hourInZone(instant: string, zone: string): number {
+  const parsed = parseInstant(instant);
+  if (parsed === null) return 0;
+
+  try {
+    const hour = new Intl.DateTimeFormat('en-CA', {
+      timeZone: zone,
+      hour: '2-digit',
+      hourCycle: 'h23',
+    }).format(parsed);
+    const value = Number.parseInt(hour, 10);
+    return Number.isNaN(value) ? 0 : value % 24;
+  } catch {
+    // An unrecognised IANA zone. UTC is the honest fallback: it is what the
+    // instant literally says, rather than a guess at what the operator meant.
+    return parsed.getUTCHours();
+  }
+}
+
 /** ISO week key, `2026-W32`. */
 export function weekKeyInZone(instant: string, zone: string): string {
   const dayKey = dayKeyInZone(instant, zone);
