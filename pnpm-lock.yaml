@@ -185,6 +185,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@naitikos/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@naitikos/api':
         specifier: workspace:*
         version: link:../../packages/api

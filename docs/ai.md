@@ -180,10 +180,14 @@ Nothing in this application computes a number with a model.
 
 ## 8. What is not built yet
 
-- **Nothing calls `invoke` yet.** The boundary, the schemas, the guardrails and
-  the consent surface are all in place; no engine has been wired through them.
-  That ordering was deliberate — a guardrail added after its first caller is a
-  guardrail with an exception.
+- **Reference rendering.** An answer's paragraphs come back as templates with
+  `{0}` slots and a reference list. The renderer that resolves those against the
+  database is not built, so the slots are currently visible in the answer. That
+  is the honest failure mode: a paragraph with a `{0}` in it is obviously
+  incomplete, and one with a plausible invented number is not.
+- **`/ask/:threadId`.** §3.2 lists it for "a saved line of enquiry". It needs a
+  table. Single-turn is the honest version until then, rather than a fake thread
+  that forgets.
 - **Local embeddings (§10.3).** The vector layer needs ONNX in a persistent
   runtime; §10.3 says so itself and calls it "the one piece of infrastructure in
   this design that C3 does not get for free". Hybrid retrieval currently means
@@ -195,7 +199,33 @@ Nothing in this application computes a number with a model.
   a column documented as model-authored would make the audit trail unable to
   distinguish the two.
 
-## 9. Where things are
+## 9. Ask
+
+`/ask` is the first caller of `invoke`, and the shape of the surface is
+§2.5's doing: **it is not a chat.** One question, one answer, and the box
+clears. No thread, no history sidebar, no typing indicator. Every affordance
+that makes a surface feel conversational is an invitation to spend time in it,
+which §1.4 counts as a counter-metric rather than a success. It is reachable
+from the command palette and from the insight inbox, and from nowhere in the
+primary navigation — a tab for it would be the shell arguing against §2.5.
+
+Retrieval is gated at the query. `buildPack` returns before a repository is
+called when a scope is off, so unconsented data is never fetched, never held,
+and never available to leak. `assemble` filters again afterwards and that
+redundancy is deliberate — a defence living only upstream is one refactor from
+being gone.
+
+The crisis check reads mood and anxiety out of the observations already fetched
+rather than through a detector. §4.7 permits one behaviour in that moment and it
+must not depend on the nightly battery having run: a person in crisis on a night
+the job failed is exactly the case that cannot be missed.
+
+Relevance scoring is word-overlap and deliberately crude. §10.4 puts the
+sophistication in *ranking*; a cleverer matcher here would be guessing at intent,
+which the retrieval plan already decided. It only has to separate "mentioned"
+from "not mentioned" well enough for the budget step to cut the right tail.
+
+## 10. Where things are
 
 | Layer | Path |
 |---|---|

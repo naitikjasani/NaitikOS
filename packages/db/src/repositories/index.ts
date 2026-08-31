@@ -114,7 +114,7 @@ export type {
 } from './ai-interaction.repository';
 export { createAiInteractionRepository } from './ai-interaction.repository';
 
-export type { InsightRepository, InsightRow } from './insight.repository';
+export type { InsightRepository, InsightRow, InsightEvidenceRow } from './insight.repository';
 export { createInsightRepository, HELD_WINDOW_DAYS } from './insight.repository';
 
 export type { GraphRepository, GraphNodeRow, UpsertNodeInput } from './graph.repository';

@@ -7,3 +7,5 @@
  */
 
 export { InsightInboxScreen } from './screens/InsightInboxScreen';
+export { InsightDetailScreen } from './screens/InsightDetailScreen';
+export { InsightArchiveScreen } from './screens/InsightArchiveScreen';

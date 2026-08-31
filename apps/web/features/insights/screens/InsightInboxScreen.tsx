@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Badge, Button, Card, CardBody, Divider, EmptyState, Inline, Stack, Text } from '@naitikos/design-system';
 
 import type { InsightRow } from '@/lib/platform/insights';
@@ -78,9 +79,12 @@ export function InsightInboxScreen({
               <CardBody>
                 <Stack gap="3">
                   <Inline justify="between" align="center" wrap>
-                    <Text role="body" as="span">
+                    {/* §4.13: an insight the operator cannot audit is one they
+                        should not trust, so the card is a door to the evidence
+                        rather than the whole of it. */}
+                    <Link className="nos-inline-link" href={`/life/insights/${insight.id}`}>
                       {insight.title}
-                    </Text>
+                    </Link>
                     <Inline gap="2" align="center">
                       <Badge tone="neutral">{insight.method}</Badge>
                       {insight.disposition === 'seen' && <Badge tone="neutral">seen</Badge>}
@@ -147,6 +151,16 @@ export function InsightInboxScreen({
       )}
 
       <Stack gap="1">
+        {/* §4.13 pairs the two surfaces: the inbox is what the system noticed,
+            Ask is for what it did not. */}
+        <Inline gap="3" wrap>
+          <Link className="nos-inline-link" href="/ask">
+            Ask something the inbox did not raise
+          </Link>
+          <Link className="nos-inline-link" href="/life/insights/archive">
+            Everything ever surfaced
+          </Link>
+        </Inline>
         <Text role="caption" tone="tertiary">
           {baselineMessage}
         </Text>

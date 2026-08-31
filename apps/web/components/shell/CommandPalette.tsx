@@ -151,6 +151,40 @@ export function CommandPalette(): ReactNode {
           ))}
         </Command.Group>
 
+        {/*
+          Ask lives in the palette and nowhere in the primary navigation.
+          §2.5 makes it "deliberately not the primary interface", and a tab for
+          it would be the shell arguing the opposite. The palette is where a
+          person goes *looking* for a capability, which is exactly the posture
+          this surface should be reached in.
+        */}
+        <Command.Group heading="Ask" className="palette__group">
+          <Command.Item
+            value="ask a question"
+            onSelect={() => {
+              run(() => {
+                router.push('/ask');
+              });
+            }}
+            className="palette__item"
+          >
+            <Icon name="action.search" label={null} size="sm" />
+            <span>Ask a question</span>
+          </Command.Item>
+          <Command.Item
+            value="insights inbox"
+            onSelect={() => {
+              run(() => {
+                router.push('/life/insights');
+              });
+            }}
+            className="palette__item"
+          >
+            <Icon name="domain.streak" label={null} size="sm" />
+            <span>Insight inbox</span>
+          </Command.Item>
+        </Command.Group>
+
         <Command.Group heading="Nutrition" className="palette__group">
           {NUTRITION_TARGETS.map((target) => (
             <Command.Item

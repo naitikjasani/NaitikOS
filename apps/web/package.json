@@ -15,6 +15,7 @@
     "clean": "rm -rf .turbo .next coverage"
   },
   "dependencies": {
+    "@naitikos/ai": "workspace:*",
     "@naitikos/api": "workspace:*",
     "@naitikos/core": "workspace:*",
     "@naitikos/db": "workspace:*",

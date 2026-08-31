@@ -57,7 +57,7 @@ import {
   shiftDayKey,
 } from '@naitikos/core';
 import type { Database } from '@naitikos/db';
-import type { InsightRow } from '@naitikos/db';
+import type { InsightEvidenceRow, InsightRow } from '@naitikos/db';
 import {
   HELD_WINDOW_DAYS,
   createInsightRepository,
@@ -225,6 +225,37 @@ export async function loadInsightInbox(
 }
 
 /**
+ * Everything ever surfaced, including what was dismissed and acted on.
+ *
+ * §9.4's soft-delete argument applied to a derived row: an insight the operator
+ * dismissed in March is evidence about what the system believed and what they
+ * thought of it, and §4.13 makes dismissals train the ranking — a signal with
+ * no history is a signal nothing can learn from.
+ */
+export async function loadInsightArchive(
+  db: Database,
+): Promise<Result<readonly InsightRow[], DomainError>> {
+  return createInsightRepository(db).all();
+}
+
+/** One insight, with its evidence. §4.13: "an insight the user cannot audit is one they should not trust." */
+export async function loadInsightDetail(
+  db: Database,
+  id: string,
+): Promise<Result<{ readonly insight: InsightRow; readonly evidence: readonly InsightEvidenceRow[] } | null, DomainError>> {
+  const insights = createInsightRepository(db);
+
+  const found = await insights.byId(id);
+  if (!found.ok) return found;
+  if (found.value === null) return ok(null);
+
+  const evidence = await insights.evidenceFor(id);
+  if (!evidence.ok) return evidence;
+
+  return ok({ insight: found.value, evidence: evidence.value });
+}
+
+/**
  * The one finding `/today` shows. §3.2: "at most ONE insight card".
  *
  * Confirmed before exploratory before descriptive is already the battery's
@@ -236,4 +267,4 @@ export function topFinding(outcome: BatteryOutcome): Finding | null {
   return outcome.surfaced[0] ?? null;
 }
 
-export type { InsightRow };
+export type { InsightEvidenceRow, InsightRow };

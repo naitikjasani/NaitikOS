@@ -58,11 +58,29 @@ export type InsightRow = {
   readonly dismissReason: string | null;
 };
 
+/**
+ * A row of supporting evidence.
+ *
+ * §9.2 on `insight_evidence`: "This table is what makes an insight auditable.
+ * Without it a finding is an assertion; with it the user can follow every
+ * number back to the rows that produced it."
+ */
+export type InsightEvidenceRow = {
+  readonly id: string;
+  readonly observationId: string | null;
+  readonly entityType: string | null;
+  readonly entityId: string | null;
+  readonly role: string | null;
+  readonly note: string | null;
+};
+
 export type InsightRepository = {
   /** The inbox: surfaced and not yet dismissed. */
   inbox(): Promise<Result<readonly InsightRow[], DomainError>>;
   /** Everything, including dismissed — the audit view. */
   all(limit?: number): Promise<Result<readonly InsightRow[], DomainError>>;
+  byId(id: string): Promise<Result<InsightRow | null, DomainError>>;
+  evidenceFor(insightId: string): Promise<Result<readonly InsightEvidenceRow[], DomainError>>;
   /**
    * Signatures held by previous runs, for control 4.
    *
@@ -115,6 +133,34 @@ export function createInsightRepository(db: Database): InsightRepository {
         .limit(limit);
 
       return ok(rows.map(toRow));
+    },
+
+    async byId(id) {
+      const rows = await db
+        .select()
+        .from(insight)
+        .where(and(isNull(insight.deletedAt), eq(insight.id, id)))
+        .limit(1);
+
+      return ok(rows[0] === undefined ? null : toRow(rows[0]));
+    },
+
+    async evidenceFor(insightId) {
+      const rows = await db
+        .select()
+        .from(insightEvidence)
+        .where(eq(insightEvidence.insightId, insightId));
+
+      return ok(
+        rows.map((row) => ({
+          id: row.id,
+          observationId: row.observationId,
+          entityType: row.entityType,
+          entityId: row.entityId,
+          role: row.role,
+          note: row.note,
+        })),
+      );
     },
 
     async heldSignatures(sinceIso) {
