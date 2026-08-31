@@ -29,6 +29,7 @@ import {
   Bell,
   BellOff,
   BookOpen,
+  Briefcase,
   Calendar,
   Camera,
   Check,
@@ -106,6 +107,9 @@ export const ICON_REGISTRY = {
   /* The Life pillar. An archive rather than a heart: what lives here is the
      paperwork and the record of a life, not a sentiment about it. */
   'nav.life': FolderArchive,
+  /* Work. A briefcase rather than a chart: §4.8's pillar is a career and its
+     cost, not a productivity dashboard. */
+  'nav.work': Briefcase,
   'nav.library': BookOpen,
   'nav.settings': Settings,
   'nav.menu': Menu,

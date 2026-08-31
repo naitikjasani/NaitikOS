@@ -698,6 +698,48 @@ export {
   projectedArrival,
 } from './domain/goal/progress';
 
+/* --- Work (§4.8) ------------------------------------------------------- */
+
+export type { Task, TaskInput, TaskStatus, TaskBucketKey, TaskBuckets } from './domain/work/task';
+export {
+  SOON_DAYS,
+  STALE_TASK_DAYS,
+  TASK_BUCKET_LABELS,
+  TASK_STATUSES,
+  TASK_STATUS_LABELS,
+  bucketTasks,
+  closedPerDay,
+  isTaskStatus,
+  staleTasks,
+  validateTask,
+} from './domain/work/task';
+
+export type {
+  CareerEntry,
+  CareerEntryInput,
+  CareerEntryKind,
+  CareerPeriod,
+  SkillTally,
+} from './domain/work/career';
+export {
+  CAREER_ENTRY_KINDS,
+  CAREER_GAP_DAYS,
+  CAREER_KIND_LABELS,
+  isCareerEntryKind,
+  loggingGap,
+  summarisePeriod,
+  validateCareerEntry,
+} from './domain/work/career';
+
+export type { WorkProject, WorkProjectInput, ProjectStanding, ProjectStatus } from './domain/work/project';
+export {
+  PROJECT_STATUSES,
+  PROJECT_STATUS_LABELS,
+  isProjectStatus,
+  projectStanding,
+  validateProject,
+} from './domain/work/project';
+
 export type { GoalTension, TensionKind } from './domain/goal/tension';
 export { ANTAGONISTIC_PAIRS, detectTensions } from './domain/goal/tension';
 

@@ -74,6 +74,13 @@ export const RESET_ORDER: readonly string[] = Object.freeze([
   'goal_progress_snapshot',
   'goal_target',
   'goal',
+  /* Work — focus sessions reference both tasks and projects, so they lead */
+  'focus_session',
+  'career_entry',
+  'task',
+  'project',
+  'learning_item',
+  'calendar_event',
   /* Insights — evidence references the insight */
   'insight_evidence',
   'insight',

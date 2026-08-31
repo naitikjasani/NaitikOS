@@ -33,3 +33,6 @@ export * from './goals';
 
 /** Nutrition — meals, foods, templates, targets (§4.3). */
 export * from './nutrition';
+
+/** Work — projects, tasks, and the career log (§4.8). */
+export * from './work';

@@ -104,6 +104,17 @@ export const PRIMARY_NAV: readonly NavItem[] = Object.freeze([
     phase: 'v2',
   },
   {
+    id: 'work',
+    label: 'Work',
+    href: '/work',
+    icon: 'nav.work',
+    // V3's first pillar: the overview, tasks, projects and the career log.
+    // Learning, calendar and focus are absent under §3.3 R6 rather than
+    // appearing as empty rooms.
+    available: true,
+    phase: 'v3',
+  },
+  {
     id: 'library',
     label: 'Library',
     href: '/library',

@@ -145,6 +145,10 @@ export type {
 export { createDocumentRepository } from './document.repository';
 export type { DocumentRepository, ExtractionInput } from './document.repository';
 
+/* --- Work (§4.8) -------------------------------------------------------- */
+export { createWorkRepository, projectsIn } from './work.repository';
+export type { WorkRepository, CloseTaskInput } from './work.repository';
+
 /* --- Telemetry (§5.11) and the V1 validation window (§12) --------------- */
 export {
   createTelemetryRepository,
