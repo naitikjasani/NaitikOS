@@ -10,3 +10,7 @@ export { WorkOverviewScreen } from './screens/WorkOverviewScreen';
 export { TaskBoardScreen } from './screens/TaskBoardScreen';
 export { ProjectsScreen } from './screens/ProjectsScreen';
 export { CareerScreen } from './screens/CareerScreen';
+export { LearningScreen } from './screens/LearningScreen';
+export { LearningNotesScreen } from './screens/LearningNotesScreen';
+export { CalendarScreen } from './screens/CalendarScreen';
+export { FocusScreen } from './screens/FocusScreen';
