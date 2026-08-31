@@ -38,6 +38,9 @@ export * from './mind';
 /** Nutrition (V2 surface, MVP schema). */
 export * from './nutrition';
 
+/** Sleep — a full module from V3, an observation pair since week one (§4.6). */
+export * from './sleep';
+
 /** Work: projects, tasks, career log, learning, calendar, focus (§4.8). */
 export * from './work';
 

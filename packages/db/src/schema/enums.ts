@@ -329,6 +329,34 @@ export const proteinSource = pgEnum('protein_source', [
 ]);
 
 /* =========================================================================
+ * Sleep (§4.6)
+ * ====================================================================== */
+
+/**
+ * What disturbed a night.
+ *
+ * A closed vocabulary rather than free text, because the point of recording it
+ * is to count it — "how many of my bad nights were the neighbours" is a
+ * question a text column cannot answer. `disturbance_note` carries the detail;
+ * this carries the category.
+ *
+ * `pain` and `anxiety` are both here and both matter clinically: §4.7 reads
+ * sleep against anxiety episodes, and a night broken by anxiety is a different
+ * fact from one broken by noise even when the duration is identical.
+ */
+export const sleepDisturbance = pgEnum('sleep_disturbance', [
+  'noise',
+  'light',
+  'temperature',
+  'pain',
+  'anxiety',
+  'bathroom',
+  'illness',
+  'device',
+  'other',
+]);
+
+/* =========================================================================
  * Work (§4.8)
  * ====================================================================== */
 
@@ -593,6 +621,7 @@ export type RoutineStepStatus = (typeof routineStepStatus.enumValues)[number];
 export type ProductEventKind = (typeof productEventKind.enumValues)[number];
 export type ProteinSource = (typeof proteinSource.enumValues)[number];
 export type MealCaptureTier = (typeof mealCaptureTier.enumValues)[number];
+export type SleepDisturbance = (typeof sleepDisturbance.enumValues)[number];
 export type WorkTaskStatus = (typeof workTaskStatus.enumValues)[number];
 export type ProjectStatus = (typeof projectStatus.enumValues)[number];
 export type CareerEntryKind = (typeof careerEntryKind.enumValues)[number];

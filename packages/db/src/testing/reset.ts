@@ -74,6 +74,8 @@ export const RESET_ORDER: readonly string[] = Object.freeze([
   'goal_progress_snapshot',
   'goal_target',
   'goal',
+  /* Sleep */
+  'sleep_night',
   /* Work — focus sessions reference both tasks and projects, so they lead */
   'focus_session',
   'career_entry',
