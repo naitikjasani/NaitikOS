@@ -36,3 +36,6 @@ export * from './nutrition';
 
 /** Work — projects, tasks, and the career log (§4.8). */
 export * from './work';
+
+/** Learning, the calendar import, and focus sessions (§4.8). */
+export * from './learning';
