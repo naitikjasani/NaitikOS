@@ -114,10 +114,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           endedAt: null,
           zone: input.zone,
           /*
-           * Derived from the instant rather than taken on trust. The client
-           * sends a day key because it knows the zone, but a pair that
-           * disagrees is a session invisible to exactly the per-day joins §4.8
-           * exists for. One instant, both halves.
+           * Derived here, and the contract has no field for it. A client that
+           * could send the instant and the day key separately could send them
+           * disagreeing, and a session pointing at two different days is
+           * invisible to exactly the per-day joins §4.8 exists for. Same rule
+           * `/api/work` applies to a task's completion.
            */
           dayKey: dayKeyInZone(input.startedAt, input.zone),
           projectId: input.projectId ?? null,

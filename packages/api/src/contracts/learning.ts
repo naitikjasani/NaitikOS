@@ -29,7 +29,7 @@
 
 import { z } from 'zod';
 
-import { dayKeySchema, instantSchema, uuidSchema, zoneSchema } from './timeline';
+import { instantSchema, uuidSchema, zoneSchema } from './timeline';
 
 /** Mirrors the `learning_kind` pgEnum. */
 export const learningKindSchema = z.enum(['book', 'paper', 'course', 'talk', 'article', 'other']);
@@ -66,11 +66,19 @@ export const learningNoteRequestSchema = z.object({
   content: z.string().min(1).max(10_000),
 });
 
+/**
+ * Starting a focus session.
+ *
+ * There is no `dayKey` here, deliberately. The server derives it from
+ * `startedAt` and `zone`, for the same reason `/api/work` derives a task's
+ * completion day: a client that could send the pair separately could send them
+ * disagreeing, and a session whose instant and day key point at different days
+ * is invisible to exactly the per-day joins §4.8 exists for.
+ */
 export const focusStartRequestSchema = z.object({
   id: uuidSchema,
   startedAt: instantSchema,
   zone: zoneSchema,
-  dayKey: dayKeySchema,
   projectId: uuidSchema.nullish(),
   taskId: uuidSchema.nullish(),
   label: z.string().max(200).nullish(),
