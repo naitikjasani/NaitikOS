@@ -12,6 +12,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type postgres from 'postgres';
 import { isErr, isOk } from '@naitikos/shared';
+import { DEFAULT_AI_CONSENT, DEFAULT_AI_PREFERENCES, DEFAULT_PREFERENCES } from '@naitikos/core';
 
 import { createDatabase } from '../client';
 import { createIdentityRepository, SINGLETON_PROFILE_ID } from './identity.repository';
@@ -296,6 +297,7 @@ describe.skipIf(db === undefined)('profile repository', () => {
         insight_ready: false,
         sync_failure: true,
       },
+      ai: DEFAULT_AI_PREFERENCES,
     });
     expect(isOk(stored)).toBe(true);
 
@@ -305,6 +307,32 @@ describe.skipIf(db === undefined)('profile repository', () => {
       expect(read.value.theme).toBe('dark');
       expect(read.value.notifications.sync_failure).toBe(true);
     }
+  });
+
+  it('round-trips an AI grant, and defaults a never-written one closed', async () => {
+    /*
+     * §10.10's scopes are the only preference where a wrong default is not a
+     * cosmetic mistake: P7's egress is not reversible, so a profile that never
+     * touched this must read as granting nothing.
+     */
+    const fresh = await profiles.getPreferences();
+    if (isOk(fresh)) {
+      expect(fresh.value.ai.enabled).toBe(false);
+      expect(fresh.value.ai.consent).toEqual(DEFAULT_AI_CONSENT);
+    }
+
+    await profiles.updatePreferences({
+      ...DEFAULT_PREFERENCES,
+      ai: { enabled: true, consent: { ...DEFAULT_AI_CONSENT, metrics: true }, monthlyCapMinor: 1500 },
+    });
+
+    const read = await profiles.getPreferences();
+    if (!isOk(read)) return;
+    expect(read.value.ai.enabled).toBe(true);
+    expect(read.value.ai.consent.metrics).toBe(true);
+    /* The scopes are independent: granting metrics grants nothing else. */
+    expect(read.value.ai.consent.clinical).toBe(false);
+    expect(read.value.ai.monthlyCapMinor).toBe(1500);
   });
 
   it('returns defaults when preferences were never written', async () => {

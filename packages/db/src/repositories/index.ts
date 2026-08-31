@@ -106,6 +106,14 @@ export type { NutritionTargetRepository, SetTargetInput } from './nutrition-targ
 /* --- Goals (§4.10) — definitions and snapshots, never progress ---------- */
 export { createGoalRepository, snapshotsSince } from './goal.repository';
 
+export type {
+  AiInteractionRepository,
+  RecordInteractionInput,
+  InteractionSummary,
+  SpendByPurpose,
+} from './ai-interaction.repository';
+export { createAiInteractionRepository } from './ai-interaction.repository';
+
 export type { InsightRepository, InsightRow } from './insight.repository';
 export { createInsightRepository, HELD_WINDOW_DAYS } from './insight.repository';
 

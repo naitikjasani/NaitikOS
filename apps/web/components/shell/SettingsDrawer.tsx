@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import Link from 'next/link';
 import {
   Divider,
   SegmentedControl,
@@ -124,31 +125,45 @@ export function SettingsDrawer(): ReactNode {
         <Divider />
 
         {/*
+          Everything in this drawer applies to *this device* and takes effect
+          immediately. Consent is neither of those things — it is stored on the
+          profile and it decides what leaves the machine — so it gets a page
+          rather than a toggle here, and the drawer links to it.
+        */}
+        <Stack gap="2">
+          <Text role="title-3" as="h3">
+            Elsewhere
+          </Text>
+          <Link
+            className="nos-inline-link"
+            href="/settings/ai"
+            onClick={() => {
+              setOpen(false);
+            }}
+          >
+            AI — what may be sent, what it may cost, and a switch that turns it off
+          </Link>
+        </Stack>
+
+        <Divider />
+
+        {/*
           Named rather than silently absent.
-          §2.1 and §5.9 both define settings that do not exist yet; listing them
-          as unbuilt is more honest than an empty screen that implies these are
-          the only preferences the system will ever have.
+          §5.9 defines settings that do not exist yet; listing them as unbuilt is
+          more honest than an empty screen that implies these are the only
+          preferences the system will ever have.
         */}
         <Stack gap="2">
           <Text role="title-3" as="h3">
             Not built yet
           </Text>
-          <Stack gap="1">
-            <ToggleField
-              label="Notification categories"
-              description="Opt-in per category, off by default. Arrives with the Daily Close."
-              checked={false}
-              onCheckedChange={() => undefined}
-              disabled
-            />
-            <ToggleField
-              label="AI consent scopes"
-              description="Nothing crosses an inference boundary. The AI layer is off."
-              checked={false}
-              onCheckedChange={() => undefined}
-              disabled
-            />
-          </Stack>
+          <ToggleField
+            label="Notification categories"
+            description="Opt-in per category, off by default. Arrives with the Daily Close."
+            checked={false}
+            onCheckedChange={() => undefined}
+            disabled
+          />
         </Stack>
       </Stack>
     </Sheet>

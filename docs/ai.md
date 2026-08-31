@@ -104,24 +104,63 @@ Requests stream. The routing table gives Ask and the pack a 32K–64K ceiling an
 the SDK requires streaming at that size to avoid an HTTP timeout; nothing
 consumes the stream events, because these surfaces are not incremental.
 
-## 6. Consent: the blueprint and the schema disagree
+## 6. Consent: resolved, and how
 
 §10.10 specifies four **independently revocable** scopes — `metrics`,
 `clinical`, `journal`, `media`. The `consent_scope` column is a *ladder*
 (`none | aggregates_only | non_clinical | clinical | journal`) where granting
-journal implies everything below it.
+journal implies everything below it. The ladder cannot express "metrics on,
+clinical off", which is a reasonable configuration.
 
-The ladder is strictly weaker: it cannot express "metrics on, clinical off",
-which is a reasonable configuration. `fromStoredScope` projects the ladder onto
-the four **conservatively** — where they disagree, the narrower reading wins.
+**The four booleans are now authoritative**, stored in the `setting` blob and
+written from `/settings/ai`. The ladder column became a *derived projection*
+(`toStoredScope`) recorded alongside each `ai_interaction` row. That inverts the
+earlier arrangement, where the ladder was authoritative and `fromStoredScope`
+narrowed it — a workaround that was correct while nothing could write the four,
+and unnecessary once something could. No migration was needed: `setting` is
+`jsonb`, which is the same trade §9.2 already makes for preferences.
+
+The projection is lossy in one direction and honest about it. "Metrics on,
+clinical off" projects to `aggregates_only`, and the fact that clinical was
+*explicitly* off rather than merely below the rung is not recoverable from the
+column. What the column is for — "what the user had granted at the moment of the
+call, so a later consent change cannot retroactively justify an earlier one" —
+survives that loss, because the projection is monotone: a narrower grant never
+projects to a wider rung.
 
 `media` is `false` at every rung, including `journal`. §10.10 marks it "Off, and
 **per-invocation confirmed**", and a standing grant cannot satisfy a
 per-invocation requirement.
 
-Reconciling the column is a migration, and §13.2 keeps migrations out of feature
-commits. Until then the projection is the boundary and the asymmetry is stated
-rather than hidden.
+### The parser leans closed, unlike every other parser in that file
+
+`parseAiPreferences` falls back to *no consent and disabled* on anything
+unexpected. Every other preference parser falls back to something merely
+conventional — a bad theme becomes dark and nothing is harmed. This one guards
+against a malformed row causing data to be sent that the operator never agreed
+to send, and P7's egress is not reversible.
+
+It also checks `=== true` rather than truthiness. A stored `"true"` string, a
+`1`, or a half-written migration must not read as a grant.
+
+An **unknown** consent scope is rejected by `validatePreferences` rather than
+dropped. Elsewhere in that validator an unknown key is a typo; here it is a
+client that believes it is granting something, and silently dropping the grant
+would leave the operator thinking they had consented to a class that was never
+enabled.
+
+### The kill switch
+
+§7: "a single flag in `/settings/ai`, and the acceptance test for the flag is
+that **the whole product still works with it off**." It saves on toggle rather
+than on a Save button — a kill switch that needs a second action to take effect
+is not one — and there is no confirmation dialog, because §8.12 makes
+confirmation a protection against loss and nothing is lost by turning it off.
+
+`aiIsUsable` requires **both** the switch and a grant, because they mean
+different things. The switch is a deliberate "not now" that leaves the grants
+intact; an empty grant is "there is nothing I am willing to send". Flipping one
+back on should not silently satisfy the other.
 
 ## 7. Money
 
@@ -141,6 +180,10 @@ Nothing in this application computes a number with a model.
 
 ## 8. What is not built yet
 
+- **Nothing calls `invoke` yet.** The boundary, the schemas, the guardrails and
+  the consent surface are all in place; no engine has been wired through them.
+  That ordering was deliberate — a guardrail added after its first caller is a
+  guardrail with an exception.
 - **Local embeddings (§10.3).** The vector layer needs ONNX in a persistent
   runtime; §10.3 says so itself and calls it "the one piece of infrastructure in
   this design that C3 does not get for free". Hybrid retrieval currently means

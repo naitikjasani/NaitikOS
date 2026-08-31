@@ -244,6 +244,18 @@ export function CommandPalette(): ReactNode {
 
         <Command.Group heading="Settings" className="palette__group">
           <Command.Item
+            value="ai consent settings"
+            onSelect={() => {
+              run(() => {
+                router.push('/settings/ai');
+              });
+            }}
+            className="palette__item"
+          >
+            <Icon name="nav.settings" label={null} size="sm" />
+            <span>AI &amp; consent</span>
+          </Command.Item>
+          <Command.Item
             value="open settings"
             onSelect={() => {
               run(() => {
