@@ -78,6 +78,13 @@
       "when": 1788103314418,
       "tag": "0010_graph_edge_properties",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1788158097309,
+      "tag": "0011_work_pillar",
+      "breakpoints": true
     }
   ]
 }

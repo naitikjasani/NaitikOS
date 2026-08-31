@@ -38,6 +38,9 @@ export * from './mind';
 /** Nutrition (V2 surface, MVP schema). */
 export * from './nutrition';
 
+/** Work: projects, tasks, career log, learning, calendar, focus (§4.8). */
+export * from './work';
+
 /** Goals, insights, reviews, documents, media. */
 export * from './crosscutting';
 

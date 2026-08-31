@@ -329,6 +329,81 @@ export const proteinSource = pgEnum('protein_source', [
 ]);
 
 /* =========================================================================
+ * Work (§4.8)
+ * ====================================================================== */
+
+/**
+ * §4.8 is emphatic that Tasks are "deliberately minimal. Not a competitor to a
+ * dedicated task manager." So the status vocabulary is three states plus a
+ * tombstone-adjacent one, and there is no `in_progress`, no priority ladder, no
+ * sub-status. A richer vocabulary would be an invitation to run one's actual
+ * work here, which §4.8 declines.
+ */
+/*
+ * `work_task_status`, not `task_status`. §9's event log already owns a
+ * `task_status` for `deferred_task`'s pending/running/succeeded lifecycle, and
+ * the collision is not merely cosmetic: drizzle-kit saw the name in its
+ * snapshot, emitted no CREATE TYPE, and produced a migration that failed on
+ * `invalid input value for enum task_status: "open"`. At the TypeScript level a
+ * second `export const taskStatus` would have been an ambiguous re-export from
+ * the schema barrel, which ESM resolves by exporting neither — silently.
+ */
+export const workTaskStatus = pgEnum('work_task_status', ['open', 'done', 'dropped']);
+
+export const projectStatus = pgEnum('project_status', [
+  'active',
+  'shipped',
+  'paused',
+  'abandoned',
+]);
+
+/**
+ * What kind of thing a career-log line records.
+ *
+ * §4.8: "reconstructing a year of work at review time from memory. Every
+ * shipped thing gets one line on the day it ships." The kinds are the ones a
+ * performance review actually asks for, which is why `feedback` — the hardest
+ * to reconstruct and the easiest to lose — is its own kind rather than a note.
+ */
+export const careerEntryKind = pgEnum('career_entry_kind', [
+  'shipped',
+  'artifact',
+  'feedback',
+  'recognition',
+  'review',
+  'role_change',
+  'incident',
+]);
+
+export const learningKind = pgEnum('learning_kind', [
+  'book',
+  'paper',
+  'course',
+  'talk',
+  'article',
+  'other',
+]);
+
+/**
+ * `abandoned` is a first-class outcome, not a failure state. A queue that can
+ * only be finished is a queue that quietly accumulates guilt, and §4.8 wants
+ * the *linkage* — what was learned, and for what — not a completion rate.
+ */
+export const learningStatus = pgEnum('learning_status', [
+  'queued',
+  'in_progress',
+  'finished',
+  'abandoned',
+]);
+
+/**
+ * Where a calendar event came from. §4.8 puts calendar at "read-only import in
+ * V3", so `manual` exists for the one case the import cannot cover: an event
+ * the operator knows about that never reached a calendar.
+ */
+export const calendarSource = pgEnum('calendar_source', ['ics', 'google', 'manual']);
+
+/* =========================================================================
  * Media and the photography protocol (§9.8)
  * ====================================================================== */
 
@@ -518,6 +593,12 @@ export type RoutineStepStatus = (typeof routineStepStatus.enumValues)[number];
 export type ProductEventKind = (typeof productEventKind.enumValues)[number];
 export type ProteinSource = (typeof proteinSource.enumValues)[number];
 export type MealCaptureTier = (typeof mealCaptureTier.enumValues)[number];
+export type WorkTaskStatus = (typeof workTaskStatus.enumValues)[number];
+export type ProjectStatus = (typeof projectStatus.enumValues)[number];
+export type CareerEntryKind = (typeof careerEntryKind.enumValues)[number];
+export type LearningKind = (typeof learningKind.enumValues)[number];
+export type LearningStatus = (typeof learningStatus.enumValues)[number];
+export type CalendarSource = (typeof calendarSource.enumValues)[number];
 export type MediaKind = (typeof mediaKind.enumValues)[number];
 export type StorageTier = (typeof storageTier.enumValues)[number];
 export type CaptureDistance = (typeof captureDistance.enumValues)[number];
