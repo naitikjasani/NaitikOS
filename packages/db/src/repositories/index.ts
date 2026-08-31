@@ -123,7 +123,13 @@ export type { GoalRepository, CloseGoalInput } from './goal.repository';
 
 /* --- Health core (§4.4) and the document vault (§4.11) ------------------ */
 export { createHealthRepository } from './health.repository';
-export type { HealthRepository, AppointmentInput, VisitNotesInput } from './health.repository';
+export type {
+  HealthRepository,
+  AppointmentInput,
+  VisitNotesInput,
+  MedicalTimelineRow,
+  TreatmentCourseRow,
+} from './health.repository';
 
 export { createLabRepository, panelsIn } from './lab.repository';
 export type {

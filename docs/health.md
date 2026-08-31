@@ -187,11 +187,46 @@ like a feature that found nothing.
 | Editing a lab result | §9.1 makes corrections supersessions, and the supersession UI does not exist for labs. A wrong value is currently corrected by re-confirming — which appends. This is the sharpest remaining edge. |
 | Symptom ↔ medication correlation | December, and behind §10.6's five statistical controls. Not a UI gap. |
 
+## The medical timeline
+
+`/timeline/medical`. §9.2's payoff, collected: every clinical write inserts a
+`medical_event` alongside its subtype row, so this is "a query over one table
+rather than a ten-way union that has to be edited every time a clinical domain
+is added". A tenth clinical domain appears here without a line changing.
+
+Rendered clinically rather than chronologically flat, per §10.7 — intervals
+above events. A condition active for four years and a lab drawn on one morning
+are not the same kind of fact, and a list sorted by date loses exactly the
+duration that makes the page useful to a clinician. An open interval reads
+"since March", never "March to today", which would assert an end nobody recorded.
+
+**The date control is the point of the page.** §9.5's bitemporality exists so
+the record can answer what your file said in March after a correction in
+October, and §4.4 says a record that cannot is one that "quietly lies to a
+clinician". That query is a date field here rather than an export flag, because
+the moment it matters is a consultation where someone asks what you were told at
+the time.
+
+A past view states how many entries it is *hiding* relative to today. A
+reconstruction that silently contained less would read as data loss rather than
+as history.
+
+Where the two axes disagree — a condition that began in January and was recorded
+in June — the card says both. A timeline showing one of them is the record a
+clinician cannot reconcile with their own notes.
+
 ## The Consultation Pack
 
 Added December 2026. §10.7, and V2's stated highest-value deliverable —
 December's gate is "at least one Consultation Pack taken to an actual
 appointment".
+
+**It lives at `/timeline/medical/pack`.** It shipped at `/body/health/pack`,
+which was wrong: §3.2 puts it under the medical timeline and §10.7 introduces it
+as that timeline's payoff rather than as a Health screen. The old path
+permanently redirects rather than 404ing — it may sit in a browser history, and
+a dead link on the morning of a consultation is the worst possible time to
+discover a route moved.
 
 ### It is deterministic, and that is the design
 

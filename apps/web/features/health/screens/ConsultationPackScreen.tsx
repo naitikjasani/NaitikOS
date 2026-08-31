@@ -12,7 +12,7 @@ import type { ConsultationPackDocument, PackSection } from '@naitikos/core';
 import { Button, Divider, Inline, Stack, Text } from '@naitikos/design-system';
 
 /**
- * `/body/health/pack` — §10.7's Consultation Pack.
+ * `/timeline/medical/pack` — §10.7's Consultation Pack.
  *
  *   "This is P5 as a deliverable rather than a disclaimer: the system's
  *    clinical output is a better conversation with a qualified human."
@@ -64,7 +64,7 @@ export function ConsultationPackScreen({ pack }: ConsultationPackScreenProps): R
                   setSpecialty(option);
                   const next = new URLSearchParams(params.toString());
                   next.set('specialty', option);
-                  router.push(`/body/health/pack?${next.toString()}`);
+                  router.push(`/timeline/medical/pack?${next.toString()}`);
                 }}
               >
                 {option}

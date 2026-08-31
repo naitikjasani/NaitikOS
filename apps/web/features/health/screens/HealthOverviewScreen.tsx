@@ -158,7 +158,7 @@ export function HealthOverviewScreen({
                 {/* §10.7's payoff, one link from the appointment it exists
                     for. A pack reachable only from a settings menu is a pack
                     nobody prints on the morning of a consultation. */}
-                <Link className="nos-inline-link" href="/body/health/pack">
+                <Link className="nos-inline-link" href="/timeline/medical/pack">
                   Build a consultation pack
                 </Link>
               </Inline>

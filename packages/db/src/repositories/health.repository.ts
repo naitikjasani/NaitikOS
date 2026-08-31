@@ -62,6 +62,7 @@ import {
 } from '@naitikos/core';
 
 import type { Database } from '../client';
+import type { MedicalEventType } from '../schema/enums';
 import {
   appointment,
   condition,
@@ -236,6 +237,31 @@ export type TreatmentCourseRow = {
   readonly prescriber: string | null;
 };
 
+/**
+ * A row of the medical timeline.
+ *
+ * §9.2's payoff, stated when the supertype was designed: the medical timeline
+ * and the Consultation Pack are "a query over one table rather than a ten-way
+ * union that has to be edited every time a clinical domain is added". This is
+ * that query. Adding a tenth clinical domain adds rows here and changes no code
+ * in this file.
+ */
+export type MedicalTimelineRow = {
+  readonly id: string;
+  readonly type: MedicalEventType;
+  readonly title: string;
+  readonly narrative: string | null;
+  readonly severity: string | null;
+  readonly sourceDescription: string | null;
+  readonly documentId: string | null;
+  /** §9.5's validity axis: when it was true. */
+  readonly validFrom: string;
+  readonly validTo: string | null;
+  /** §9.5's transaction axis: when the system started believing it. */
+  readonly recordedFrom: string;
+  readonly recordedTo: string | null;
+};
+
 export type HealthRepository = {
   /* --- vitals ------------------------------------------------------- */
   vitalsBetween(from: string, until: string): Promise<Result<readonly VitalObservation[], DomainError>>;
@@ -278,6 +304,20 @@ export type HealthRepository = {
    * superseded record of a course is a record of a mistake, not of a treatment.
    */
   treatmentCourses(): Promise<Result<readonly TreatmentCourseRow[], DomainError>>;
+
+  /**
+   * The medical timeline, optionally **as the record stood on a past date**.
+   *
+   * `asOfIso` is §9.5's reconstruction query, and it is the reason
+   * bitemporality exists at all: §4.4 says a record that cannot answer "what
+   * did my file say in March" after an October correction is one that "quietly
+   * lies to a clinician". Omitted, it returns current belief — `recordedTo IS
+   * NULL`, which is what every other read in this file uses.
+   */
+  medicalTimeline(options?: {
+    readonly asOfIso?: string;
+    readonly fromIso?: string;
+  }): Promise<Result<readonly MedicalTimelineRow[], DomainError>>;
   recordProcedure(input: ProcedureInput, nowIso: string): Promise<Result<DentalProcedure, DomainError>>;
 
   /* --- appointments ------------------------------------------------- */
@@ -571,6 +611,52 @@ export function createHealthRepository(db: Database): HealthRepository {
         .set({ reportedToPrescriber: true, updatedAt: sql`now()` })
         .where(eq(sideEffect.id, id));
       return ok(undefined);
+    },
+
+    async medicalTimeline(options = {}) {
+      const asOf = options.asOfIso;
+
+      const believedThen =
+        asOf === undefined
+          ? isNull(medicalEvent.recordedTo)
+          : /*
+             * The row believed at `asOf`: recorded on or before it, and either
+             * never superseded or superseded afterwards. Both halves matter —
+             * dropping the second returns every version ever written, and
+             * dropping the first returns rows the system did not yet know.
+             */
+            and(
+              lt(medicalEvent.recordedFrom, asOf),
+              sql`(${medicalEvent.recordedTo} IS NULL OR ${medicalEvent.recordedTo} > ${asOf})`,
+            );
+
+      const rows = await db
+        .select()
+        .from(medicalEvent)
+        .where(
+          and(
+            isNull(medicalEvent.deletedAt),
+            believedThen,
+            options.fromIso === undefined ? undefined : gte(medicalEvent.validFrom, options.fromIso),
+          ),
+        )
+        .orderBy(desc(medicalEvent.validFrom));
+
+      return ok(
+        rows.map((row) => ({
+          id: row.id,
+          type: row.type as MedicalEventType,
+          title: row.title,
+          narrative: row.narrative,
+          severity: row.severity,
+          sourceDescription: row.sourceDescription,
+          documentId: row.documentId,
+          validFrom: row.validFrom,
+          validTo: row.validTo,
+          recordedFrom: row.recordedFrom,
+          recordedTo: row.recordedTo,
+        })),
+      );
     },
 
     async treatmentCourses() {
