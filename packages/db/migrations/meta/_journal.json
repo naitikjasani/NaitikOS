@@ -92,6 +92,13 @@
       "when": 1788173350298,
       "tag": "0012_sleep_night",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1788209874525,
+      "tag": "0013_money_pillar",
+      "breakpoints": true
     }
   ]
 }

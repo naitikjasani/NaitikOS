@@ -38,6 +38,9 @@ export * from './mind';
 /** Nutrition (V2 surface, MVP schema). */
 export * from './nutrition';
 
+/** Money: accounts, transactions, budgets, subscriptions, shopping (§4.9). */
+export * from './money';
+
 /** Sleep — a full module from V3, an observation pair since week one (§4.6). */
 export * from './sleep';
 

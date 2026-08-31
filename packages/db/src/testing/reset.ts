@@ -74,6 +74,13 @@ export const RESET_ORDER: readonly string[] = Object.freeze([
   'goal_progress_snapshot',
   'goal_target',
   'goal',
+  /* Money — shopping references transactions, which reference accounts */
+  'shopping_item',
+  'money_transaction',
+  'account_balance',
+  'budget',
+  'subscription',
+  'financial_account',
   /* Sleep */
   'sleep_night',
   /* Work — focus sessions reference both tasks and projects, so they lead */

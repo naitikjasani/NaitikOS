@@ -329,6 +329,77 @@ export const proteinSource = pgEnum('protein_source', [
 ]);
 
 /* =========================================================================
+ * Money (§4.9)
+ * ====================================================================== */
+
+export const accountKind = pgEnum('account_kind', [
+  'current',
+  'savings',
+  'credit_card',
+  'investment',
+  'loan',
+  'cash',
+  'wallet',
+  'other',
+]);
+
+/**
+ * Spending categories.
+ *
+ * A closed, deliberately short list. §4.9 says the cross-domain linkage is
+ * "thinner than the others" but that "where it does link, it links well —
+ * supplement and skincare spend against outcomes, food spend against nutrition
+ * quality". Those three are the reason this vocabulary exists, and they are
+ * named separately rather than folded into a `health` bucket precisely so the
+ * join is possible.
+ *
+ * Everything else is coarse on purpose. A forty-category taxonomy is a finance
+ * product's feature and §13's finding 12 rules out competing there; a category
+ * the operator has to think about before choosing is a category that gets
+ * chosen inconsistently, which makes every total built from it a lie.
+ */
+export const spendCategory = pgEnum('spend_category', [
+  'groceries',
+  'eating_out',
+  /** §4.9's "supplement spend against outcomes". Separate from `health`. */
+  'supplements',
+  /** §4.9's "skincare spend against outcomes". Separate from `health`. */
+  'skincare',
+  'health',
+  'fitness',
+  'rent',
+  'utilities',
+  'transport',
+  'subscriptions',
+  'shopping',
+  'travel',
+  'education',
+  'gifts',
+  'fees',
+  'income',
+  'transfer',
+  'other',
+]);
+
+export const budgetPeriod = pgEnum('budget_period', ['weekly', 'monthly', 'quarterly', 'annual']);
+
+export const subscriptionCadence = pgEnum('subscription_cadence', [
+  'weekly',
+  'monthly',
+  'quarterly',
+  'annual',
+]);
+
+/**
+ * Where a shopping item is in its life.
+ *
+ * `dropped` is a first-class outcome for the same reason `abandoned` is on a
+ * learning item: a list that can only be bought from accumulates things the
+ * operator no longer wants, and a list like that stops being opened.
+ */
+export const shoppingStatus = pgEnum('shopping_status', ['wanted', 'purchased', 'dropped']);
+
+/* =========================================================================
  * Sleep (§4.6)
  * ====================================================================== */
 
@@ -621,6 +692,11 @@ export type RoutineStepStatus = (typeof routineStepStatus.enumValues)[number];
 export type ProductEventKind = (typeof productEventKind.enumValues)[number];
 export type ProteinSource = (typeof proteinSource.enumValues)[number];
 export type MealCaptureTier = (typeof mealCaptureTier.enumValues)[number];
+export type AccountKind = (typeof accountKind.enumValues)[number];
+export type SpendCategory = (typeof spendCategory.enumValues)[number];
+export type BudgetPeriod = (typeof budgetPeriod.enumValues)[number];
+export type SubscriptionCadence = (typeof subscriptionCadence.enumValues)[number];
+export type ShoppingStatus = (typeof shoppingStatus.enumValues)[number];
 export type SleepDisturbance = (typeof sleepDisturbance.enumValues)[number];
 export type WorkTaskStatus = (typeof workTaskStatus.enumValues)[number];
 export type ProjectStatus = (typeof projectStatus.enumValues)[number];
