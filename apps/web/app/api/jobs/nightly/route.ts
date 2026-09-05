@@ -46,6 +46,7 @@ import {
 } from '../../../../lib/platform/context';
 import type { PlatformContext } from '../../../../lib/platform/context';
 import { loadInsights, recordInsightNight } from '../../../../lib/platform/insights';
+import { generatePredictions, resolveDuePredictions } from '../../../../lib/platform/predictions';
 
 /**
  * The registered steps.
@@ -123,6 +124,53 @@ function stepsFor(platform: PlatformContext): readonly JobStep[] {
         return ok({
           rowsAffected: removed.ok ? removed.value : 0,
           note: `retention cutoff ${cutoff.slice(0, 10)}`,
+        });
+      },
+    },
+    {
+      name: 'resolve-predictions',
+      describes: 'Scores every prediction whose horizon has arrived, and says which could not be scored.',
+      /*
+       * Does not halt the run. An unscored prediction stays pending and is
+       * picked up tomorrow — `pending` is a day-key comparison, not a
+       * one-shot queue — so a failure here delays the calibration record
+       * rather than losing anything from it.
+       */
+      haltOnFailure: false,
+      async run() {
+        const outcome = await resolveDuePredictions(platform.db, platform.zone);
+        if (!outcome.ok) return outcome;
+
+        const { scored, hits, unresolvable } = outcome.value;
+        return ok({
+          rowsAffected: scored + unresolvable,
+          /* The unresolvable count is reported alongside the hits rather than
+           * folded into them. §10.9's record is only worth reading if the
+           * denominator is visible. */
+          note: `${String(hits)} of ${String(scored)} inside the interval, ${String(unresolvable)} unscorable`,
+        });
+      },
+    },
+    {
+      name: 'make-predictions',
+      describes: "Writes tonight's predictions, and counts the subjects that had too little to say.",
+      haltOnFailure: false,
+      async run() {
+        const outcome = await generatePredictions(platform.db, platform.zone);
+        if (!outcome.ok) return outcome;
+
+        const { predicted, insufficient, refused, notes } = outcome.value;
+        return ok({
+          rowsAffected: predicted,
+          /*
+           * `insufficient` is reported, not hidden. §10.9 requires degrading to
+           * "insufficient data" rather than guessing, and a run that silently
+           * wrote nothing would be indistinguishable from a broken one.
+           */
+          note:
+            notes.length === 0
+              ? `${String(predicted)} written`
+              : `${String(predicted)} written, ${String(insufficient)} insufficient, ${String(refused)} refused — ${notes.join('; ')}`,
         });
       },
     },

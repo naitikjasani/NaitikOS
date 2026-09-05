@@ -73,6 +73,32 @@ export const JOB_STEPS = [
   'snapshot-goal-progress',
 
   /**
+   * Score every prediction whose horizon has arrived (§10.9).
+   *
+   * **Before `make-predictions`, and the order is load-bearing.** Tonight's new
+   * prediction for a metric is fitted over a window that includes today's
+   * reading; yesterday's prediction *about* today must be scored against that
+   * same reading first. Reversed, a run could resolve a prediction against a
+   * series the same run had already extended, which is not the comparison
+   * §10.9 asks for.
+   *
+   * Idempotent because `resolve` refuses a prediction that already carries a
+   * verdict — a re-run finds nothing left to score rather than re-scoring
+   * against a later reading.
+   */
+  'resolve-predictions',
+
+  /**
+   * Tonight's predictions (§10.9).
+   *
+   * After rollups, because every method here is fitted over them, and after
+   * resolution for the reason above. The id is derived from the subject and the
+   * day so a re-run writes the same row twice and lands on one — without that,
+   * a retried evening would double the denominator of every calibration figure.
+   */
+  'make-predictions',
+
+  /**
    * Deterministic detectors (§10.6).
    *
    * V2. Registered here so the ordering is settled: after rollups, because a
