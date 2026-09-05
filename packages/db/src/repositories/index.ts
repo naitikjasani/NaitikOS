@@ -222,3 +222,8 @@ export type {
 /* --- The Life Timeline (§10.8) --- */
 export { createLifeRepository } from './life.repository';
 export type { LifeRepository } from './life.repository';
+
+/* --- The prediction engine's record and its calibration (§10.9) --------- */
+export { createPredictionRepository } from './prediction.repository';
+export type { PredictionRepository, ResolvePredictionInput } from './prediction.repository';
+

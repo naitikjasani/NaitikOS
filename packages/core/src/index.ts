@@ -1268,3 +1268,37 @@ export {
   boundsFor,
   positionOf,
 } from './domain/life/span';
+
+/* --- The prediction engine (§10.9) -------------------------------------- */
+
+export type {
+  Prediction,
+  PredictionInput,
+  PredictionKind,
+  PredictionMethod,
+  PredictionOutcome,
+  PredictionRequest,
+} from './domain/prediction/predict';
+export {
+  MAX_HORIZON_DAYS,
+  MIN_PREDICTION_OBSERVATIONS,
+  PERMITTED_METRICS,
+  PREDICTION_KINDS,
+  PREDICTION_KIND_LABELS,
+  PREDICTION_METHODS,
+  PREDICTION_METHOD_LABELS,
+  describePrediction,
+  isPermittedSubject,
+  makePrediction,
+} from './domain/prediction/predict';
+
+export type { CalibrationReport, Resolution } from './domain/prediction/calibration';
+export {
+  COVERAGE_TOLERANCE,
+  MIN_CALIBRATION_SAMPLE,
+  NOMINAL_COVERAGE,
+  NO_OBSERVATION_REASON,
+  calibrationOver,
+  resolvePrediction,
+} from './domain/prediction/calibration';
+
