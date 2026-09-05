@@ -48,3 +48,6 @@ export * from './reviews';
 
 /** Money — accounts, transactions, budgets, subscriptions, shopping (§4.9). */
 export * from './money';
+
+/** The Life Timeline — eras, chapters and significant events (§10.8). */
+export * from './life';

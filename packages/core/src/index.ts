@@ -1237,3 +1237,34 @@ export {
   spendByCategory,
   budgetStanding,
 } from './domain/money/budget';
+
+/* --- The Life Timeline (§10.8) --- */
+export type {
+  LifeSpanKind,
+  TimelineScale,
+  LifeSpan,
+  LifeSpanInput,
+  LifeEvent,
+  LifeEventInput,
+  SpanExtent,
+  SpanLane,
+  TimelineBounds,
+} from './domain/life/span';
+export {
+  LIFE_SPAN_KINDS,
+  LIFE_SPAN_KIND_LABELS,
+  TIMELINE_SCALES,
+  TIMELINE_SCALE_LABELS,
+  MIN_SLOT,
+  MAX_SLOT,
+  MIN_SIGNIFICANCE,
+  MAX_SIGNIFICANCE,
+  isLifeSpanKind,
+  isTimelineScale,
+  validateSpan,
+  validateEvent,
+  spanExtent,
+  layoutSpans,
+  boundsFor,
+  positionOf,
+} from './domain/life/span';

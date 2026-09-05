@@ -8,3 +8,4 @@ export type { TimelineListProps } from './components/TimelineList';
  * intervals, labs as points — which is a different read model, not a filter.
  */
 export { MedicalTimelineScreen } from './screens/MedicalTimelineScreen';
+export { LifeTimelineScreen } from './screens/LifeTimelineScreen';

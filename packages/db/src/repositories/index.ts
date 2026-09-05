@@ -218,3 +218,7 @@ export type {
   ImportOutcome as TransactionImportOutcome,
   MarkPurchasedInput,
 } from './money.repository';
+
+/* --- The Life Timeline (§10.8) --- */
+export { createLifeRepository } from './life.repository';
+export type { LifeRepository } from './life.repository';

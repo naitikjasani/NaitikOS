@@ -1663,3 +1663,77 @@
     page-break-inside: avoid;
   }
 }
+
+/* =========================================================================
+ * Life timeline (§10.8)
+ *
+ * A span is positioned as a percentage of the axis, so the lane is the
+ * containing block and every bar is absolute within it. The colour arrives as
+ * `--life-span-colour`, set inline from `seriesColorVar(slot)` — the same token
+ * the charts use, so a theme change repaints spans and series together and no
+ * span can be given a value that fails contrast in one of the two themes.
+ * ====================================================================== */
+
+.nos-life-lane {
+  position: relative;
+  height: var(--space-6);
+  width: 100%;
+}
+
+.nos-life-lane--events {
+  height: var(--space-4);
+}
+
+.nos-life-span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: var(--radius-sm);
+  background: var(--life-span-colour);
+  display: flex;
+  align-items: center;
+  padding-inline: var(--space-2);
+  overflow: hidden;
+  /* The bar carries meaning through position and length; the label is a
+     convenience. Clipping it is preferable to a bar that grows to fit its
+     text, which would misreport the span's duration. */
+  min-width: 2px;
+}
+
+.nos-life-span__label {
+  font-size: var(--text-caption-size);
+  line-height: 1;
+  color: var(--color-text-on-accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nos-life-event {
+  position: absolute;
+  top: 50%;
+  width: var(--space-2);
+  height: var(--space-2);
+  margin-top: calc(var(--space-2) / -2);
+  margin-inline-start: calc(var(--space-2) / -2);
+  border-radius: 50%;
+  background: var(--color-text-primary);
+  box-shadow: 0 0 0 2px var(--color-surface-raised);
+}
+
+.nos-life-swatch {
+  width: var(--space-6);
+  height: var(--space-6);
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.nos-life-swatch[aria-pressed='true'] {
+  border-color: var(--color-text-primary);
+}
+
+.nos-life-swatch:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
