@@ -155,7 +155,10 @@ export type {
   LearningNote,
   CalendarEventRow,
   ImportEventInput,
-  ImportOutcome,
+  /* Aliased: Money's import reports the same two-number shape under the same
+   * name, and a barrel cannot export both. Neither is more entitled to the
+   * bare word than the other, so both are qualified. */
+  ImportOutcome as CalendarImportOutcome,
   ProgressInput as LearningProgressInput,
 } from './learning.repository';
 
@@ -200,3 +203,18 @@ export type {
   UpsertDraftInput,
   SaveEditInput,
 } from './review.repository';
+
+/* --- Money (§4.9) --- */
+export { createMoneyRepository } from './money.repository';
+export type {
+  MoneyRepository,
+  Subscription,
+  SubscriptionInput,
+  ShoppingItem,
+  ShoppingItemInput,
+  BalanceInput,
+  TransactionInput,
+  ImportedTransaction,
+  ImportOutcome as TransactionImportOutcome,
+  MarkPurchasedInput,
+} from './money.repository';

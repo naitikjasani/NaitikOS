@@ -45,3 +45,6 @@ export * from './sleep';
 
 /** Reviews — weekly, monthly, quarterly, annual (§4.12). */
 export * from './reviews';
+
+/** Money — accounts, transactions, budgets, subscriptions, shopping (§4.9). */
+export * from './money';

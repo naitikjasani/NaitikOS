@@ -1184,3 +1184,56 @@ export {
   draftToMarkdown,
   isReviewComplete,
 } from './domain/review/draft';
+
+/* --- Money (§4.9) --- */
+export type { Money } from './domain/money/amount';
+export {
+  MINOR_UNITS,
+  DEFAULT_MINOR_UNITS,
+  minorUnitsFor,
+  parseAmount,
+  formatAmount,
+  addAmounts,
+  sumAmounts,
+  negate,
+  isOutflow,
+} from './domain/money/amount';
+
+export type {
+  AccountKind,
+  FinancialAccount,
+  AccountBalance,
+  AccountInput,
+  NetWorth,
+} from './domain/money/account';
+export {
+  ACCOUNT_KINDS,
+  ACCOUNT_KIND_LABELS,
+  STALE_BALANCE_DAYS,
+  isAccountKind,
+  validateAccount,
+  netWorthOn,
+} from './domain/money/account';
+
+export type {
+  BudgetPeriod,
+  SpendCategory,
+  MoneyTransaction,
+  Budget,
+  BudgetInput,
+  CategorySpend,
+  BudgetStanding,
+} from './domain/money/budget';
+export {
+  BUDGET_PERIODS,
+  BUDGET_PERIOD_LABELS,
+  SPEND_CATEGORIES,
+  SPEND_CATEGORY_LABELS,
+  NON_SPEND_CATEGORIES,
+  isBudgetPeriod,
+  isSpendCategory,
+  validateBudget,
+  isBudgetActive,
+  spendByCategory,
+  budgetStanding,
+} from './domain/money/budget';

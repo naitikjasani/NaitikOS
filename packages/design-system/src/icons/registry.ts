@@ -87,6 +87,7 @@ import {
   TrendingUp,
   Upload,
   User,
+  Wallet,
   Wind,
   X,
   type LucideIcon,
@@ -110,6 +111,10 @@ export const ICON_REGISTRY = {
   /* Work. A briefcase rather than a chart: §4.8's pillar is a career and its
      cost, not a productivity dashboard. */
   'nav.work': Briefcase,
+  /* Money. A wallet rather than a currency symbol: §4.9's question is where it
+     goes, not which denomination it is in, and a ₹ or $ glyph would hard-code a
+     currency into the chrome of a record meant to outlive a relocation. */
+  'nav.money': Wallet,
   'nav.library': BookOpen,
   'nav.settings': Settings,
   'nav.menu': Menu,

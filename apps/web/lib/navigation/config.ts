@@ -115,6 +115,17 @@ export const PRIMARY_NAV: readonly NavItem[] = Object.freeze([
     phase: 'v3',
   },
   {
+    id: 'money',
+    label: 'Money',
+    href: '/money',
+    icon: 'nav.money',
+    // V3's second pillar, and the last one: the overview, `/money/accounts`,
+    // `/money/transactions`, `/money/budgets`, `/money/subscriptions`,
+    // `/money/shopping` and `/money/networth`.
+    available: true,
+    phase: 'v3',
+  },
+  {
     id: 'library',
     label: 'Library',
     href: '/library',
