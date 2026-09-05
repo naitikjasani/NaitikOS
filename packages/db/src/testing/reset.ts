@@ -74,6 +74,10 @@ export const RESET_ORDER: readonly string[] = Object.freeze([
   'goal_progress_snapshot',
   'goal_target',
   'goal',
+  /* Predictions and the Life Timeline — events reference spans */
+  'life_event',
+  'life_span',
+  'prediction',
   /* Money — shopping references transactions, which reference accounts */
   'shopping_item',
   'money_transaction',

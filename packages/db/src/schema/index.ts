@@ -38,6 +38,9 @@ export * from './mind';
 /** Nutrition (V2 surface, MVP schema). */
 export * from './nutrition';
 
+/** Predictions and their calibration record, and the Life Timeline (§10.8, §10.9). */
+export * from './prediction';
+
 /** Money: accounts, transactions, budgets, subscriptions, shopping (§4.9). */
 export * from './money';
 

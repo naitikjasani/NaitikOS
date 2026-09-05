@@ -329,6 +329,49 @@ export const proteinSource = pgEnum('protein_source', [
 ]);
 
 /* =========================================================================
+ * Predictions and the Life Timeline (§10.8, §10.9)
+ * ====================================================================== */
+
+/**
+ * What a prediction may be about.
+ *
+ * §10.9 lists exactly four permitted subjects and one prohibition: "Permitted:
+ * goal trajectory, bodyweight projection under current intake, next-session
+ * load progression, adherence-risk flagging. **Prohibited: any prediction
+ * about a clinical outcome, a symptom course, or a medication response.**"
+ *
+ * The enum is the structural half of that. There is no `clinical_outcome`
+ * member and no `symptom_course` member, so a prohibited prediction has no
+ * kind to be written under — §10.10's "unrepresentable harmful output" applied
+ * to a column.
+ */
+export const predictionKind = pgEnum('prediction_kind', [
+  'goal_trajectory',
+  'bodyweight_projection',
+  'load_progression',
+  'adherence_risk',
+]);
+
+/**
+ * How a prediction was arrived at.
+ *
+ * §10.9: "Classical, interpretable methods only... **No machine learning.**
+ * n=1 with a few hundred observations per metric is not a machine-learning
+ * problem; it is a statistics problem." Every member here is a method whose
+ * output a person can check by hand, which is the property that makes the
+ * prohibition enforceable rather than aspirational.
+ */
+export const predictionMethod = pgEnum('prediction_method', [
+  'linear_trend',
+  'loess_trend',
+  'seasonal_decomposition',
+  'adherence_state_model',
+]);
+
+/** An era is a life phase; a chapter is a job, a relocation, a relationship. */
+export const lifeSpanKind = pgEnum('life_span_kind', ['era', 'chapter']);
+
+/* =========================================================================
  * Money (§4.9)
  * ====================================================================== */
 
@@ -692,6 +735,9 @@ export type RoutineStepStatus = (typeof routineStepStatus.enumValues)[number];
 export type ProductEventKind = (typeof productEventKind.enumValues)[number];
 export type ProteinSource = (typeof proteinSource.enumValues)[number];
 export type MealCaptureTier = (typeof mealCaptureTier.enumValues)[number];
+export type PredictionKind = (typeof predictionKind.enumValues)[number];
+export type PredictionMethod = (typeof predictionMethod.enumValues)[number];
+export type LifeSpanKind = (typeof lifeSpanKind.enumValues)[number];
 export type AccountKind = (typeof accountKind.enumValues)[number];
 export type SpendCategory = (typeof spendCategory.enumValues)[number];
 export type BudgetPeriod = (typeof budgetPeriod.enumValues)[number];
