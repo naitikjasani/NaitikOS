@@ -130,7 +130,11 @@ export const PRIMARY_NAV: readonly NavItem[] = Object.freeze([
     label: 'Library',
     href: '/library',
     icon: 'nav.library',
-    available: false,
+    // Reference data, and a read surface rather than a pillar: the overview,
+    // `/library/exercises`, `/library/foods`, `/library/products`,
+    // `/library/protocols`, `/library/metrics` and `/library/tags`. Nothing
+    // here owns a row — each registry is authored by the module that writes it.
+    available: true,
     phase: 'mvp',
   },
 ]);
