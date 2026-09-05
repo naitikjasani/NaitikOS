@@ -7,3 +7,8 @@
  */
 
 export { AiSettingsScreen } from './screens/AiSettingsScreen';
+export { AppearanceSettingsScreen } from './screens/AppearanceSettingsScreen';
+export { CaptureSettingsScreen } from './screens/CaptureSettingsScreen';
+export { NotificationsSettingsScreen } from './screens/NotificationsSettingsScreen';
+export { IntegrationsSettingsScreen } from './screens/IntegrationsSettingsScreen';
+

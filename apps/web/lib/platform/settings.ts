@@ -13,7 +13,7 @@ import 'server-only';
 
 import type { Result } from '@naitikos/shared';
 import { ok } from '@naitikos/shared';
-import type { AiPreferences, DomainError, Preferences } from '@naitikos/core';
+import type { AiPreferences, DomainError, NotificationPreferences, Preferences } from '@naitikos/core';
 import { dayKeyInZone, isoFromMillis, systemClock, zonedDayBounds } from '@naitikos/core';
 import type { Database, InteractionSummary } from '@naitikos/db';
 import { createAiInteractionRepository, createProfileRepository } from '@naitikos/db';
@@ -86,3 +86,23 @@ export async function saveAiPreferences(
 }
 
 export type { InteractionSummary };
+
+/**
+ * The stored notification preferences.
+ *
+ * Read for display only. §3.2 promises "Reminders — opt-in only" and the
+ * preference block is real — it sits in `setting` and it is what a delivery
+ * path will read on the day one exists — but nothing sends anything today. The
+ * page shows the stored values and says so, rather than rendering controls
+ * wired to nothing: a toggle that changes no behaviour teaches the operator
+ * that the interface lies, which is a more expensive thing to lose than a
+ * feature.
+ */
+export async function loadNotificationPreferences(
+  db: Database,
+): Promise<Result<NotificationPreferences, DomainError>> {
+  const preferences = await createProfileRepository(db).getPreferences();
+  if (!preferences.ok) return preferences;
+  return ok(preferences.value.notifications);
+}
+

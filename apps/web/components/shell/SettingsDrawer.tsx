@@ -8,7 +8,6 @@ import {
   Sheet,
   Stack,
   Text,
-  ToggleField,
 } from '@naitikos/design-system';
 import { DENSITIES, MOTION_PREFERENCES, THEMES } from '@naitikos/core';
 
@@ -34,6 +33,29 @@ import { useNavigationStore } from '@/lib/stores/navigation.store';
  * and all belong to later milestones — a toggle that writes nothing would be
  * worse than its absence.
  */
+/**
+ * The pages this drawer points at.
+ *
+ * Everything above the divider applies to *this device* and takes effect
+ * immediately. These do not: they are stored on the profile, or they describe
+ * what the system does rather than what it should do, and both deserve a page
+ * with room to explain themselves rather than a toggle in a sheet.
+ *
+ * The list previously ended with a disabled "not built yet" toggle for
+ * notification categories. That was honest when nothing existed; now
+ * `/settings/notifications` says the same thing at greater length and with the
+ * stored preferences visible, so the dead control is gone rather than sitting
+ * next to a live link to the page that replaced it.
+ */
+const ELSEWHERE: readonly { readonly href: string; readonly label: string }[] = Object.freeze([
+  { href: '/settings/ai', label: 'AI — what may be sent, what it may cost, and a switch that turns it off' },
+  { href: '/settings/appearance', label: 'Appearance — and which of theme, density and motion actually take effect' },
+  { href: '/settings/capture', label: 'Capture — the quick-capture rail and its shortcuts' },
+  { href: '/settings/notifications', label: 'Notifications — opt-in only, and currently silent' },
+  { href: '/settings/integrations', label: 'Integrations — what can be imported, and what cannot' },
+  { href: '/settings/profile', label: 'Profile — identity, zone, clinical context' },
+]);
+
 export function SettingsDrawer(): ReactNode {
   const isOpen = useNavigationStore((state) => state.isSettingsOpen);
   const setOpen = useNavigationStore((state) => state.setSettingsOpen);
@@ -134,37 +156,20 @@ export function SettingsDrawer(): ReactNode {
           <Text role="title-3" as="h3">
             Elsewhere
           </Text>
-          <Link
-            className="nos-inline-link"
-            href="/settings/ai"
-            onClick={() => {
-              setOpen(false);
-            }}
-          >
-            AI — what may be sent, what it may cost, and a switch that turns it off
-          </Link>
+          {ELSEWHERE.map((entry) => (
+            <Link
+              key={entry.href}
+              className="nos-inline-link"
+              href={entry.href}
+              onClick={() => {
+                setOpen(false);
+              }}
+            >
+              {entry.label}
+            </Link>
+          ))}
         </Stack>
 
-        <Divider />
-
-        {/*
-          Named rather than silently absent.
-          §5.9 defines settings that do not exist yet; listing them as unbuilt is
-          more honest than an empty screen that implies these are the only
-          preferences the system will ever have.
-        */}
-        <Stack gap="2">
-          <Text role="title-3" as="h3">
-            Not built yet
-          </Text>
-          <ToggleField
-            label="Notification categories"
-            description="Opt-in per category, off by default. Arrives with the Daily Close."
-            checked={false}
-            onCheckedChange={() => undefined}
-            disabled
-          />
-        </Stack>
       </Stack>
     </Sheet>
   );
