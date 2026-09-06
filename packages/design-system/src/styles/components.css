@@ -1737,3 +1737,41 @@
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
+
+/* -------------------------------------------------------------------------
+ * Ask — resolved figures (§10.10)
+ *
+ * The model emits `{0}` and an observation id; the server reads the row and
+ * substitutes the stored value. That guarantee is invisible to a person if a
+ * resolved figure looks exactly like a written one, so it is marked.
+ *
+ * Deliberately quiet. A highlighter-yellow `<mark>` would make every sentence
+ * with a number in it look like a warning, and §8.3 reserves emphasis for
+ * things that need acting on. This is a subtle underline and a slightly
+ * heavier weight: enough to notice on a second read, not enough to fragment
+ * the paragraph on the first.
+ * ---------------------------------------------------------------------- */
+
+.nos-ask__figure {
+  background: transparent;
+  color: inherit;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--font-weight-medium);
+  /* Under the text rather than around it. A box or a pill would turn a
+     sentence into a form, which is the opposite of what a narrated answer is
+     supposed to read like. */
+  border-block-end: 1px solid var(--color-border-strong);
+  text-decoration: none;
+}
+
+/*
+ * A reference that could not be resolved.
+ *
+ * Rendered as an em dash in the border colour — visibly a hole rather than a
+ * word. §8.9: missing data is shown as missing, and a plausible-looking number
+ * in this position is the single worst thing this surface could produce.
+ */
+.nos-ask__gap {
+  color: var(--color-text-tertiary);
+  border-block-end: 1px dashed var(--color-border-strong);
+}

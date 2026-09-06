@@ -54,6 +54,9 @@ import {
   UNCONFIGURED_TRANSPORT,
 } from '@naitikos/ai';
 import type { Database } from '@naitikos/db';
+
+import type { RenderedParagraph } from './references';
+import { renderNarrations } from './references';
 import {
   createAiInteractionRepository,
   createHealthRepository,
@@ -74,10 +77,28 @@ export type AskResult = {
   readonly kind: QuestionKind;
   readonly windowDays: number;
   readonly answer: Answer | null;
+  /**
+   * The answer's paragraphs with every reference resolved against the database.
+   *
+   * §10.10's payoff. The model emitted `{0}` and an observation id; this is the
+   * stored figure put back in, by the application, from the row. The raw
+   * `answer` is kept beside it because the templates are what §9.2's audit
+   * needs — what the model actually said, before substitution.
+   */
+  readonly paragraphs: readonly RenderedParagraph[];
   /** Set when no answer was produced. Always says what still works. */
   readonly problem: string | null;
   /** What the pack did not contain, surfaced whether or not there is an answer. */
   readonly omitted: string;
+  /**
+   * References that could not be resolved, counted.
+   *
+   * Not zero in practice: a model can name an observation that has been
+   * deleted, or invent an id outright. Both render as a visible gap rather than
+   * as a number, and the count is surfaced so the operator knows a sentence is
+   * incomplete rather than wondering why it reads oddly.
+   */
+  readonly unresolvedReferences: number;
 };
 
 export async function ask(
@@ -102,10 +123,12 @@ export async function ask(
       kind,
       windowDays,
       answer: null,
+      paragraphs: [],
       problem: ai.enabled
         ? 'Nothing is granted for the model to read. Open AI settings to choose what it may see — every figure in the app is computed without it either way.'
         : 'The AI layer is off. Every figure in the app is computed without it; turning it on adds prose and nothing else.',
       omitted: 'Everything. Nothing was read.',
+      unresolvedReferences: 0,
     });
   }
 
@@ -162,13 +185,29 @@ export async function ask(
     });
   }
 
+  /*
+   * Resolution happens here rather than on the client, and that is the whole
+   * of §10.10's guarantee in one decision. A client that received reference ids
+   * and looked them up would be a second path to a figure — and the one running
+   * in a browser, where the code the operator is trusting is the code that
+   * shipped. The number is read from the row on the server and travels as text.
+   */
+  const paragraphs =
+    outcome.ok ? await renderNarrations(db, outcome.value.paragraphs) : ok<readonly RenderedParagraph[]>([]);
+  if (!paragraphs.ok) return paragraphs;
+
   return ok({
     question: input.question,
     kind,
     windowDays,
     answer: outcome.ok ? outcome.value : null,
+    paragraphs: paragraphs.value,
     problem: outcome.ok ? null : outcome.sentence,
     omitted: pack.omitted,
+    unresolvedReferences: paragraphs.value.reduce(
+      (total, entry) => total + entry.rendered.unresolved.length + entry.rendered.orphanSlots.length,
+      0,
+    ),
   });
 }
 

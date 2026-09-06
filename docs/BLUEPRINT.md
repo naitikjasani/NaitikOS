@@ -1,4 +1,4 @@
-# NaitikOS — Engineering Blueprint
+git# NaitikOS — Engineering Blueprint
 
 **Version** 1.0 · **Date** 2 August 2026 · **Status** Pre-implementation · **Audience** Founding engineering team
 

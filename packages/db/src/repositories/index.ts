@@ -241,3 +241,13 @@ export type {
 /* --- People and Places (§3.2) ------------------------------------------- */
 export { createSocialRepository } from './social.repository';
 export type { SocialRepository, PersonRow } from './social.repository';
+
+/* --- Resolving §10.10's references into stored figures ------------------- */
+export { createReferenceRepository } from './reference.repository';
+export type {
+  FindingStatistics,
+  ObservationDisplay,
+  ReferenceLookup,
+  ReferenceRepository,
+  ReferenceRows,
+} from './reference.repository';

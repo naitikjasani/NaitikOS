@@ -33,6 +33,17 @@ export {
 } from './schemas/references';
 export type { Reference, Narration } from './schemas/references';
 
+/* --- Rendering a narration back into prose (§10.10) --------------------- */
+export {
+  UNRESOLVED_MARKER,
+  isFullyResolved,
+  referenceKey,
+  referencesIn,
+  renderNarration,
+  renderedToText,
+} from './render/narration';
+export type { ReferenceValues, RenderedNarration, RenderedSegment } from './render/narration';
+
 export {
   INSIGHT_KINDS,
   insightKindSchema,
