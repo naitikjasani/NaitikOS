@@ -58,6 +58,29 @@ export default function manifest(): MetadataRoute.Manifest {
         description: 'Record the day in under sixty seconds.',
         url: '/today/close',
       },
+      /*
+       * Two captures, not nine.
+       *
+       * `lib/capture/entrances.ts` has a URL for every kind the system
+       * captures, and this list is deliberately a fraction of it. Android shows
+       * at most four shortcuts on a long-press and iOS shows a similar handful;
+       * past that the menu is scrolled, and a scrolled menu is the list-reading
+       * §3.3(4) exists to avoid. Mood and weight are the two things captured
+       * between Closes often enough to earn a place on the home screen — the
+       * rest are reachable by the `c` chord, the palette, and by URL.
+       */
+      {
+        name: 'Log mood',
+        short_name: 'Mood',
+        description: 'One tap, one to five.',
+        url: '/today/capture/mood',
+      },
+      {
+        name: 'Log weight',
+        short_name: 'Weight',
+        description: 'A single reading. The seven-day mean is what the record reads (§4.6).',
+        url: '/today/capture/weight',
+      },
     ],
   };
 }

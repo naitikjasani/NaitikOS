@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { Icon, Text } from '@naitikos/design-system';
 
-import { QUICK_CAPTURE_CHORDS } from '@/features/capture';
+import { QUICK_CAPTURE_CHORDS } from '@/lib/capture/rail';
 import { PRIMARY_NAV, showsUnbuiltRoutes } from '@/lib/navigation/config';
 import { useAppearanceStore } from '@/lib/stores/appearance.store';
 import { useNavigationStore } from '@/lib/stores/navigation.store';

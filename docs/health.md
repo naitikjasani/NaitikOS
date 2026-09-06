@@ -187,6 +187,70 @@ like a feature that found nothing.
 | Editing a lab result | §9.1 makes corrections supersessions, and the supersession UI does not exist for labs. A wrong value is currently corrected by re-confirming — which appends. This is the sharpest remaining edge. |
 | Symptom ↔ medication correlation | December, and behind §10.6's five statistical controls. Not a UI gap. |
 
+## 9. The medication detail page
+
+`/body/health/medications/:id`, §3.2's "detail + adherence + side effects".
+Added 6 September 2026.
+
+### The dose history is why it exists
+
+The register shows the current dose. It cannot show how the operator got there,
+and for a psychiatric medication that is most of the clinically interesting
+information: 37.5 mg for a fortnight, then 75, then 150 is a titration, and it
+reads completely differently from a single jump. A prescriber asks about it.
+
+The schema already held this. §9.5 makes a dose change a **new
+`medication_schedule` row with its own validity interval**, never an update of
+the old one, and `0002_medication_schedule_exclusion` adds a database constraint
+forbidding two overlapping believed schedules. So the history is read, not
+reconstructed — and this page is the only surface in the system where that
+design is visible, which is a fair argument that it should have existed sooner.
+
+There is no inline "change dose" field, for the same reason. It would be the one
+place in the product where the temptation to `UPDATE` a believed row appeared,
+and the dose history is exactly what that update would erase.
+
+### The order of the sections is an argument
+
+Dose history above adherence. Adherence is the figure a person comes for and the
+figure most likely to be read as a verdict; putting the titration above it
+frames the quarter as *what was being taken*, so a run of skipped days beside a
+dose increase reads as a fact about the increase rather than about the person.
+
+### Ninety days, not the register's thirty
+
+Thirty answers *am I taking it*. This is the page opened before an appointment,
+and a quarter is the interval those run at. It is also long enough to contain a
+dose change, which is what makes the two halves of the page relate to each other
+rather than sit side by side.
+
+### The side effects are labelled as suspicions in the heading
+
+"Side effects you suspected of this" — not a footnote, because a list of effects
+under a medication's name *looks* like an attribution whatever the data means.
+The column is `suspectedMedicationId` and §9.2 fixes what it means: "linked but
+never asserted as causal by the system." The specific reason it matters here is
+in `domain/health/side-effect.ts`: an SNRI, an SSRI and isotretinoin share a
+long list of overlapping documented effects, so a system that picked one would
+be guessing with a confident interface.
+
+Effects logged with no suspected cause do not appear. An effect with no
+attribution is not evidence about this one.
+
+### One adherence calculation, still
+
+`windowAdherence`, in `core` — the same function the Consultation Pack and both
+register lenses call. §4.4's claim that Health holds the register "consumed by
+Mind, Skin, and adherence detection across the system" only stays true while
+there is one calculation, and the part that would silently drift if copied is
+the rule that a day with no record is not a missed dose.
+
+A schedule with no daily denominator — `as_needed`, or anything less frequent
+than daily — says so on its own row rather than leaving a blank ratio to be
+inferred. `expectedDosesPerDay` refuses on purpose: a weekly medication forced
+into a daily denominator reports 0 of 1 on six days in seven for a perfectly
+adherent operator.
+
 ## The medical timeline
 
 `/timeline/medical`. §9.2's payoff, collected: every clinical write inserts a

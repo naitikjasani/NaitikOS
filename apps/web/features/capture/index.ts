@@ -6,7 +6,7 @@
  * here, because the outbox is infrastructure and lives in `lib/offline`.
  */
 
-export { QuickCapture, QUICK_CAPTURE_CHORDS } from './components/QuickCapture';
+export { QuickCapture } from './components/QuickCapture';
 export type { QuickCaptureProps } from './components/QuickCapture';
 
 export { SyncBanner } from './components/SyncBanner';

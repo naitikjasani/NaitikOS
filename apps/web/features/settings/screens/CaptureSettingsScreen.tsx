@@ -1,9 +1,8 @@
-'use client';
-
 import type { ReactNode } from 'react';
 import { Badge, Card, CardBody, Inline, Stack, Text } from '@naitikos/design-system';
 
-import { QUICK_CAPTURE_CHORDS } from '@/features/capture';
+import { QUICK_CAPTURE_CHORDS } from '@/lib/capture/rail';
+import { CAPTURE_ENTRANCES } from '@/lib/capture/entrances';
 
 /**
  * `/settings/capture` — §3.2's "Quick-capture rail configuration".
@@ -20,12 +19,12 @@ import { QUICK_CAPTURE_CHORDS } from '@/features/capture';
  * than the absence of the page: it would teach the operator that the system
  * lies about its own configuration.
  *
- * ## Why it is a client component with no interactivity
+ * ## A Server Component, reading the rail's own list
  *
- * `QUICK_CAPTURE_CHORDS` is exported from a module marked `'use client'`. A
- * Server Component importing it receives a client reference it cannot
- * dereference, so the alternative is a second copy of the list here — which
- * would drift from the rail within one change.
+ * There is nothing to interact with, and `QUICK_CAPTURE_CHORDS` now lives in
+ * `lib/capture/rail.ts` rather than inside the sheet — so this page reads the
+ * same array the sheet renders instead of keeping a second copy that would
+ * drift from it within one change.
  */
 
 export function CaptureSettingsScreen(): ReactNode {
@@ -64,6 +63,40 @@ export function CaptureSettingsScreen(): ReactNode {
               while reading does not leave the application waiting. The same entries appear in the command
               palette and in the floating capture action.
             </Text>
+          </Stack>
+        </CardBody>
+      </Card>
+
+      <Card variant="outlined">
+        <CardBody>
+          <Stack gap="3">
+            <Text role="title-3" as="h2">
+              Reachable by URL
+            </Text>
+            <Text role="body-sm" tone="secondary">
+              {/*
+                Named on this page because a home-screen shortcut is invisible
+                until someone knows it exists, and §3.3(4) makes the shortcut
+                menu the mobile equivalent of the chord. Two of these are in the
+                installed app's long-press menu; the rest are here.
+              */}
+              A home-screen shortcut, a notification action or a share target can only hand the
+              application a URL. These are those URLs. Four of them open a page rather than the sheet,
+              because for those the page is the faster path.
+            </Text>
+
+            <Stack gap="2">
+              {CAPTURE_ENTRANCES.map((entrance) => (
+                <Inline key={entrance.slug} gap="3" align="baseline" justify="between">
+                  <Text role="mono" tone="secondary" as="span">
+                    /today/capture/{entrance.slug}
+                  </Text>
+                  <Text role="caption" tone="tertiary" as="span">
+                    {entrance.target.kind === 'sheet' ? 'sheet' : entrance.target.href}
+                  </Text>
+                </Inline>
+              ))}
+            </Stack>
           </Stack>
         </CardBody>
       </Card>

@@ -30,76 +30,14 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button, Inline, NumberField, ScaleField, Sheet, Stack, Text } from '@naitikos/design-system';
 import { isoFromMillis, systemClock } from '@naitikos/core';
 
+import { CAPTURE_PARAM, entranceFor } from '@/lib/capture/entrances';
+import { RAIL, type CaptureKind } from '@/lib/capture/rail';
 import { newIdempotencyKey, offlineEnvelope } from '@/lib/offline/device';
 import { queueAndDrain } from '@/lib/offline/drain';
 import { useNavigationStore } from '@/lib/stores/navigation.store';
 
 /** How long the leader key stays armed. */
 const CHORD_TIMEOUT_MS = 2000;
-
-type CaptureKind = {
-  readonly key: string;
-  readonly metricKey: string;
-  readonly label: string;
-  readonly control: 'scale' | 'number' | 'preset';
-  readonly unit: string;
-  readonly min: number;
-  readonly max: number;
-  readonly step: number;
-  /**
-   * For `preset`: the values offered as one-tap buttons.
-   *
-   * Hydration is the one metric on this rail where the *value* is almost always
-   * one of three numbers — a glass, a bottle, a litre. A stepper from 0 to 3000
-   * in steps of 50 is sixty taps for a number the operator already knows, so the
-   * control is three buttons and the stepper is not offered at all.
-   */
-  readonly presets?: readonly number[];
-};
-
-/**
- * The rail's contents.
- *
- * A short, hard-coded list rather than everything in the registry, and that is
- * the design. §3.2 caps quick capture at "≤3-tap logging" — a rail of eighteen
- * metrics is a menu, and a menu is navigation, which §3.3(4) forbids here. What
- * belongs is the handful of things captured *between* Daily Closes.
- *
- * §3.2 puts the configuration at `/settings/capture`; until that exists, this
- * list is the default it will edit.
- */
-const KINDS: readonly CaptureKind[] = [
-  { key: 'm', metricKey: 'mind.mood', label: 'Mood', control: 'scale', unit: '', min: 1, max: 5, step: 1 },
-  { key: 'e', metricKey: 'mind.energy', label: 'Energy', control: 'scale', unit: '', min: 1, max: 5, step: 1 },
-  { key: 'a', metricKey: 'mind.anxiety', label: 'Anxiety', control: 'scale', unit: '', min: 1, max: 5, step: 1 },
-  { key: 'w', metricKey: 'body.weight', label: 'Weight', control: 'number', unit: 'kg', min: 20, max: 400, step: 0.1 },
-  /*
-   * Hydration, and the only Nutrition thing on this rail.
-   *
-   * §4.3's other captures are *meals*, and a meal needs the suggestion ranking
-   * — which is server data this shell does not have. Fetching it when the sheet
-   * opens would put a round trip in the middle of §2.2's ten-second budget,
-   * making the sheet slower than `/body/nutrition/log`, which is server-rendered
-   * with that data already in the response. So there is no `c f`: the fastest
-   * path to a logged meal is the route, and a second slower path that looks
-   * faster would be a trap.
-   *
-   * Water is different. It is one number, it has no library behind it, and the
-   * three presets cover almost every case. It belongs on the rail for the same
-   * reason weight does.
-   */
-  {
-    key: 'h',
-    metricKey: 'nutrition.water',
-    label: 'Water',
-    control: 'preset',
-    unit: 'ml',
-    min: 0,
-    max: 3000,
-    step: 50,
-    presets: [250, 500, 1000],
-  },
-];
 
 export type QuickCaptureProps = {
   readonly zone: string;
@@ -118,7 +56,7 @@ export function QuickCapture({ zone }: QuickCaptureProps): ReactNode {
   const openCapture = useNavigationStore((state) => state.openCapture);
   const closeCapture = useNavigationStore((state) => state.closeCapture);
 
-  const active = KINDS.find((kind) => kind.metricKey === captureKind) ?? null;
+  const active = RAIL.find((kind) => kind.metricKey === captureKind) ?? null;
   const [value, setValue] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   /** True between `c` and the domain key. A ref, so arming does not re-render. */
@@ -132,6 +70,53 @@ export function QuickCapture({ zone }: QuickCaptureProps): ReactNode {
     },
     [openCapture],
   );
+
+  /**
+   * The deep-link entrance — `/today?capture=mood`.
+   *
+   * §3.3(4) forbids capture requiring navigation, so `/today/capture/:kind`
+   * redirects here rather than rendering anything; this is the other half of
+   * that adaptor. See `lib/capture/entrances.ts` for why the route exists at
+   * all.
+   *
+   * Read from `window.location` rather than `useSearchParams`, for two reasons.
+   * The parameter is an *entrance* — it is consumed once on arrival and then
+   * removed, so there is nothing reactive about it. And `useSearchParams` opts
+   * every route rendering this shell into client-side rendering unless each one
+   * wraps it in Suspense, which is a build-wide cost for a value read once.
+   *
+   * The parameter is stripped with `history.replaceState`, not `router.replace`.
+   * The path does not change, so nothing needs to re-render — and a real
+   * navigation would fire the shell's route-change handler, which closes every
+   * overlay, including the sheet this just opened.
+   *
+   * ## Why the sheet opens in an effect rather than during render
+   *
+   * Deriving it during render is the pattern the lint rule below asks for, and
+   * here it would be wrong: the server has no URL search parameters to read, so
+   * a sheet open on the first client render and closed in the server's HTML is
+   * a hydration mismatch. Opening after mount is what makes the two agree.
+   *
+   * The rule's own exception covers this — *"subscribe for updates from some
+   * external system"* — with the launch URL as the external system. It happens
+   * once, on arrival, and never again.
+   */
+  useEffect(() => {
+    const slug = new URLSearchParams(window.location.search).get(CAPTURE_PARAM);
+    if (slug === null) return;
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete(CAPTURE_PARAM);
+    window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+
+    const target = entranceFor(slug)?.target;
+    if (target === undefined || target.kind !== 'sheet') return;
+
+    const kind = RAIL.find((candidate) => candidate.metricKey === target.metricKey);
+    if (kind === undefined) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- See above: the launch URL is the external system, and deriving this during render would be a hydration mismatch rather than an optimisation.
+    open(kind);
+  }, [open]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -152,7 +137,7 @@ export function QuickCapture({ zone }: QuickCaptureProps): ReactNode {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
 
       if (armed.current) {
-        const kind = KINDS.find((candidate) => candidate.key === event.key.toLowerCase());
+        const kind = RAIL.find((candidate) => candidate.key === event.key.toLowerCase());
         armed.current = false;
         window.clearTimeout(armedTimer.current);
         if (kind !== undefined) {
@@ -290,16 +275,3 @@ export function QuickCapture({ zone }: QuickCaptureProps): ReactNode {
     </>
   );
 }
-
-/**
- * The rail, for the command palette.
- *
- * A chord nobody can discover is a chord nobody uses, and the palette is the
- * only surface a person opens *looking* for what is possible. Exported as data
- * rather than rendered here so the palette owns its own layout.
- */
-export const QUICK_CAPTURE_CHORDS: readonly {
-  readonly chord: string;
-  readonly label: string;
-  readonly metricKey: string;
-}[] = KINDS.map((kind) => ({ chord: `c ${kind.key}`, label: kind.label, metricKey: kind.metricKey }));

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
+import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { uuidV7 } from '@naitikos/shared';
 import { medicationLabel, systemClock } from '@naitikos/core';
@@ -171,9 +172,22 @@ export function MedicationScreen({
           <Card key={medication.id} variant="raised">
             <CardBody>
               <Stack gap="3">
-                <Text role="title-3" as="h2">
-                  {medicationLabel(medication)}
-                </Text>
+                <Inline gap="3" justify="between" align="baseline">
+                  <Text role="title-3" as="h2">
+                    {medicationLabel(medication)}
+                  </Text>
+                  {/*
+                    The detail page, and the only route to it.
+                    §3.2 gives it the dose history — the titration this row
+                    cannot show, because a register shows the dose now and the
+                    clinically interesting part is how it got there.
+                  */}
+                  <Link className="nos-inline-link" href={`/body/health/medications/${medication.id}`}>
+                    <Text role="caption" as="span">
+                      History →
+                    </Text>
+                  </Link>
+                </Inline>
 
                 {medication.stoppedAt !== null ? (
                   <Text role="body-sm" tone="secondary">

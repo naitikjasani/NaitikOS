@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 
 import { useNavigationStore } from '@/lib/stores/navigation.store';
 import { QuickCapture, SyncBanner } from '@/features/capture';
@@ -47,8 +47,20 @@ export function AppShell({ children, account, zone }: AppShellProps): ReactNode 
    * Without this, opening the palette, navigating, and landing on a new page
    * leaves the palette open over unrelated content. It is the most common shell
    * bug and it only appears once routing actually works, which is late.
+   *
+   * The first run is skipped. Nothing can be open on mount, so the call was
+   * always a no-op — except in the one case where it was not: a deep link
+   * arriving at `/today?capture=mood` has the sheet opened by a child effect,
+   * and child effects run before the parent's. Clearing overlays on mount would
+   * therefore close the sheet the URL asked for, before the first paint, and
+   * leave the operator on `/today` with no explanation.
    */
+  const navigated = useRef(false);
   useEffect(() => {
+    if (!navigated.current) {
+      navigated.current = true;
+      return;
+    }
     closeAllOverlays();
   }, [pathname, closeAllOverlays]);
 

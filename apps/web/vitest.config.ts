@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url';
+
 import { baseTestConfig } from '@naitikos/config/vitest/base';
 import { defineConfig } from 'vitest/config';
 
@@ -22,6 +24,11 @@ import { defineConfig } from 'vitest/config';
  */
 export default defineConfig({
   ...baseTestConfig,
+  /* `@/` is a tsconfig path, which Vitest does not read. Without it a test
+   * importing a module that imports `@/...` fails to resolve at run time even
+   * though it typechecks — a mismatch that only appears once a tested module
+   * has a non-relative dependency. */
+  resolve: { alias: { '@': fileURLToPath(new URL('.', import.meta.url)) } },
   test: {
     ...baseTestConfig.test,
     include: ['lib/**/*.{test,spec}.ts', 'features/**/*.{test,spec}.ts'],
