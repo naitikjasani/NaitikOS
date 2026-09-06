@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
+import Link from 'next/link';
 import {
   CAPTURE_DISTANCES,
   CAPTURE_LIGHTING,
@@ -229,11 +230,20 @@ export function PhotoCaptureScreen({ localTime }: { readonly localTime: string }
       */}
       <Card variant="flat">
         <CardBody>
-          <Text role="body-sm" tone="secondary">
-            Nothing is stored yet. The encrypted upload path is the next thing built — §5.5 requires
-            client-side encryption before a body photo leaves the device, and a half-wired version is
-            worse than none.
-          </Text>
+          <Stack gap="2">
+            <Text role="body-sm" tone="secondary">
+              Nothing is stored yet. The encrypted upload path is the next thing built — §5.5 requires
+              client-side encryption before a body photo leaves the device, and a half-wired version is
+              worse than none.
+            </Text>
+            <Text role="caption" tone="tertiary">
+              <Link className="nos-inline-link" href="/body/skin/photos/compare">
+                Compare two photos
+              </Link>
+              {' — which is what the protocol above is for. It reads the same series and will say so '}
+              when it has nothing to read.
+            </Text>
+          </Stack>
         </CardBody>
       </Card>
     </Stack>

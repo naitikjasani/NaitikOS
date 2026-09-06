@@ -6,6 +6,19 @@
  * sometimes returns prose is a URL whose caching, logging and error-report
  * behaviour has to be reasoned about case by case; a separate one can be
  * excluded from the service-worker cache by path.
+ *
+ * ## `journal:read`, and the reason it is not `observation:read`
+ *
+ * `journal:read` exists for exactly one purpose, stated in `core/auth/roles.ts`:
+ * a **clinician holding a shared export is deliberately not granted it**,
+ * because §4.7's "therapist-shared export with granular consent" is about
+ * therapy notes the operator chose to share, not standing access to a diary.
+ *
+ * This route guarded on `observation:read` — which a clinician *does* hold — so
+ * the one permission designed to keep the diary out of a clinician's reach was
+ * not checked on the diary's own endpoint. The list is safe by construction
+ * (`journalList` does not select `content`); this is the endpoint that returns
+ * the prose, and it was the gap.
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
@@ -25,7 +38,7 @@ export async function GET(
   request: NextRequest,
   context: { readonly params: Promise<{ readonly id: string }> },
 ): Promise<NextResponse> {
-  const guarded = await guard(request, 'observation:read');
+  const guarded = await guard(request, 'journal:read');
   if (isGuardFailure(guarded)) return guarded.response;
   const { traceId, platform } = guarded.context;
 

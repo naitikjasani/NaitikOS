@@ -16,6 +16,11 @@
  * optimisation. §4.7 calls journal content the most sensitive data in the
  * system, and a list endpoint that returns it puts every entry into any log,
  * cache or error report that touches the response.
+ *
+ * {@link MindRepository.therapySessions} is held to the same rule for the same
+ * reason — `themes` and `note` are prose about a therapy hour, they share the
+ * `journal` consent scope and the `journal:read` permission, and the list read
+ * does not select them.
  */
 
 import { and, desc, eq, gte, isNull, lt, ne, sql } from 'drizzle-orm';
@@ -48,7 +53,13 @@ import {
 
 import type { Database } from '../client';
 import { crisisPlan } from '../schema/identity';
-import { anxietyEpisode, journalEntry, journalPrompt, practiceSession } from '../schema/mind';
+import {
+  anxietyEpisode,
+  journalEntry,
+  journalPrompt,
+  practiceSession,
+  therapySession,
+} from '../schema/mind';
 import { createObservationRepository } from './observation.repository';
 import type { WriteContext } from './workout.repository';
 
@@ -118,6 +129,81 @@ function toEntry(row: typeof journalEntry.$inferSelect): JournalEntry {
 }
 
 /* -------------------------------------------------------------------------
+ * Therapy (§3.2 `/mind/therapy`, §4.7)
+ * ---------------------------------------------------------------------- */
+
+/**
+ * One between-session commitment, as stored in `therapy_session.action_items`.
+ *
+ * There is no `TherapyActionItem` in `core` to import: the shape is declared by
+ * the schema comment (`[{ text, dueAt, completedAt }]`) and nothing computes
+ * over it, so it has no domain rules to live next to. Declared here beside the
+ * parser that has to trust the jsonb, in the same way `PersonRow` is declared
+ * in `social.repository.ts`.
+ */
+export type TherapyActionItem = {
+  readonly text: string;
+  /** An instant, or null. A commitment without a date is still a commitment. */
+  readonly dueAt: string | null;
+  readonly completedAt: string | null;
+};
+
+/**
+ * A therapy session **without its prose**.
+ *
+ * `themes` and `note` are absent by construction, not by omission at the call
+ * site — see the file header. What remains is the scaffolding of the hour: when
+ * it was, who it was with, what was agreed, and when the next one is.
+ *
+ * There is deliberately no word count, which is where this differs from
+ * {@link JournalListItem}. The journal needs one because a heading has to fall
+ * back to something; a therapy session already has a date and a therapist. And
+ * a per-session word count is a number that invites comparison between one
+ * session and the next — quantifying a therapy hour is exactly the move §4.7
+ * rules out. `hasNotes` answers the only question a list is entitled to ask:
+ * whether there is anything written down.
+ */
+export type TherapySessionSummary = {
+  readonly id: string;
+  readonly dayKey: string;
+  readonly occurredAt: string;
+  readonly zone: string;
+  readonly therapist: string | null;
+  readonly modality: string | null;
+  readonly followUpAt: string | null;
+  readonly actionItems: readonly TherapyActionItem[];
+  /** Whether `themes` or `note` holds anything. Never what they hold. */
+  readonly hasNotes: boolean;
+};
+
+/**
+ * Read `action_items` back out of jsonb, trusting nothing.
+ *
+ * The same shape as `parseContacts` in `core`, and for the same reason: jsonb
+ * has no schema, the column has been through however many application versions
+ * the row is old, and a malformed entry must drop out rather than reach a
+ * component as `undefined`. Under `noUncheckedIndexedAccess` a bad row would
+ * otherwise be a runtime crash on a screen someone opened for reassurance.
+ */
+function parseActionItems(value: unknown): readonly TherapyActionItem[] {
+  if (!Array.isArray(value)) return [];
+
+  const items: TherapyActionItem[] = [];
+  for (const entry of value) {
+    if (typeof entry !== 'object' || entry === null) continue;
+    const record = entry as Record<string, unknown>;
+    const text = typeof record['text'] === 'string' ? record['text'].trim() : '';
+    if (text.length === 0) continue;
+    items.push({
+      text,
+      dueAt: typeof record['dueAt'] === 'string' ? record['dueAt'] : null,
+      completedAt: typeof record['completedAt'] === 'string' ? record['completedAt'] : null,
+    });
+  }
+  return items;
+}
+
+/* -------------------------------------------------------------------------
  * The repository
  * ---------------------------------------------------------------------- */
 
@@ -149,6 +235,16 @@ export type MindRepository = {
 
   logPractice(planned: PlannedPractice, context: WriteContext): Promise<Result<PracticeWritten, DomainError>>;
   recentPractices(limit?: number): Promise<Result<readonly PracticeSession[], DomainError>>;
+
+  /**
+   * Therapy sessions, newest first, **without `themes` or `note`**.
+   *
+   * There is no `therapySessionById` beside this and no write method anywhere
+   * in this file. Both absences are deliberate and are argued at the two
+   * surfaces that would consume them — `apps/web/lib/platform/therapy.ts` and
+   * `TherapyScreen`.
+   */
+  therapySessions(limit?: number): Promise<Result<readonly TherapySessionSummary[], DomainError>>;
 
   activeCrisisPlan(): Promise<Result<CrisisPlan | null, DomainError>>;
 };
@@ -460,6 +556,48 @@ export function createMindRepository(db: Database): MindRepository {
         .orderBy(desc(practiceSession.startedAt))
         .limit(limit);
       return ok(rows.map(toPractice));
+    },
+
+    async therapySessions(limit = 40) {
+      const rows = await db
+        .select({
+          id: therapySession.id,
+          occurredAt: therapySession.occurredAt,
+          zone: therapySession.zone,
+          therapist: therapySession.therapist,
+          modality: therapySession.modality,
+          followUpAt: therapySession.followUpAt,
+          actionItems: therapySession.actionItems,
+          /*
+           * The presence of prose, computed in SQL, so the prose itself never
+           * enters the result set — the same enforcement as `journalList`'s
+           * word count and for the stronger reason. `concat_ws` skips nulls, so
+           * a session with only a note and a session with only themes both come
+           * back true, and one with neither comes back false rather than as an
+           * empty string somebody could render.
+           */
+          hasNotes: sql<boolean>`
+            btrim(concat_ws(' ', ${therapySession.themes}, ${therapySession.note})) <> ''
+          `,
+        })
+        .from(therapySession)
+        .where(isNull(therapySession.deletedAt))
+        .orderBy(desc(therapySession.occurredAt))
+        .limit(limit);
+
+      return ok(
+        rows.map((row) => ({
+          id: row.id,
+          dayKey: dayKeyInZone(row.occurredAt, row.zone),
+          occurredAt: row.occurredAt,
+          zone: row.zone,
+          therapist: row.therapist,
+          modality: row.modality,
+          followUpAt: row.followUpAt,
+          actionItems: parseActionItems(row.actionItems),
+          hasNotes: row.hasNotes === true,
+        })),
+      );
     },
 
     async activeCrisisPlan() {

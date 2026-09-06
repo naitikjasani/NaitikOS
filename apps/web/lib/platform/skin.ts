@@ -40,8 +40,11 @@ import {
   REGION_LABELS,
   TRACKED_REGIONS,
   changesBefore,
+  comparablePhotos,
+  dayKeyInZone,
   daysSinceIntroduction,
   hlcReceive,
+  isBodyRegion,
   initialHlcState,
   isoFromMillis,
   notFoundError,
@@ -49,11 +52,12 @@ import {
   reactionHistory,
   regionTrends,
   routineWindowAdherence,
+  seriesKey,
   shiftDayKey,
   systemClock,
   windowDayKeys,
 } from '@naitikos/core';
-import type { Database } from '@naitikos/db';
+import type { Database, ProtocolPhoto } from '@naitikos/db';
 import {
   createMetricRepository,
   createRoutineRepository,
@@ -381,4 +385,139 @@ export async function clearRoutineStep(
 ): Promise<Result<{ readonly cleared: boolean }, DomainError>> {
   const cleared = await createRoutineRepository(db).clearStep(routineId, stepId, dayKey);
   return cleared.ok ? ok({ cleared: cleared.value }) : err(cleared.error);
+}
+
+/* -------------------------------------------------------------------------
+ * Photo comparison (§3.2 `/body/skin/photos/compare`, §4.2, §9.8)
+ * ---------------------------------------------------------------------- */
+
+/**
+ * A stored photo with the civil day it belongs to.
+ *
+ * The day is resolved here rather than in the browser, and in the photo's *own*
+ * capture zone rather than the profile's. §5.3's failure mode is a photo taken
+ * at 23:40 in Mumbai being filed under the following day because a runtime in
+ * UTC re-derived it — which in a comparison view would silently reorder two
+ * photos taken hours apart.
+ */
+export type ComparisonPhoto = ProtocolPhoto & {
+  readonly dayKey: string;
+};
+
+/**
+ * One region-plus-pose series, split by what §9.8 lets a comparison show.
+ *
+ * The split is the point. A single list with a flag on some entries invites a
+ * renderer to forget the flag; two lists make the flagged photos something the
+ * screen has to *ask* for.
+ */
+export type PhotoSeries = {
+  readonly key: string;
+  readonly region: BodyRegion;
+  readonly regionLabel: string;
+  readonly poseId: string | null;
+  /** Compliant at capture, oldest first. What the view offers by default. */
+  readonly eligible: readonly ComparisonPhoto[];
+  /** Flagged at capture. Behind the toggle, and marked wherever it appears. */
+  readonly flagged: readonly ComparisonPhoto[];
+};
+
+export type PhotoComparisonView = {
+  /** In §4.2's region order, then by pose. Empty series are not carried. */
+  readonly series: readonly PhotoSeries[];
+  /** Photos with no capture time, which cannot be placed in a series. */
+  readonly undatedCount: number;
+  /**
+   * How many of the photos are sensitive-tier ciphertext.
+   *
+   * Surfaced because it decides what the screen can honestly render. §5.5: the
+   * storage provider "holds ciphertext it cannot read", and neither does this
+   * server — decryption needs the passphrase-derived master key, which lives in
+   * the browser's memory and is never transmitted.
+   */
+  readonly encryptedCount: number;
+};
+
+/**
+ * Everything `/body/skin/photos/compare` is allowed to know.
+ *
+ * ## What this deliberately does not return
+ *
+ * No similarity figure, no change score, no luminance delta, no perceptual-hash
+ * distance. Not because they are hard — the hash is already on the row — but
+ * because §4.2 says the quiet part out loud: apparent change between two
+ * photographs "is dominated by capture variance rather than skin change". A
+ * number derived from two images would therefore be *mostly a measurement of
+ * the light*, presented with the authority of arithmetic.
+ *
+ * §10.0 forbids the model computing or asserting. A deterministic figure would
+ * evade the letter of that rule and break its purpose: the constraint exists so
+ * that every number the operator reads is one the system can stand behind, and
+ * "these two photos are 12% different" is not.
+ *
+ * What it returns instead is what was *recorded at capture*: the protocol block
+ * of each photo, and the compliance score the capture screen computed against
+ * that series' own baseline. Those are retrieved facts, not new claims.
+ */
+export async function loadPhotoComparison(
+  db: Database,
+  options: { readonly zone: string },
+): Promise<Result<PhotoComparisonView, DomainError>> {
+  const read = await createSkinRepository(db).protocolPhotos(TRACKED_REGIONS);
+  if (!read.ok) return err(read.error);
+
+  const dated: ComparisonPhoto[] = read.value.photos.map((photo) => ({
+    ...photo,
+    dayKey: dayKeyInZone(photo.capturedAt, photo.capturedZone ?? options.zone),
+  }));
+
+  /* Grouped by region *and* pose. `seriesKey` is the authority on that pairing
+   * because it is the same function the capture screen picks its alignment
+   * reference with — a face-front and a face-left photo are not two views of
+   * one series, they are two series. */
+  const grouped = new Map<string, ComparisonPhoto[]>();
+  for (const photo of dated) {
+    const key = seriesKey(photo.region, photo.poseId);
+    const existing = grouped.get(key);
+    if (existing === undefined) grouped.set(key, [photo]);
+    else existing.push(photo);
+  }
+
+  const series: PhotoSeries[] = [];
+  for (const [key, photos] of grouped) {
+    const first = photos[0];
+    if (first === undefined || !isBodyRegion(first.region)) continue;
+
+    /*
+     * The eligibility decision is `core`'s, not this loader's. Only the ids
+     * come back, because `comparablePhotos` returns `SeriesPhoto` and would
+     * drop the encryption and zone fields the screen needs — so the ids
+     * partition the richer list rather than replacing it.
+     */
+    const eligibleIds = new Set(
+      comparablePhotos(photos, first.region, first.poseId).map((photo) => photo.mediaObjectId),
+    );
+
+    const ordered = [...photos].sort((a, b) => (a.capturedAt < b.capturedAt ? -1 : a.capturedAt > b.capturedAt ? 1 : 0));
+
+    series.push({
+      key,
+      region: first.region,
+      regionLabel: REGION_LABELS[first.region],
+      poseId: first.poseId,
+      eligible: ordered.filter((photo) => eligibleIds.has(photo.mediaObjectId)),
+      flagged: ordered.filter((photo) => !eligibleIds.has(photo.mediaObjectId)),
+    });
+  }
+
+  series.sort((a, b) => {
+    const byRegion = TRACKED_REGIONS.indexOf(a.region) - TRACKED_REGIONS.indexOf(b.region);
+    return byRegion === 0 ? a.key.localeCompare(b.key) : byRegion;
+  });
+
+  return ok({
+    series,
+    undatedCount: read.value.undatedCount,
+    encryptedCount: dated.filter((photo) => photo.isEncrypted).length,
+  });
 }

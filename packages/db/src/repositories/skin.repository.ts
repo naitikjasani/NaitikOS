@@ -35,14 +35,17 @@ import type {
   ProductEvent,
   ProductEventKind,
   ProductSeverity,
+  SeriesPhoto,
   SkinRegionState,
   SkinState,
   SkincareProduct,
+  StorageTier,
 } from '@naitikos/core';
 import { SKIN_METRICS, conflictError, isActiveOn, isDomainError, prepareObservations } from '@naitikos/core';
 
 import type { Database } from '../client';
 import { productEvent, skinRegionState, skinState, skincareProduct } from '../schema/body';
+import { mediaObject } from '../schema/crosscutting';
 import { observation } from '../schema/substrate';
 import { createObservationRepository } from './observation.repository';
 import type { WriteContext } from './workout.repository';
@@ -129,6 +132,80 @@ export type SkinStateWritten = {
   readonly hlc: string | null;
 };
 
+/**
+ * A protocol-governed photo, as the comparison view needs it (§9.8).
+ *
+ * `SeriesPhoto` is `core`'s shape and carries everything the protocol reasons
+ * about. The three additions are things only persistence knows:
+ *
+ * - `tier` and `isEncrypted`, because a sensitive-tier row is ciphertext the
+ *   server cannot read (§5.5). A comparison screen that assumed otherwise would
+ *   render two broken images and call it a comparison.
+ * - `capturedZone`, because the day a photo belongs to is a zoned question
+ *   (§5.3) and the instant alone cannot answer it.
+ * - `complianceNotes`, because a flagged photo's *reason* is the only thing
+ *   that makes the flag actionable rather than decorative.
+ */
+export type ProtocolPhoto = SeriesPhoto & {
+  readonly tier: StorageTier;
+  /** Sensitive tier: the stored bytes are ciphertext (§5.5). */
+  readonly isEncrypted: boolean;
+  readonly capturedZone: string | null;
+  readonly complianceNotes: string | null;
+};
+
+export type ProtocolPhotoRead = {
+  /** Oldest first, so a series reads in the direction time runs. */
+  readonly photos: readonly ProtocolPhoto[];
+  /**
+   * Protocol photos held back because they carry no capture time.
+   *
+   * Counted rather than dropped. §9.8: "a photo series with silent gaps is
+   * worse than one with none" — a photo that cannot be placed on a timeline
+   * cannot be compared, but the operator is entitled to know it exists.
+   */
+  readonly undatedCount: number;
+};
+
+function toProtocolPhoto(row: {
+  readonly id: string;
+  readonly capturedAt: string | null;
+  readonly capturedZone: string | null;
+  readonly tier: StorageTier;
+  readonly wrappedKey: string | null;
+  readonly protocolRegion: string | null;
+  readonly poseId: string | null;
+  readonly distance: string | null;
+  readonly lighting: string | null;
+  readonly timeBucket: string | null;
+  readonly flash: string | null;
+  readonly medianLuminance: string | null;
+  readonly complianceScore: string | null;
+  readonly complianceNotes: string | null;
+}): ProtocolPhoto | null {
+  if (row.capturedAt === null || row.protocolRegion === null) return null;
+
+  return {
+    mediaObjectId: row.id,
+    capturedAt: row.capturedAt,
+    capturedZone: row.capturedZone,
+    region: row.protocolRegion,
+    poseId: row.poseId,
+    distance: row.distance as ProtocolPhoto['distance'],
+    lighting: row.lighting as ProtocolPhoto['lighting'],
+    timeBucket: row.timeBucket as ProtocolPhoto['timeBucket'],
+    flash: row.flash as ProtocolPhoto['flash'],
+    /* `numeric`, so string at the driver boundary (§5.3). These two are the
+     * exception the column comment allows: both are bounded ratios read only
+     * for display and comparison, never summed into a dosage or a lab value. */
+    medianLuminance: row.medianLuminance === null ? null : Number(row.medianLuminance),
+    complianceScore: row.complianceScore === null ? null : Number(row.complianceScore),
+    tier: row.tier,
+    isEncrypted: row.tier === 'sensitive' && row.wrappedKey !== null,
+    complianceNotes: row.complianceNotes,
+  };
+}
+
 export type SkinRepository = {
   /** The day's row with its regions, or null. Call this before writing. */
   stateForDay(dayKey: string): Promise<Result<SkinState | null, DomainError>>;
@@ -143,6 +220,17 @@ export type SkinRepository = {
   productEvents(): Promise<Result<readonly ProductEvent[], DomainError>>;
   /** Recompute the `is_active` cache from the event replay (§9.3(4)). */
   refreshActiveProducts(dayKey: string, zone: string): Promise<Result<number, DomainError>>;
+
+  /**
+   * Every protocol-governed photo for the given regions, oldest first.
+   *
+   * Deliberately *not* filtered on `compliance_score`. §9.8 puts that decision
+   * in the view — "comparison views default to compliant photos only, with
+   * non-compliant ones available behind a toggle and clearly marked" — and a
+   * repository that filtered here would make the toggle unimplementable and the
+   * count of hidden photos unknowable.
+   */
+  protocolPhotos(regions: readonly BodyRegion[]): Promise<Result<ProtocolPhotoRead, DomainError>>;
 };
 
 export function createSkinRepository(db: Database): SkinRepository {
@@ -402,6 +490,49 @@ export function createSkinRepository(db: Database): SkinRepository {
       }
 
       return ok(changed);
+    },
+
+    async protocolPhotos(regions) {
+      if (regions.length === 0) return ok({ photos: [], undatedCount: 0 });
+
+      const rows = await db
+        .select({
+          id: mediaObject.id,
+          capturedAt: mediaObject.capturedAt,
+          capturedZone: mediaObject.capturedZone,
+          tier: mediaObject.tier,
+          wrappedKey: mediaObject.wrappedKey,
+          protocolRegion: mediaObject.protocolRegion,
+          poseId: mediaObject.poseId,
+          distance: mediaObject.distance,
+          lighting: mediaObject.lighting,
+          timeBucket: mediaObject.timeBucket,
+          flash: mediaObject.flash,
+          medianLuminance: mediaObject.medianLuminance,
+          complianceScore: mediaObject.complianceScore,
+          complianceNotes: mediaObject.complianceNotes,
+        })
+        .from(mediaObject)
+        .where(
+          and(
+            inArray(mediaObject.protocolRegion, [...regions]),
+            /* Video and audio can carry a region too; neither is a still the
+               protocol was written for, and neither belongs in a comparison. */
+            eq(mediaObject.kind, 'image'),
+            isNull(mediaObject.deletedAt),
+          ),
+        )
+        .orderBy(asc(mediaObject.capturedAt));
+
+      const photos: ProtocolPhoto[] = [];
+      let undatedCount = 0;
+      for (const row of rows) {
+        const photo = toProtocolPhoto(row);
+        if (photo === null) undatedCount += 1;
+        else photos.push(photo);
+      }
+
+      return ok({ photos, undatedCount });
     },
   };
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, type ReactNode } from 'react';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import {
   DEFAULT_TREND_WINDOW_DAYS,
@@ -123,11 +124,14 @@ export function CompositionScreen({ todayDayKey }: { readonly todayDayKey: strin
 
   if (samples.length === 0) {
     return (
-      <EmptyState
-        icon="data.chart"
-        title="No bodyweight recorded"
-        description="Log a weight from the quick-capture rail and the trend appears here."
-      />
+      <Stack gap="5">
+        <PhotosLink />
+        <EmptyState
+          icon="data.chart"
+          title="No bodyweight recorded"
+          description="Log a weight from the quick-capture rail and the trend appears here."
+        />
+      </Stack>
     );
   }
 
@@ -140,6 +144,8 @@ export function CompositionScreen({ todayDayKey }: { readonly todayDayKey: strin
 
   return (
     <Stack gap="5">
+      <PhotosLink />
+
       <Card variant="flat">
         <CardBody>
           <Inline justify="between" align="center">
@@ -226,5 +232,23 @@ export function CompositionScreen({ todayDayKey }: { readonly todayDayKey: strin
         }}
       />
     </Stack>
+  );
+}
+
+/**
+ * The other half of §4.6's composition: the photographs.
+ *
+ * Rendered in the empty state as well as the populated one, because the gallery
+ * is worth reaching on a day nobody stepped on the scales.
+ */
+function PhotosLink(): ReactNode {
+  return (
+    <Inline gap="2" wrap>
+      <Link className="nos-inline-link" href="/body/composition/photos">
+        <Text role="body-sm" as="span">
+          Physique photos
+        </Text>
+      </Link>
+    </Inline>
   );
 }

@@ -266,3 +266,15 @@ export type {
 /* --- Reading §9.4's permanent audit log (`/settings/data/audit`) --------- */
 export { createAuditReader } from './observability.repository';
 export type { AuditEntry, AuditReader } from './observability.repository';
+
+/* --- The photo-comparison read (§4.2, §9.8) ------------------------------
+ * Appended rather than folded into the skin block above, because the block
+ * above is the daily-log surface and this is the media one. */
+export type { ProtocolPhoto, ProtocolPhotoRead } from './skin.repository';
+
+/* --- Therapy sessions, read-only (§3.2 `/mind/therapy`, §4.7) ----------- */
+export type { TherapyActionItem, TherapySessionSummary } from './mind.repository';
+
+/* --- Protocol-governed photography, read back (§9.8) -------------------- */
+export { createMediaRepository } from './upload-outbox.repository';
+export type { MediaRepository, ProtocolPhotoRow } from './upload-outbox.repository';

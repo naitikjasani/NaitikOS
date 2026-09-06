@@ -208,6 +208,19 @@ export function MindOverviewScreen({
           </Stack>
         </CardBody>
       </Card>
+
+      {/*
+        Last, by this screen's own ordering rule — see the header. Therapy asks
+        for more reading than anything above it, and unlike the journal there is
+        nothing on it to skim: it is somewhere to go deliberately rather than a
+        card to glance at. One line, and no session count beside it, for the
+        reason argued in `TherapyScreen`.
+      */}
+      <Link className="nos-inline-link" href="/mind/therapy">
+        <Text role="caption" as="span">
+          Therapy sessions and between-session notes
+        </Text>
+      </Link>
     </Stack>
   );
 }

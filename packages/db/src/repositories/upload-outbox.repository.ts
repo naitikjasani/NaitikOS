@@ -24,13 +24,22 @@
  * docs/storage.md.
  */
 
-import { and, asc, eq, inArray, isNull, lte, ne, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, lte, ne, sql } from 'drizzle-orm';
 import type { Result } from '@naitikos/shared';
 import { ok } from '@naitikos/shared';
-import type { DomainError, StorageTier } from '@naitikos/core';
+import type {
+  BodyRegion,
+  CaptureDistance,
+  CaptureLighting,
+  CaptureTimeBucket,
+  DomainError,
+  FlashState,
+  StorageTier,
+} from '@naitikos/core';
 import { parseInstant } from '@naitikos/core';
 
 import type { Database } from '../client';
+import { mediaObject } from '../schema/crosscutting';
 import { uploadOutbox } from '../schema/events';
 
 export type OutboxStatus = (typeof uploadOutbox.status.enumValues)[number];
@@ -343,6 +352,133 @@ export function createUploadOutboxRepository(db: Database): UploadOutboxReposito
             ? null
             : Math.max(0, Math.round((nowMillis - oldestMillis) / 1000)),
       };
+    },
+  };
+}
+
+/* =========================================================================
+ * Stored media, read back (§9.8)
+ * ====================================================================== */
+
+/**
+ * Why this read lives beside the outbox rather than in a vault of its own.
+ *
+ * The outbox is where a `media_object` row comes from — {@link
+ * UploadOutboxRepository.markUploaded} is the moment an intent becomes an
+ * object. This is the other end of that same lifecycle, and keeping the two
+ * within sight of each other is what stops the second one being written as
+ * though the first did not exist. The document vault is a different table
+ * about a different thing.
+ *
+ * ## It is a read and only a read
+ *
+ * Nothing in this repository writes `media_object`, because nothing in the
+ * system does yet: §5.5's client-side encryption needs a passphrase-derived key
+ * flow that has not been built, and §14.4 is explicit that deferring photography
+ * is acceptable while deferring encryption is not. A gallery that reads an empty
+ * table is honest. A writer that stored plaintext "for now" would not be.
+ */
+export type ProtocolPhotoRow = {
+  readonly mediaObjectId: string;
+  readonly tier: StorageTier;
+  readonly mimeType: string;
+  readonly byteSize: number | null;
+  readonly width: number | null;
+  readonly height: number | null;
+
+  /**
+   * Nullable, and deliberately not defaulted to the row's `created_at`.
+   *
+   * A photo whose capture time was never recorded cannot be placed in a
+   * chronological series, and substituting the upload time would place it
+   * confidently in the wrong week. §8.9(3) — the gap is the fact.
+   */
+  readonly capturedAt: string | null;
+  readonly capturedZone: string | null;
+  readonly deviceIdentity: string | null;
+
+  /* The capture-protocol block (§9.8). Every field independently nullable,
+   * because a photo captured before a field existed is not a photo with that
+   * field set to a default. */
+  readonly region: string | null;
+  readonly poseId: string | null;
+  readonly distance: CaptureDistance | null;
+  readonly lighting: CaptureLighting | null;
+  readonly flash: FlashState | null;
+  readonly timeBucket: CaptureTimeBucket | null;
+  readonly alignmentReferenceId: string | null;
+  readonly medianLuminance: number | null;
+  readonly complianceScore: number | null;
+  readonly complianceNotes: string | null;
+
+  /**
+   * The bytes are client-side encrypted and the server cannot read them (§5.5).
+   *
+   * Derived from the presence of a wrapped key rather than from the tier, so it
+   * answers "can this be rendered" rather than "was it filed correctly". The
+   * `media_object_sensitive_encrypted` check constraint makes the two agree for
+   * the sensitive tier; this column is what a caller should branch on.
+   */
+  readonly isEncrypted: boolean;
+};
+
+export type MediaRepository = {
+  /**
+   * Protocol-governed photography for the given regions, newest first.
+   *
+   * Region-parameterised rather than hard-coded to skin or physique: §9.8
+   * describes one protocol block serving both, and the caller is the layer that
+   * knows which regions constitute which gallery. Undated rows sort last rather
+   * than being dropped.
+   */
+  protocolPhotos(
+    regions: readonly BodyRegion[],
+    limit?: number,
+  ): Promise<Result<readonly ProtocolPhotoRow[], DomainError>>;
+};
+
+function toProtocolPhoto(row: typeof mediaObject.$inferSelect): ProtocolPhotoRow {
+  return {
+    mediaObjectId: row.id,
+    tier: row.tier,
+    mimeType: row.mimeType,
+    byteSize: row.byteSize,
+    width: row.width,
+    height: row.height,
+    capturedAt: row.capturedAt,
+    capturedZone: row.capturedZone,
+    deviceIdentity: row.deviceIdentity,
+    region: row.protocolRegion,
+    poseId: row.poseId,
+    distance: row.distance,
+    lighting: row.lighting,
+    flash: row.flash,
+    timeBucket: row.timeBucket,
+    alignmentReferenceId: row.alignmentReferenceId,
+    /* `numeric` reads back as a string. `Number` on a null would be zero, and a
+     * luminance of zero is a black frame rather than an unrecorded one. */
+    medianLuminance: row.medianLuminance === null ? null : Number(row.medianLuminance),
+    complianceScore: row.complianceScore === null ? null : Number(row.complianceScore),
+    complianceNotes: row.complianceNotes,
+    isEncrypted: row.wrappedKey !== null,
+  };
+}
+
+export function createMediaRepository(db: Database): MediaRepository {
+  return {
+    async protocolPhotos(regions, limit = 200) {
+      if (regions.length === 0) return ok([]);
+
+      const rows = await db
+        .select()
+        .from(mediaObject)
+        .where(and(isNull(mediaObject.deletedAt), inArray(mediaObject.protocolRegion, [...regions])))
+        /* `nulls last` explicitly. Postgres sorts nulls first under `desc`, which
+         * would open a physique gallery with the one photo that has no date. */
+        .orderBy(sql`${mediaObject.capturedAt} desc nulls last`, desc(mediaObject.createdAt))
+        .limit(limit);
+
+      return ok(rows.map(toProtocolPhoto));
     },
   };
 }

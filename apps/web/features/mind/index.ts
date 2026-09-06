@@ -18,3 +18,7 @@ export { MedicationScreen } from './screens/MedicationScreen';
  * because six months and one month answer different questions. */
 export { MoodScreen, MOOD_WINDOW_DAYS } from './screens/MoodScreen';
 export { PromptsScreen } from './screens/PromptsScreen';
+
+/* Therapy (§3.2 `/mind/therapy`, §4.7). A Server Component and read-only —
+ * see the screen's header for what is deliberately absent from it. */
+export { TherapyScreen } from './screens/TherapyScreen';

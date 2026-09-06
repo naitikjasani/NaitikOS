@@ -18,3 +18,8 @@ export { PhotoCaptureScreen } from './screens/PhotoCaptureScreen';
  * and courses are recorded through Health. */
 export { SkinRegionsScreen } from './screens/SkinRegionsScreen';
 export { TreatmentsScreen } from './screens/TreatmentsScreen';
+
+/* Side-by-side comparison (§3.2). A Client Component: choosing which two photos
+ * to set against each other is the interaction, and the refusal to pair two
+ * photos taken under different conditions has to react to that choice. */
+export { PhotoCompareScreen } from './screens/PhotoCompareScreen';
