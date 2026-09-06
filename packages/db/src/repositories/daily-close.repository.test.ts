@@ -12,6 +12,7 @@
  *     which is what lets the outbox drain (§5.7).
  */
 
+import { sql } from 'drizzle-orm';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { isErr, isOk, uuidV7 } from '@naitikos/shared';
 import type { ClosePlan, MetricRegistry } from '@naitikos/core';
@@ -391,6 +392,58 @@ suite('idempotency repository', () => {
 
     const everything = await repository.prune('2099-01-01T00:00:00.000Z');
     expect(isOk(everything) && everything.value).toBe(1);
+  });
+
+  it('reclaims a stranded in-flight key once its TTL has passed', async () => {
+    if (db === undefined) return;
+    const repository = createIdempotencyRepository(db);
+    const key = newId();
+    const fingerprint = fingerprintRequest(ENDPOINT, BODY);
+
+    /*
+     * The scenario: a process claims a key and dies before `complete()` or
+     * `release()`. The row stays incomplete for ever.
+     *
+     * `claim` returned `in_flight` for any incomplete record without looking at
+     * `expires_at`, so every retry of that outbox entry was refused
+     * permanently — the capture could never be unblocked. The seven-day
+     * recovery `release()`'s comment promises was carried entirely by the
+     * `prune-idempotency` job, which is named in `JOB_STEPS` and never
+     * registered in the nightly route, so nothing pruned and the recovery did
+     * not exist.
+     */
+    await repository.claim(key, ENDPOINT, fingerprint);
+
+    const stillLive = await repository.claim(key, ENDPOINT, fingerprint);
+    expect(isOk(stillLive) && stillLive.value.state).toBe('in_flight');
+
+    // Age the record past its TTL. Nothing else can move the clock — the expiry
+    // is computed by Postgres, so the test has to reach the row directly.
+    await db.execute(sql`update idempotency_record set expires_at = now() - interval '1 second' where key = ${key}`);
+
+    const retry = await repository.claim(key, ENDPOINT, fingerprint);
+    expect(isOk(retry) && retry.value.state).toBe('fresh');
+  });
+
+  it('re-executes rather than replaying a completed key past its TTL', async () => {
+    if (db === undefined) return;
+    const repository = createIdempotencyRepository(db);
+    const key = newId();
+    const fingerprint = fingerprintRequest(ENDPOINT, BODY);
+
+    await repository.claim(key, ENDPOINT, fingerprint);
+    await repository.complete(key, 200, { ok: true });
+
+    const withinTtl = await repository.claim(key, ENDPOINT, fingerprint);
+    expect(isOk(withinTtl) && withinTtl.value.state).toBe('replayed');
+
+    await db.execute(sql`update idempotency_record set expires_at = now() - interval '1 second' where key = ${key}`);
+
+    /* This is what a TTL means: after seven days the stored response is no
+     * longer remembered, so a replay arriving later re-executes rather than
+     * returning a week-old body. */
+    const afterTtl = await repository.claim(key, ENDPOINT, fingerprint);
+    expect(isOk(afterTtl) && afterTtl.value.state).toBe('fresh');
   });
 
   it('fingerprints differently for different endpoints and bodies', () => {

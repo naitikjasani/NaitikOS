@@ -56,13 +56,27 @@ module happened to import first.
 | 12 | `rebuild-timeline` | no | When a projector change makes entries stale |
 | 13 | `maintain-partitions` | **yes** | §9.7. **Before** the collapse; see below |
 | 14 | `downsample-samples` | **yes** | §9.7, past 90 days |
-| 15 | `prune-idempotency` | no | Expired records |
+| 15 | `prune-idempotency` | **yes** | §5.7's seven-day TTL. Registered 7 September 2026; see below |
 | 16 | `prune-telemetry` | **yes** | §5.11's ninety-day retention |
 | 17 | `drain-task-queue` | **yes** | **Last**, so work enqueued earlier tonight runs tonight |
 
-Eight are registered. The nine that are not do **domain** work and arrive with
+Nine are registered. The eight that are not do **domain** work and arrive with
 their domains — a rollup step is meaningless before there is anything to roll
 up.
+
+`prune-idempotency` was the exception, and not a deliberate one. Its domain
+existed and `IdempotencyRepository.prune` was implemented; the step was simply
+never added to `stepsFor`. That mattered more than a housekeeping omission
+should have, because `claim()` returned `in_flight` for any incomplete record
+without consulting `expires_at` — so a request that died between `claim()` and
+`complete()` blocked every retry of that capture permanently, and the seven-day
+recovery `release()`'s comment promises was carried entirely by a sweep that
+never ran.
+
+The expiry is now enforced in `claim()`, where it is relied upon; a guarantee
+that depends on a job being wired up is not a guarantee. This step is back to
+being what it should always have been — housekeeping that stops the table
+growing without bound, and that cannot halt the run.
 
 Running a partial list is deliberate, not incomplete. §5.16's alert watches for
 the *absence* of a completion record, so a record has to be written from the

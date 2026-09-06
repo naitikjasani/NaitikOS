@@ -30,6 +30,7 @@ import { runJobSchema } from '@naitikos/api';
 import type { JobStep, JobStepName } from '@naitikos/core';
 import { JOB_STEPS, dayKeyInZone, isoFromMillis, runNightly, systemClock } from '@naitikos/core';
 import {
+  createIdempotencyRepository,
   createJobRunRecorder,
   createTelemetryRepository,
   hasCompletedRunSince,
@@ -53,9 +54,9 @@ import { collapseOldSamples, maintainSamplePartitions } from '../../../../lib/pl
 /**
  * The registered steps.
  *
- * Three are operational — they keep the queues from silently stranding rows and
- * the telemetry table from growing without bound, which is the failure §5.2's
- * "safe to re-run" depends on. Two more are custodial: they keep `sample`
+ * Four are operational — they keep the queues from silently stranding rows and
+ * the bookkeeping tables from growing without bound, which is the failure
+ * §5.2's "safe to re-run" depends on. Two more are custodial: they keep `sample`
  * partitioned ahead of itself and collapsed behind itself, which is what stops
  * §9.7's "tens of millions" of device rows from becoming an operational problem
  * rather than a storage one.
@@ -111,6 +112,34 @@ function stepsFor(platform: PlatformContext): readonly JobStep[] {
         return ok({
           rowsAffected: stale.ok ? stale.value : 0,
           note: `${String(health.pending)} pending, ${String(health.failed)} failed`,
+        });
+      },
+    },
+    {
+      name: 'prune-idempotency',
+      describes: 'Discards idempotency records past their seven-day TTL (§5.7).',
+      /*
+       * Housekeeping now, and only housekeeping.
+       *
+       * It was load-bearing by accident. `claim()` used to return `in_flight`
+       * for any incomplete record without consulting `expires_at`, so a request
+       * that died between `claim()` and `complete()` left a row that blocked
+       * every retry of that capture for ever — and the seven-day recovery
+       * `release()` promises was carried entirely by this sweep, which was
+       * named in `JOB_STEPS` and never registered here. Nothing pruned, so
+       * nothing recovered.
+       *
+       * The expiry is now enforced in `claim()` itself, where it is relied
+       * upon. This step keeps the table from growing without bound, which is a
+       * real job but not a correctness one — so it cannot halt the run.
+       */
+      haltOnFailure: false,
+      async run() {
+        const cutoff = isoFromMillis(systemClock.nowMillis());
+        const removed = await createIdempotencyRepository(platform.db).prune(cutoff);
+        return ok({
+          rowsAffected: removed.ok ? removed.value : 0,
+          note: `expired before ${cutoff.slice(0, 10)}`,
         });
       },
     },
