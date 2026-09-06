@@ -180,24 +180,28 @@ Nothing in this application computes a number with a model.
 
 ## 8. What is not built yet
 
-- **Reference rendering.** An answer's paragraphs come back as templates with
-  `{0}` slots and a reference list. The renderer that resolves those against the
-  database is not built, so the slots are currently visible in the answer. That
-  is the honest failure mode: a paragraph with a `{0}` in it is obviously
-  incomplete, and one with a plausible invented number is not.
-- **`/ask/:threadId`.** §3.2 lists it for "a saved line of enquiry". It needs a
-  table. Single-turn is the honest version until then, rather than a fake thread
-  that forgets.
 - **Local embeddings (§10.3).** The vector layer needs ONNX in a persistent
   runtime; §10.3 says so itself and calls it "the one piece of infrastructure in
   this design that C3 does not get for free". Hybrid retrieval currently means
   the lexical half only.
-- **The Ask surface (§10.4's consumer).** The context engine it needs is built
-  and tested; the surface is not.
 - **Narration of insights.** The inbox renders the detector's own prose and
   leaves `narrative` null, deliberately — writing a deterministic sentence into
   a column documented as model-authored would make the audit trail unable to
   distinguish the two.
+- **Four of `statisticRefSchema`'s six fields.** It permits `r`, `n`, `p`,
+  `effectSize`, `lagDays` and `windowDays`; the `insight` table stores `p_value`
+  and `effect_size`. The other four resolve to a visible gap. That is §6.2's
+  failure mode — two files each correct on their own — and it is recorded at
+  both ends rather than fixed by narrowing the schema, because narrowing it is a
+  decision about what a detector may report.
+
+### Recently closed
+
+- **Reference rendering.** Built. An answer's paragraphs come back as templates
+  with `{0}` slots; the server resolves each reference against the database and
+  substitutes. See §10 below.
+- **`/ask/:threadId`.** Built, on migration 0017. See §11.
+- **The Ask surface.** Built; §9 describes it.
 
 ## 9. Ask
 
@@ -233,3 +237,96 @@ from "not mentioned" well enough for the budget step to cut the right tail.
 | Guardrails | `packages/ai/src/guardrails/` — consent, prohibited, budget, crisis |
 | Context engine | `packages/ai/src/context/` — classify, summarise, assemble |
 | Boundary | `packages/ai/src/client/` — routing, transport, invoke, anthropic |
+| Rendering | `packages/ai/src/render/` — narration substitution (§11) |
+| Reference lookup | `packages/db/src/repositories/reference.repository.ts` |
+| Translation | `apps/web/lib/platform/references.ts` |
+| Enquiry threads | `packages/db/src/repositories/enquiry.repository.ts`, `apps/web/lib/platform/enquiry.ts` |
+
+## 11. Reference rendering — the other half of §10.10
+
+`schemas/references.ts` makes a narration structurally unable to carry a number.
+That is worth nothing on its own: for a while every Ask answer rendered with
+visible `{0}` slots, which was the honest failure and an unsatisfying one.
+
+`render/narration.ts` puts the stored figure back. The model emits `{0}` and an
+observation id; the server reads the row and substitutes. §10.10's sentence —
+*"the model is never the source of a figure the user reads"* — is now true end
+to end.
+
+**Resolution happens on the server.** A client receiving reference ids and
+looking them up would be a second path to a figure, running in a browser. The
+number is read from the row server-side and travels as text.
+
+**The output is segments, not a string.** A rendered narration is a list of
+pieces, each labelled prose, resolved value, or unresolvable reference. That
+costs a `.map` and buys two things: the UI can mark a figure as coming from the
+record — §10.10 is invisible to a person if a resolved number looks like a
+written one — and a reference that cannot be resolved is *distinguishable*.
+
+**An unresolved reference never disappears.** The model can name an observation
+since deleted, or invent an id outright. Substituting nothing gives *"has been
+below on most days"* — a sentence that reads as complete and is missing its
+subject, which is worse than either a gap or an error because it looks fine. It
+renders as an em dash and the count is stated under the answer.
+
+**A superseded observation renders as it was, and says so.** §9.1 makes a
+correction a supersession rather than an edit. An answer written on Tuesday
+cited what was true on Tuesday; silently following the chain would make a saved
+answer say something the model never said. The correction is reported instead.
+
+### The layering, and why the repository speaks in ids
+
+`db` cannot import `@naitikos/ai` — §5.0 puts `ai` above `db`. So
+`reference.repository.ts` takes five sets of identifiers and returns five maps,
+and `lib/platform/references.ts` owns the translation. The deeper reason is that
+a reference is a fact about a model's output format, and the database layer has
+no business knowing that format exists.
+
+One query per kind, five issued together. An eight-paragraph answer naming one
+observation four times costs one row read.
+
+## 12. Saved lines of enquiry (`/ask/:threadId`)
+
+§3.2 has listed this route since day one. Migration 0017 gave it two tables.
+
+**A thread is not a conversation, and the schema is what enforces that.** There
+is no column for a transcript and no ordering the context builder reads.
+**Prior turns are never sent back to the model.** Feeding a model its own output
+makes it reason over its own assertions rather than over the record, which is
+§10.0's prohibition in the one place it is most tempting to break.
+
+The consequence the interface states plainly, under the box: *"Each question is
+answered from your record alone. Nothing said above is sent back to the model,
+so a follow-up has to stand on its own."* Without that, a user writes "and what
+about the week before?" and gets a confused answer with no indication why.
+
+**A thread is created deliberately, and before the asking.** There is no "save
+this answer" button. Saving after the fact makes every answer a candidate for
+keeping, which turns the surface into a chat log with a filter on it. Naming the
+enquiry first forces the question §4.13 says the surface is for — *what am I
+actually trying to find out* — and that outlives any one phrasing.
+
+A thread can sit unasked. That is a legitimate use: a line of enquiry you have
+not got to is still one. It sorts last in the list, because a placeholder from
+six months ago is not more urgent than something answered this morning.
+
+**Stored answers are re-rendered on every read, never cached.** A turn holds
+templates and reference ids; the figures resolve against the log each time the
+thread opens. This is the surface where §10's supersession behaviour earns its
+keep, because it is the only one showing answers old enough for the record to
+have moved underneath them.
+
+**A turn with no answer is kept.** "I asked this in April and the layer was off"
+is part of a line of enquiry; hiding it would make the thread look unpursued. A
+CHECK requires exactly one of `answer` and `problem` — neither is a row that
+says an exchange happened and refuses to say what came of it, both is two
+accounts of one moment.
+
+**An unparseable stored answer is shown as unreadable, not skipped.** A row from
+2031 may predate whatever `answerSchema` looks like then. The question stays
+legible — it is the operator's — and the answer says what happened to it.
+
+**Nothing can POST a turn.** Turns come into existence exactly one way: by
+asking, through `/api/ask` with a `threadId`. A client able to write an answer
+could write one containing a number, and every structural control in
+`schemas/references.ts` would be bypassed by a request.

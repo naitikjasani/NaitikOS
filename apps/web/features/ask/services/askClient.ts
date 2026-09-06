@@ -21,12 +21,12 @@ export class HttpError extends Error {
   }
 }
 
-export async function askQuestion(question: string): Promise<AskResult> {
-  const response = await fetch('/api/ask', {
+async function post<T>(path: string, body: unknown): Promise<T> {
+  const response = await fetch(path, {
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify({ question }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
@@ -34,5 +34,34 @@ export async function askQuestion(question: string): Promise<AskResult> {
     throw new HttpError(response.status, detail?.message ?? `Request failed (${String(response.status)}).`);
   }
 
-  return (await response.json()) as AskResult;
+  return (await response.json()) as T;
+}
+
+/**
+ * Ask a question.
+ *
+ * `threadId` is optional and asking without one is the default. §2.5 demotes
+ * Ask deliberately; a surface that saved every question by itself would be a
+ * chat log the operator never chose to keep.
+ */
+export async function askQuestion(question: string, threadId?: string): Promise<AskResult> {
+  return post<AskResult>('/api/ask', threadId === undefined ? { question } : { question, threadId });
+}
+
+export type ThreadDraft = {
+  readonly id: string;
+  readonly title: string;
+  readonly note: string | null;
+};
+
+export async function saveThread(thread: ThreadDraft): Promise<void> {
+  await post('/api/enquiry', { kind: 'thread', thread });
+}
+
+export async function deleteThread(id: string, reason: string | null): Promise<void> {
+  await post('/api/enquiry', { kind: 'thread_delete', delete: { id, reason } });
+}
+
+export async function deleteTurn(id: string, reason: string | null): Promise<void> {
+  await post('/api/enquiry', { kind: 'turn_delete', delete: { id, reason } });
 }

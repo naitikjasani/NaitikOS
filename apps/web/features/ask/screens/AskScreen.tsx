@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { Badge, Button, Card, CardBody, Divider, Inline, Spinner, Stack, Text, TextAreaField } from '@naitikos/design-system';
 
 import type { AskResult } from '@/lib/platform/ask';
-import type { RenderedParagraph } from '@/lib/platform/references';
 import { askQuestion } from '../services/askClient';
+import { AnsweredParagraph, UnresolvedNote } from '../components/AnsweredParagraph';
 
 /**
  * `/ask` — §4.13, and §2.5's deliberate demotion of it.
@@ -23,9 +23,11 @@ import { askQuestion } from '../services/askClient';
  * feel conversational is an invitation to spend time in it — which §1.4 counts
  * as a counter-metric, not a success.
  *
- * §3.2 lists `/ask/:threadId` for "a saved line of enquiry". That needs a table
- * and it is not built; a single-turn surface is the honest version of this
- * screen until it is, rather than a fake thread that forgets.
+ * §3.2's `/ask/:threadId` — "a saved line of enquiry" — now exists, and this
+ * screen deliberately does not become it. Asking here answers and forgets. A
+ * question worth returning to is saved to a thread by choosing one, which is an
+ * act; a surface that saved every question by itself would be a chat log
+ * nobody chose to keep.
  *
  * ## Figures are marked, because §10.10 is invisible otherwise
  *
@@ -199,7 +201,7 @@ function AnswerCard({ result }: { readonly result: AskResult }): ReactNode {
             <Stack gap="3">
               {result.answer.answerable ? (
                 result.paragraphs.map((paragraph, index) => (
-                  <Paragraph key={index} paragraph={paragraph} />
+                  <AnsweredParagraph key={index} paragraph={paragraph} />
                 ))
               ) : (
                 <Text role="body" as="p">
@@ -217,21 +219,13 @@ function AnswerCard({ result }: { readonly result: AskResult }): ReactNode {
                 {result.answer.omitted}
               </Text>
 
-              {result.unresolvedReferences > 0 && (
-                /*
-                 * The model named something that is not in the record — an
-                 * observation since deleted, or an id it invented. Both render
-                 * as a gap in the sentence above; this says how many, so an
-                 * oddly-reading answer has a stated cause rather than leaving
-                 * the operator to wonder.
-                 */
-                <Text role="caption" tone="tertiary">
-                  {result.unresolvedReferences === 1 ?
-                    'One figure could not be found in your record and is shown as a gap.'
-                  : `${String(result.unresolvedReferences)} figures could not be found in your record and are shown as gaps.`
-                  }
-                </Text>
-              )}
+              {/*
+                The model named something not in the record — an observation
+                since deleted, or an id it invented. Both render as a gap in the
+                sentence above; this says how many, so an oddly-reading answer
+                has a stated cause rather than leaving the operator to wonder.
+              */}
+              <UnresolvedNote count={result.unresolvedReferences} />
             </Stack>
           )}
 
@@ -243,55 +237,5 @@ function AnswerCard({ result }: { readonly result: AskResult }): ReactNode {
         </Stack>
       </CardBody>
     </Card>
-  );
-}
-
-/**
- * One answered paragraph, with its figures marked as coming from the record.
- *
- * §10.10's guarantee — "the model is never the source of a figure the user
- * reads" — is invisible if a resolved number looks exactly like a written one.
- * The `<mark>` is not decoration: it is the interface saying *this came from
- * your data* about the one part of the sentence where that matters.
- *
- * An unresolved reference renders as an explicit gap. The model named an
- * observation that is not there — deleted, or invented — and the honest output
- * is a hole in the sentence. Substituting nothing would leave "has been below
- * on most days", which reads as complete and is missing its subject.
- */
-function Paragraph({ paragraph }: { readonly paragraph: RenderedParagraph }): ReactNode {
-  return (
-    <Stack gap="1">
-      <Text role="body" as="p">
-        {paragraph.rendered.segments.map((segment, index) => {
-          if (segment.kind === 'text') return <span key={index}>{segment.text}</span>;
-          if (segment.kind === 'value') {
-            return (
-              <mark key={index} className="nos-ask__figure" title="Read from your record">
-                {segment.text}
-              </mark>
-            );
-          }
-          return (
-            <span key={index} className="nos-ask__gap" title="This reference could not be resolved">
-              &mdash;
-            </span>
-          );
-        })}
-      </Text>
-
-      {paragraph.hasSuperseded && (
-        <Text role="caption" tone="tertiary">
-          {/*
-            §9.1 makes a correction a supersession rather than an edit, so this
-            answer still shows the figure it was written about. Rendering the
-            correction in its place would make a saved answer say something the
-            model never said.
-          */}
-          A figure here has been corrected since this was written. The value shown is the one the answer was
-          about.
-        </Text>
-      )}
-    </Stack>
   );
 }

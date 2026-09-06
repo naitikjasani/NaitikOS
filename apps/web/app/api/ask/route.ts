@@ -26,8 +26,19 @@ import { ask } from '@/lib/platform/ask';
 
 export const dynamic = 'force-dynamic';
 
-/** A question, not an essay. Long enough for the hardest one §4.13 gives. */
-const askSchema = z.object({ question: z.string().min(3).max(600) });
+/**
+ * A question, not an essay. Long enough for the hardest one §4.13 gives.
+ *
+ * `threadId` is optional and is the whole of §3.2's saved-enquiry feature at
+ * the wire. Present, the turn is stored against that thread; absent, the
+ * question is answered and forgotten, which stays the default — §2.5 demotes
+ * Ask deliberately, and a surface that saved every question by itself would be
+ * a chat log the operator never chose to keep.
+ */
+const askSchema = z.object({
+  question: z.string().min(3).max(600),
+  threadId: z.string().uuid().optional(),
+});
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const guarded = await guard(request, 'observation:read');
@@ -38,7 +49,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   if ('response' in parsed) return parsed.response;
 
   try {
-    const result = await ask(platform.db, { question: parsed.data.question, zone: platform.zone });
+    const result = await ask(platform.db, {
+      question: parsed.data.question,
+      zone: platform.zone,
+      ...(parsed.data.threadId === undefined ? {} : { threadId: parsed.data.threadId }),
+    });
     if (!result.ok) return errorResponse(result.error, traceId);
 
     return NextResponse.json(result.value);

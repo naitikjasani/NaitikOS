@@ -62,6 +62,7 @@ import {
   createHealthRepository,
   createMedicationRepository,
   createMetricRepository,
+  createEnquiryRepository,
   createObservationRepository,
   createProfileRepository,
 } from '@naitikos/db';
@@ -103,7 +104,7 @@ export type AskResult = {
 
 export async function ask(
   db: Database,
-  input: { readonly question: string; readonly zone: string },
+  input: { readonly question: string; readonly zone: string; readonly threadId?: string },
 ): Promise<Result<AskResult, DomainError>> {
   const preferences = await createProfileRepository(db).getPreferences();
   if (!preferences.ok) return preferences;
@@ -164,9 +165,18 @@ export async function ask(
    * auditability a requirement, and the refused and blocked rows are the ones
    * an investigation actually wants.
    */
+  /*
+   * Held so the turn can point at it. This is the column that makes an answer
+   * from March readable against March's consent rather than against today's —
+   * null only when no call was made at all, which is the common case with the
+   * layer off.
+   */
+  let interactionId: string | null = null;
+
   if (outcome.record !== null) {
+    interactionId = crypto.randomUUID();
     await createAiInteractionRepository(db).record({
-      id: crypto.randomUUID(),
+      id: interactionId,
       purpose: 'ask',
       model: outcome.record.model,
       inputTokens: outcome.record.usage.inputTokens,
@@ -196,7 +206,7 @@ export async function ask(
     outcome.ok ? await renderNarrations(db, outcome.value.paragraphs) : ok<readonly RenderedParagraph[]>([]);
   if (!paragraphs.ok) return paragraphs;
 
-  return ok({
+  const result: AskResult = {
     question: input.question,
     kind,
     windowDays,
@@ -208,7 +218,44 @@ export async function ask(
       (total, entry) => total + entry.rendered.unresolved.length + entry.rendered.orphanSlots.length,
       0,
     ),
-  });
+  };
+
+  /*
+   * The turn is stored last, and only when a thread was named.
+   *
+   * Last, because a failure to save must not lose an answer the operator is
+   * already looking at — they asked a question and got one, and a write error
+   * downstream of that is a bookkeeping problem rather than a reason to show
+   * them nothing.
+   *
+   * Only when named, because §2.5 demotes Ask deliberately. A surface that
+   * saved every question by itself would be a chat log nobody chose to keep,
+   * and §1.4 counts time in app as a counter-metric.
+   *
+   * `answer` stores what the model produced — templates and references, not the
+   * rendered prose above. §9.1's supersession then works in the operator's
+   * favour: reopening this turn in a year resolves the figures against the log
+   * as it stands, and reports any that have been corrected since.
+   */
+  if (input.threadId !== undefined) {
+    const stored = await createEnquiryRepository(db).addTurn({
+      id: crypto.randomUUID(),
+      threadId: input.threadId,
+      question: input.question,
+      kind,
+      windowDays,
+      answer: outcome.ok ? outcome.value : null,
+      omitted: outcome.ok ? pack.omitted : null,
+      problem: outcome.ok ? null : outcome.sentence,
+      /* The ledger row, so this turn is readable against the consent that was
+       * in force when it was asked rather than against today's (§9.2). */
+      interactionId,
+      askedAt: isoFromMillis(systemClock.nowMillis()),
+    });
+    if (!stored.ok) return stored;
+  }
+
+  return ok(result);
 }
 
 /* -------------------------------------------------------------------------

@@ -251,3 +251,13 @@ export type {
   ReferenceRepository,
   ReferenceRows,
 } from './reference.repository';
+
+/* --- Saved lines of enquiry (§3.2's /ask/:threadId) --------------------- */
+export { createEnquiryRepository } from './enquiry.repository';
+export type {
+  AskThreadRow,
+  AskTurnRow,
+  EnquiryRepository,
+  ThreadInput,
+  TurnInput,
+} from './enquiry.repository';
