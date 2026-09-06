@@ -12,3 +12,9 @@ export { SkinStateScreen } from './screens/SkinStateScreen';
 export { RoutineScreen } from './screens/RoutineScreen';
 export { ProductsScreen } from './screens/ProductsScreen';
 export { PhotoCaptureScreen } from './screens/PhotoCaptureScreen';
+
+/* Per-region history and treatment courses (§3.2). Both Server Components —
+ * neither has an interaction, because logging happens on `/body/skin/state`
+ * and courses are recorded through Health. */
+export { SkinRegionsScreen } from './screens/SkinRegionsScreen';
+export { TreatmentsScreen } from './screens/TreatmentsScreen';

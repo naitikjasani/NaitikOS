@@ -88,6 +88,16 @@ export function SkinOverviewScreen({ dayKey }: { readonly dayKey: string }): Rea
             Photos
           </Text>
         </Link>
+        <Link className="nos-inline-link" href="/body/skin/regions">
+          <Text role="body-sm" as="span">
+            Regions
+          </Text>
+        </Link>
+        <Link className="nos-inline-link" href="/body/skin/treatments">
+          <Text role="body-sm" as="span">
+            Treatments
+          </Text>
+        </Link>
       </Inline>
 
       {data.states.length === 0 ? (

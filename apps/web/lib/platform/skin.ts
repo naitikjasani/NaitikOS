@@ -21,12 +21,14 @@ import 'server-only';
 import type { Result } from '@naitikos/shared';
 import { err, ok } from '@naitikos/shared';
 import type {
+  BodyRegion,
   DomainError,
   Hlc,
   MetricRegistry,
   ProductChange,
   ProductEvent,
   Reaction,
+  RegionTrend,
   Routine,
   RoutineStep,
   RoutineWindowAdherence,
@@ -35,6 +37,8 @@ import type {
   SkinStateInput,
 } from '@naitikos/core';
 import {
+  REGION_LABELS,
+  TRACKED_REGIONS,
   changesBefore,
   daysSinceIntroduction,
   hlcReceive,
@@ -45,6 +49,7 @@ import {
   reactionHistory,
   regionTrends,
   routineWindowAdherence,
+  shiftDayKey,
   systemClock,
   windowDayKeys,
 } from '@naitikos/core';
@@ -162,6 +167,108 @@ export async function loadSkinOverview(
     states: states.value,
     regions: regionTrends(states.value),
     flares,
+  });
+}
+
+/* -------------------------------------------------------------------------
+ * Per-region history
+ * ---------------------------------------------------------------------- */
+
+/**
+ * How far back the regions view reaches.
+ *
+ * Ninety days. The overview's window answers "how is it now"; this one answers
+ * "is one region moving while another is not", and that question needs long
+ * enough for a treatment course or a seasonal change to show. Shorter and every
+ * region looks flat; longer and a resolved flare from last spring drags the mean
+ * of a region that has been clear for months.
+ */
+export const REGION_WINDOW_DAYS = 90;
+
+export type RegionSeriesPoint = {
+  readonly dayKey: string;
+  /** `null` for a day with no record. Never zero — §8.9. */
+  readonly state: number | null;
+  readonly lesionCount: number | null;
+};
+
+export type RegionHistory = {
+  readonly region: BodyRegion;
+  readonly label: string;
+  readonly trend: RegionTrend | null;
+  /** One entry per day in the window, oldest first. */
+  readonly series: readonly RegionSeriesPoint[];
+};
+
+export type SkinRegionsView = {
+  readonly fromDayKey: string;
+  readonly toDayKey: string;
+  readonly windowDays: number;
+  /** One per tracked region, in §4.2's order, whether or not it has data. */
+  readonly regions: readonly RegionHistory[];
+  /** Days in the window with any skin record at all, for the coverage line. */
+  readonly recordedDays: number;
+};
+
+/**
+ * Each tracked region as its own series.
+ *
+ * The reason this is not the overview: `regionTrends` collapses a region to one
+ * mean, and the question this page exists for — *is my face clearing while my
+ * back is not* — is invisible in a mean. Two regions with the same ninety-day
+ * average can be moving in opposite directions.
+ *
+ * Every tracked region appears whether or not it has been recorded. §4.2 fixes
+ * the list at face, chest and back, and a region silently absent because it was
+ * never logged would read as a region with nothing wrong.
+ */
+export async function loadSkinRegions(
+  db: Database,
+  options: { readonly toDayKey: string },
+): Promise<Result<SkinRegionsView, DomainError>> {
+  const fromDayKey = shiftDayKey(options.toDayKey, -(REGION_WINDOW_DAYS - 1)) ?? options.toDayKey;
+
+  const states = await createSkinRepository(db).statesBetween(fromDayKey, options.toDayKey);
+  if (!states.ok) return err(states.error);
+
+  const dayKeys = windowDayKeys(options.toDayKey, REGION_WINDOW_DAYS);
+  const trends = new Map(regionTrends(states.value).map((trend) => [trend.region, trend]));
+
+  /* Region readings indexed by day, so the series is one pass rather than a
+   * scan of every state per day. */
+  const byRegionAndDay = new Map<string, { state: number | null; lesionCount: number | null }>();
+  for (const state of states.value) {
+    for (const region of state.regions) {
+      byRegionAndDay.set(`${region.region}:${state.observedOn}`, {
+        state: region.state,
+        lesionCount: region.activeLesionCount,
+      });
+    }
+  }
+
+  const recordedDays = new Set(states.value.map((state) => state.observedOn)).size;
+
+  return ok({
+    fromDayKey,
+    toDayKey: options.toDayKey,
+    windowDays: REGION_WINDOW_DAYS,
+    recordedDays,
+    regions: TRACKED_REGIONS.map((region) => ({
+      region,
+      label: REGION_LABELS[region],
+      trend: trends.get(region) ?? null,
+      series: dayKeys.map((dayKey) => {
+        const found = byRegionAndDay.get(`${region}:${dayKey}`);
+        return {
+          dayKey,
+          /* A day with no record contributes `null`, never a zero. The grid
+           * renders the two differently, and a day the operator did not log is
+           * not a day their skin was clear. */
+          state: found?.state ?? null,
+          lesionCount: found?.lesionCount ?? null,
+        };
+      }),
+    })),
   });
 }
 
