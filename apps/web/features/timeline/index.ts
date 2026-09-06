@@ -9,3 +9,7 @@ export type { TimelineListProps } from './components/TimelineList';
  */
 export { MedicalTimelineScreen } from './screens/MedicalTimelineScreen';
 export { LifeTimelineScreen } from './screens/LifeTimelineScreen';
+
+/* One day, fully expanded (§3.2). Server-rendered: the date is known at request
+ * time, and §9.1's log is append-only so there is nothing to interact with. */
+export { TimelineDayScreen } from './screens/TimelineDayScreen';

@@ -18,6 +18,7 @@
  */
 
 import type { ReactNode } from 'react';
+import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { Badge, Card, CardBody, EmptyState, ErrorState, Inline, LoadingState, Stack, Text } from '@naitikos/design-system';
 
@@ -100,8 +101,18 @@ export function TimelineList({ grouping = 'day', limit = 50 }: TimelineListProps
             between them. §8.13 treats the document outline as a navigation
             surface rather than as styling.
           */}
+          {/*
+            The heading links to the expanded day when the grouping is by day —
+            `group.key` is the day key in that case. §3.2's `/timeline/:date`
+            shows the detail entries this view collapses, and the heading is
+            where somebody looking at a day would reach for it.
+          */}
           <Text role="title-3" as="h2">
-            {group.label}
+            {grouping === 'day' ?
+              <Link className="nos-inline-link" href={`/timeline/${group.key}`}>
+                {group.label}
+              </Link>
+            : group.label}
           </Text>
 
           <Stack gap="2" as="ul">

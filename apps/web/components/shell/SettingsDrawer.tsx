@@ -54,6 +54,9 @@ const ELSEWHERE: readonly { readonly href: string; readonly label: string }[] = 
   { href: '/settings/notifications', label: 'Notifications — opt-in only, and currently silent' },
   { href: '/settings/integrations', label: 'Integrations — what can be imported, and what cannot' },
   { href: '/settings/profile', label: 'Profile — identity, zone, clinical context' },
+  { href: '/settings/privacy', label: 'Privacy — where the encryption boundary sits, and what leaves' },
+  { href: '/settings/data', label: 'Data — export the record, and read the audit log' },
+  { href: '/settings', label: 'All settings' },
 ]);
 
 export function SettingsDrawer(): ReactNode {

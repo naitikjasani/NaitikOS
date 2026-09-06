@@ -262,3 +262,7 @@ export type {
   ThreadInput,
   TurnInput,
 } from './enquiry.repository';
+
+/* --- Reading §9.4's permanent audit log (`/settings/data/audit`) --------- */
+export { createAuditReader } from './observability.repository';
+export type { AuditEntry, AuditReader } from './observability.repository';

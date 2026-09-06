@@ -47,6 +47,10 @@ import type {
   Tracer,
 } from '@naitikos/core';
 import { systemClock } from '@naitikos/core';
+import type { Result } from '@naitikos/shared';
+import { ok } from '@naitikos/shared';
+import type { DomainError } from '@naitikos/core';
+import { asc, count, desc, eq } from 'drizzle-orm';
 
 import type { Database } from '../client';
 import { appEvent, auditLog } from '../schema/operations';
@@ -362,6 +366,87 @@ export function createAuditHook(db: Database): AuditHook {
         ...(input.changeReason === undefined ? {} : { changeReason: input.changeReason }),
         ...(input.traceId === undefined ? {} : { traceId: input.traceId }),
       });
+    },
+  };
+}
+
+/**
+ * Reading the audit log — §3.2's `/settings/data/audit`.
+ *
+ * A reader, next to the writer, because §9.4 makes this domain data rather than
+ * operational exhaust: *"Audit is domain data, lives in Postgres, and is
+ * retained forever."* A permanent record nobody can read is a permanent record
+ * that might as well not exist, and the whole argument for keeping it forever
+ * is that somebody will one day need to ask what changed.
+ *
+ * **There is no write path here and never will be.** The log is the thing that
+ * makes every other soft delete trustworthy; a repository that could amend it
+ * would make it evidence of nothing.
+ */
+export type AuditEntry = {
+  readonly id: string;
+  readonly entityType: string;
+  readonly entityId: string;
+  readonly operation: string;
+  readonly actor: string;
+  readonly changeReason: string | null;
+  readonly occurredAt: string;
+  readonly traceId: string | null;
+};
+
+export type AuditReader = {
+  /** Most recent first. Filtered by entity type when one is given. */
+  recent(limit: number, entityType?: string): Promise<Result<readonly AuditEntry[], DomainError>>;
+  /** Distinct entity types present, for the filter. */
+  entityTypes(): Promise<Result<readonly string[], DomainError>>;
+  /** Total rows. Shown so a page of fifty is legible as a page of fifty. */
+  total(): Promise<Result<number, DomainError>>;
+};
+
+export function createAuditReader(db: Database): AuditReader {
+  return {
+    async recent(limit, entityType) {
+      const rows = await db
+        .select({
+          id: auditLog.id,
+          entityType: auditLog.entityType,
+          entityId: auditLog.entityId,
+          operation: auditLog.operation,
+          actor: auditLog.actor,
+          changeReason: auditLog.changeReason,
+          occurredAt: auditLog.occurredAt,
+          traceId: auditLog.traceId,
+        })
+        .from(auditLog)
+        .where(entityType === undefined ? undefined : eq(auditLog.entityType, entityType))
+        .orderBy(desc(auditLog.occurredAt))
+        .limit(limit);
+
+      /*
+       * `before_state` and `after_state` are deliberately not selected.
+       *
+       * They hold whole entity snapshots — a journal entry, a symptom note —
+       * and §5.11's rule is names and numbers, never content. A viewer that
+       * rendered them would put the most sensitive text in the database onto a
+       * settings page, which is the one screen most likely to be open while
+       * somebody is looking over a shoulder. What changed is answerable from
+       * `changed_fields` if it is ever needed; what it changed *to* is the
+       * entity's own surface to show.
+       */
+      return ok(rows.map((row) => ({ ...row })));
+    },
+
+    async entityTypes() {
+      const rows = await db
+        .selectDistinct({ entityType: auditLog.entityType })
+        .from(auditLog)
+        .orderBy(asc(auditLog.entityType));
+      return ok(rows.map((row) => row.entityType));
+    },
+
+    async total() {
+      const rows = await db.select({ total: count() }).from(auditLog);
+      return ok(Number(rows[0]?.total ?? 0));
     },
   };
 }

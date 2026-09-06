@@ -59,8 +59,19 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const registry = await createMetricRepository(platform.db).registry();
     if (!registry.ok) return errorResponse(registry.error, traceId);
 
+    /*
+     * `includeOperational` is opt-in from the query string.
+     *
+     * §9.10's export is of *the record*, and an idempotency key is not a fact
+     * about a person — so the default omits the operational tables. The flag
+     * exists because a full-fidelity backup drill wants everything, and that is
+     * a different job from an export. Defaulting the other way would put sync
+     * bookkeeping into the archive a stranger reads in 2046.
+     */
+    const includeOperational = new URL(request.url).searchParams.get('operational') === 'true';
+
     const [tables, timeline] = await Promise.all([
-      exports.tables(),
+      exports.tables({ includeOperational }),
       exports.medicalTimelineMarkdown(),
     ]);
     if (!tables.ok) return errorResponse(tables.error, traceId);

@@ -12,3 +12,8 @@ export { CaptureSettingsScreen } from './screens/CaptureSettingsScreen';
 export { NotificationsSettingsScreen } from './screens/NotificationsSettingsScreen';
 export { IntegrationsSettingsScreen } from './screens/IntegrationsSettingsScreen';
 
+
+/* The data surfaces (§3.2). The export builder is a client component only
+ * because of one toggle; the audit viewer only because of one filter. */
+export { ExportBuilderScreen } from './screens/ExportBuilderScreen';
+export { AuditScreen } from './screens/AuditScreen';
