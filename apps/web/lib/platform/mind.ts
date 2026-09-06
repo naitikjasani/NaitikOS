@@ -192,6 +192,19 @@ export type MindOverview = {
   /** True on a settled stretch with no plan on file — never during a bad one. */
   readonly invitePlanning: boolean;
   readonly prompt: JournalPrompt | null;
+  /**
+   * Every active prompt, for `/mind/journal/prompts`.
+   *
+   * Carried on the overview rather than given its own endpoint. They are seeded
+   * rows that change when the seed does, and a second endpoint returning the
+   * same list would be a second thing to keep in step — the payload cost is a
+   * dozen short strings.
+   *
+   * `/mind` renders only {@link MindOverview.prompt}, and deliberately: §4.7's
+   * journal is for opening and writing in, and a wall of questions is a
+   * decision to make before writing on an evening when making one is hard.
+   */
+  readonly promptLibrary: readonly JournalPrompt[];
   readonly journal: readonly JournalListItem[];
 };
 
@@ -276,6 +289,7 @@ export async function loadMindOverview(
     crisis: crisisSurface(evaluation, plan.value),
     invitePlanning: shouldInvitePlanning(evaluation),
     prompt: promptForDay(prompts.value, options.toDayKey),
+    promptLibrary: prompts.value,
     journal: journal.value,
   });
 }

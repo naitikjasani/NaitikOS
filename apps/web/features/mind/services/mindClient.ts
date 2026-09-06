@@ -83,6 +83,8 @@ export type MindOverview = {
   readonly crisis: { readonly plan: CrisisPlan } | null;
   readonly invitePlanning: boolean;
   readonly prompt: JournalPrompt | null;
+  /** Every active prompt, for `/mind/journal/prompts`. See the server type. */
+  readonly promptLibrary: readonly JournalPrompt[];
   readonly journal: readonly JournalListItem[];
 };
 

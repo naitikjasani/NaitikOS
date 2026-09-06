@@ -110,9 +110,19 @@ export function MindOverviewScreen({
           description="Mood, energy and anxiety are three taps in the Daily Close. They appear here once there is a day or two of them."
         />
       ) : (
-        data.scales.map((scale) => (
-          <ScaleCard key={scale.id} scale={scale} annotations={data.annotations} />
-        ))
+        <>
+          {data.scales.map((scale) => (
+            <ScaleCard key={scale.id} scale={scale} annotations={data.annotations} />
+          ))}
+          {/* The long view. This screen answers "how am I now"; six months is a
+              different question and gets its own page rather than a range
+              selector here, which would make this screen two screens. */}
+          <Link className="nos-inline-link" href="/mind/mood">
+            <Text role="caption" as="span">
+              Mood and energy over six months
+            </Text>
+          </Link>
+        </>
       )}
 
       <Card variant="outlined">
@@ -159,11 +169,18 @@ export function MindOverviewScreen({
               <Text role="title-3" as="h2">
                 Journal
               </Text>
-              <Link className="nos-inline-link" href="/mind/journal">
-                <Text role="caption" as="span">
-                  Open
-                </Text>
-              </Link>
+              <Inline gap="3" align="center">
+                <Link className="nos-inline-link" href="/mind/journal/prompts">
+                  <Text role="caption" as="span">
+                    Prompts
+                  </Text>
+                </Link>
+                <Link className="nos-inline-link" href="/mind/journal">
+                  <Text role="caption" as="span">
+                    Open
+                  </Text>
+                </Link>
+              </Inline>
             </Inline>
 
             {data.prompt === null ? null : (

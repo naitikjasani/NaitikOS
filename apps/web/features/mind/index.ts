@@ -13,3 +13,8 @@ export { JournalScreen } from './screens/JournalScreen';
 export { JournalEntryScreen } from './screens/JournalEntryScreen';
 export { PracticesScreen } from './screens/PracticesScreen';
 export { MedicationScreen } from './screens/MedicationScreen';
+
+/* The long-window mood and energy view (§3.2). Separate from the overview
+ * because six months and one month answer different questions. */
+export { MoodScreen, MOOD_WINDOW_DAYS } from './screens/MoodScreen';
+export { PromptsScreen } from './screens/PromptsScreen';

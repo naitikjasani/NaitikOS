@@ -21,11 +21,18 @@ import { MedicationRegisterForm } from '@/features/registers';
 import { fetchMedications, logDose } from '../services/mindClient';
 
 /**
- * `/mind/meds` — the psychiatric medication lens.
+ * The medication register, and its psychiatric lens.
  *
- * §3.3(3): "one row, three lenses." This is not a second medication register.
- * It is `/api/medications?lens=psychiatric` — the same rows Health will render
- * in full in V2, filtered to the two the operator is actually on.
+ * §3.3(3): "one row, three lenses." There is no second medication register —
+ * this component is both `/body/health/medications` (every row) and
+ * `/mind/meds` (`?lens=psychiatric`, the two the operator is actually on),
+ * separated by one prop.
+ *
+ * It lives under `mind/` because that lens shipped first, in V2, while Health
+ * core was still ahead. The canonical route in §3.2 is the Health one and the
+ * Mind route is documented there as "→ /body/health/medications, filtered";
+ * the file has simply not been moved, and moving it would drag
+ * `fetchMedications` and `logDose` out of `mindClient` for no behavioural gain.
  *
  * ## Every figure is shown with both of its inputs
  *
@@ -51,17 +58,36 @@ export function MedicationScreen({
   dayKey,
   zone,
   nowIso,
+  psychiatricOnly = true,
 }: {
   readonly dayKey: string;
   readonly zone: string;
   readonly nowIso: string;
+  /**
+   * Which lens this is.
+   *
+   * Defaults to the psychiatric one because that is the lens that shipped
+   * first and is the more sensitive of the two — a component that defaulted to
+   * showing every medication would put the full register on `/mind/meds` the
+   * first time somebody forgot the prop, which is the wrong direction to fail
+   * in for §4.7's duty of care.
+   *
+   * §3.3(3), "one row, three lenses", is why this is a parameter rather than a
+   * second component. Two screens over one endpoint would drift on exactly the
+   * detail that matters here — whether days with no record are counted as
+   * missed doses.
+   */
+  readonly psychiatricOnly?: boolean;
 }): ReactNode {
   const queryClient = useQueryClient();
   const [adding, setAdding] = useState(false);
 
   const lens = useQuery({
-    queryKey: ['medications', dayKey, zone, 'psychiatric'],
-    queryFn: () => fetchMedications(dayKey, zone, { psychiatricOnly: true, windowDays: 30 }),
+    /* The lens is part of the key. Without it, opening the register after the
+     * psychiatric view would render two medications from cache and look like
+     * a register with two rows in it. */
+    queryKey: ['medications', dayKey, zone, psychiatricOnly ? 'psychiatric' : 'all'],
+    queryFn: () => fetchMedications(dayKey, zone, { psychiatricOnly, windowDays: 30 }),
   });
 
   const dose = useMutation({
