@@ -9,7 +9,7 @@ import type { InsightRow } from '@/lib/platform/insights';
 import { setDisposition } from '../services/insightClient';
 
 /**
- * `/life/insights` — §3.2's V2 inbox.
+ * `/insights` — §3.2's V2 inbox.
  *
  * ## An inbox, not a feed
  *
@@ -82,7 +82,7 @@ export function InsightInboxScreen({
                     {/* §4.13: an insight the operator cannot audit is one they
                         should not trust, so the card is a door to the evidence
                         rather than the whole of it. */}
-                    <Link className="nos-inline-link" href={`/life/insights/${insight.id}`}>
+                    <Link className="nos-inline-link" href={`/insights/${insight.id}`}>
                       {insight.title}
                     </Link>
                     <Inline gap="2" align="center">
@@ -157,8 +157,21 @@ export function InsightInboxScreen({
           <Link className="nos-inline-link" href="/ask">
             Ask something the inbox did not raise
           </Link>
-          <Link className="nos-inline-link" href="/life/insights/archive">
+          <Link className="nos-inline-link" href="/insights/archive">
             Everything ever surfaced
+          </Link>
+          {/*
+            §10.9's calibration surface. It had no inbound link from anywhere in
+            the application until the inbox moved up beside it — an orphaned
+            route, reachable only by typing the URL.
+
+            It belongs here rather than anywhere else, because calibration is
+            the answer to the question this page provokes: *should I believe
+            any of this?* A system that surfaces findings and hides its own
+            track record is asking for trust it has not shown the working for.
+          */}
+          <Link className="nos-inline-link" href="/insights/calibration">
+            How well its predictions have held up
           </Link>
         </Inline>
         <Text role="caption" tone="tertiary">

@@ -1,4 +1,4 @@
-/** `/life/insights` — §3.2's V2 inbox, §10.6's surface. */
+/** `/insights` — §3.2's V2 inbox, §10.6's surface. */
 
 import type { ReactNode } from 'react';
 import { dayKeyInZone, isoFromMillis, systemClock } from '@naitikos/core';

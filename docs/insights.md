@@ -1,6 +1,7 @@
 # Insights — the deterministic battery
 
-**Status:** implemented, Week 4 · **Blueprint sections:** §2.1, §10.6, §3.2
+**Status:** implemented, Week 4; the V2 inbox routes moved to the top level on
+7 September 2026 (§7). · **Blueprint sections:** §2.1, §10.6, §3.2, §10.9
 **Related:** [mind.md](mind.md) · [skin.md](skin.md)
 
 ---
@@ -138,10 +139,44 @@ inbox needs anyway.
 §3.2 marks `/insights` as V2 and gives the MVP one place for a finding:
 `/today`'s "Today's signal — at most ONE insight card".
 
-So there is no inbox route in this milestone. The cap is enforced server-side in
-`topFinding`, not in the component — §3.3's argument is that an interface which
-shows everything shows nothing, and an insight surface is the easiest place in a
-health application to violate it.
+The cap is enforced server-side in `topFinding`, not in the component — §3.3's
+argument is that an interface which shows everything shows nothing, and an
+insight surface is the easiest place in a health application to violate it.
+
+### The routes, and where they live (7 September 2026)
+
+The V2 inbox now exists, at the four routes §3.2 names:
+
+| Route | What it is |
+|---|---|
+| `/insights` | The inbox — what survived the battery, usually empty |
+| `/insights/:id` | Evidence, method, confidence |
+| `/insights/archive` | Dismissed and acted-on history |
+| `/insights/calibration` | §10.9 — how well the predictions have held up |
+
+They were built under `/life/insights` and moved here on 7 September 2026.
+Two reasons, and the second is the one that mattered.
+
+**§3.2 puts insights at the top level, beside `/ask`, not under a pillar.** That
+placement is an argument rather than a filing convention: a finding is a lens
+over the whole record, and an adherence finding is about Body. Nesting the inbox
+under Life implied an ownership that does not exist.
+
+**More concretely, the section was split.** `/insights/calibration` had already
+been built at the top level while the inbox sat under `/life`, so two halves of
+one surface lived in two places — which is worse than either choice on its own.
+
+Moving the inbox also fixed an orphan. Nothing anywhere in the application
+linked to `/insights/calibration`; it was reachable only by typing the URL. It
+is now linked from the inbox, which is where it belongs — calibration answers
+the question the inbox provokes, which is *should I believe any of this?* A
+system that surfaces findings and hides its own track record is asking for trust
+it has not shown the working for.
+
+Neither `/insights` nor `/ask` appears in the primary navigation, so the inbox
+is still listed on `/life` as a cross-pillar pointer. Without that card the only
+route to it is the command palette, which is a surface you have to already know
+about. `/ask` has exactly that problem today and it is worth fixing.
 
 The adherence figures themselves appear where they are actionable: `/mind/meds`
 and `/body/skin/routine`.

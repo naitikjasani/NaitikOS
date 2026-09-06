@@ -7,7 +7,7 @@ import { Badge, Inline, Stack, Text } from '@naitikos/design-system';
 import type { InsightRow } from '@/lib/platform/insights';
 
 /**
- * `/life/insights/archive` — everything ever surfaced.
+ * `/insights/archive` — everything ever surfaced.
  *
  * ## Why the dismissed ones are kept
  *
@@ -37,7 +37,7 @@ export function InsightArchiveScreen({ insights }: { readonly insights: readonly
         {insights.map((insight) => (
           <Inline key={insight.id} justify="between" align="center" wrap>
             <Stack gap="1">
-              <Link className="nos-inline-link" href={`/life/insights/${insight.id}`}>
+              <Link className="nos-inline-link" href={`/insights/${insight.id}`}>
                 {insight.title}
               </Link>
               <Text role="caption" tone="tertiary">

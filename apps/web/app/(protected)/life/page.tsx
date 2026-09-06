@@ -1,10 +1,18 @@
 /**
  * `/life` — the pillar overview.
  *
- * Six modules. §3.3 R6 keeps a route absent until it has a surface — "A
- * visible-but-empty module teaches the user that the system is a graveyard" —
- * so each of these joined the list on the commit that gave it one. People and
- * Places were the last two to arrive.
+ * Five modules and one pointer. §3.3 R6 keeps a route absent until it has a
+ * surface — "A visible-but-empty module teaches the user that the system is a
+ * graveyard" — so each of these joined the list on the commit that gave it one.
+ * People and Places were the last two to arrive.
+ *
+ * **Insights is not a Life module.** §3.2 puts it at the top level beside
+ * `/ask`, because a finding is a lens over the whole record rather than
+ * something Life owns — an adherence finding is about Body. It is listed here
+ * anyway, and deliberately: the primary nav has no entry for it, so without
+ * this card the only route to the inbox is the command palette, which is a
+ * surface you have to already know about. Its sibling `/ask` has exactly that
+ * problem today.
  */
 
 import type { ReactNode } from 'react';
@@ -22,7 +30,7 @@ const MODULES = [
     description: 'A target over numbers you already record, and an honest projection of where the line goes.',
   },
   {
-    href: '/life/insights',
+    href: '/insights',
     title: 'Insights',
     description: 'The few findings that survived the statistics, each with what it does not prove. Usually empty, which is the system working.',
   },

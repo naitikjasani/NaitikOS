@@ -1,4 +1,4 @@
-/** `/life/insights/archive` — §3.2's "dismissed & acted-on history". */
+/** `/insights/archive` — §3.2's "dismissed & acted-on history". */
 
 import type { ReactNode } from 'react';
 

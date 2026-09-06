@@ -175,7 +175,7 @@ export function CommandPalette(): ReactNode {
             value="insights inbox"
             onSelect={() => {
               run(() => {
-                router.push('/life/insights');
+                router.push('/insights');
               });
             }}
             className="palette__item"

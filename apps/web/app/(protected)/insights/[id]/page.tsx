@@ -1,4 +1,4 @@
-/** `/life/insights/:id` — §3.2, §4.13's audit view. */
+/** `/insights/:id` — §3.2, §4.13's audit view. */
 
 import type { ReactNode } from 'react';
 import { notFound } from 'next/navigation';

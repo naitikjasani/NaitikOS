@@ -7,7 +7,7 @@ import { Badge, Card, CardBody, Divider, Inline, Stack, Text } from '@naitikos/d
 import type { InsightEvidenceRow, InsightRow } from '@/lib/platform/insights';
 
 /**
- * `/life/insights/:id` — §3.2's "evidence, method, confidence".
+ * `/insights/:id` — §3.2's "evidence, method, confidence".
  *
  * §4.13: "An insight the user cannot audit is an insight they should not
  * trust." This page is what audit means in practice — the method that produced
@@ -117,10 +117,10 @@ export function InsightDetailScreen({ insight, evidence }: InsightDetailScreenPr
       <Divider />
 
       <Inline gap="3" wrap>
-        <Link className="nos-inline-link" href="/life/insights">
+        <Link className="nos-inline-link" href="/insights">
           Back to the inbox
         </Link>
-        <Link className="nos-inline-link" href="/life/insights/archive">
+        <Link className="nos-inline-link" href="/insights/archive">
           Everything ever surfaced
         </Link>
       </Inline>
