@@ -7,13 +7,13 @@ import { Badge, Button, Card, CardBody, Inline, Stack, Text } from '@naitikos/de
  *
  * ## An index, not a second import surface
  *
- * Two of the three exist, and both live where the imported data lands: the ICS
- * import is on `/work/calendar` and the bank CSV import is on
- * `/money/transactions`. That placement is right and this page does not
- * duplicate it — an import that runs somewhere other than where its results
- * appear gives the operator nothing to check the result against, and a second
- * uploader for the same file would be a second place for the de-duplication
- * rule to drift.
+ * All three exist, and each lives where the imported data lands: the ICS import
+ * is on `/work/calendar`, the bank CSV import is on `/money/transactions`, and
+ * the device import is on `/body/devices`. That placement is right and this
+ * page does not duplicate it — an import that runs somewhere other than where
+ * its results appear gives the operator nothing to check the result against,
+ * and a second uploader for the same file would be a second place for the
+ * de-duplication rule to drift.
  *
  * So this page answers one question — *what can get in, and from where* — and
  * hands off. §3.3 R6's logic applied to a settings page: a surface that repeats
@@ -85,27 +85,33 @@ export function IntegrationsSettingsScreen(): ReactNode {
           <Stack gap="3">
             <Inline gap="2" align="center" justify="between">
               <Text role="title-3" as="h2">
-                Apple Health
+                Apple Health and Google Fit
               </Text>
-              <Badge tone="caution">not built</Badge>
+              <Badge tone="positive">built</Badge>
             </Inline>
             <Text role="body-sm" tone="secondary">
-              Apple Health import does not exist. Nothing in this application reads HealthKit, and no
-              import path accepts its export.
+              A JSON export of readings, dropped on the devices page. Heart rate, HRV, steps, energy,
+              distance, respiratory rate, exercise minutes and blood oxygen are mapped onto the same metric
+              registry everything else in this system speaks — so a watch&rsquo;s numbers can be laid beside
+              a night&rsquo;s sleep or a training week without either knowing the other exists.
             </Text>
             {/*
-              Why this one is materially harder than the other two, stated so the
-              gap does not read as an oversight. A PWA cannot reach HealthKit —
-              the API is native-only — so the realistic path is the Health app's
-              own XML export, which is a single multi-hundred-megabyte file that
-              cannot be parsed the way a CSV is.
+              The XML caveat stays, because it is still true and it is the thing
+              that surprises people. What changed is that it is now a
+              *preparation* step rather than a reason nothing exists.
             */}
             <Text role="caption" tone="tertiary">
-              It is not a small piece of work. HealthKit has no web API, so the only route is the Health
-              app&rsquo;s own XML export — one file, frequently hundreds of megabytes, which has to be
-              streamed rather than parsed whole, mapped onto the metric registry, and de-duplicated against
-              observations that may already exist for the same days.
+              HealthKit has no web API, so the Health app&rsquo;s own export is the only route — and that
+              export is XML, frequently hundreds of megabytes. It has to be converted to JSON before it
+              gets here. The import reads the file in your browser and sends it in batches, so a large one
+              makes progress rather than timing out, and re-sending a file that partly landed adds only
+              what is missing.
             </Text>
+            <Inline gap="2">
+              <Button asChild size="sm" variant="secondary">
+                <Link href="/body/devices">Import device data</Link>
+              </Button>
+            </Inline>
           </Stack>
         </CardBody>
       </Card>

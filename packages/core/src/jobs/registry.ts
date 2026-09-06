@@ -135,6 +135,21 @@ export const JOB_STEPS = [
   /** Rebuild the timeline projection when a version bump requires it. */
   'rebuild-timeline',
 
+  /**
+   * Make sure the month ahead has a `sample` partition to land in.
+   *
+   * Before `downsample-samples`, and the order is not arbitrary: both touch the
+   * same table, and creating a partition takes a brief `ACCESS EXCLUSIVE` lock
+   * on the parent. Doing that first means the lock is taken against a quiet
+   * table rather than queued behind a collapse that is deleting a month of rows.
+   *
+   * A step rather than a database cron for the reason §5.2 gives: this is the
+   * only scheduler. A partition that failed to appear must show up in `job_run`
+   * beside everything else, because the symptom otherwise is an import failing
+   * at midnight on the first of a month with a constraint error.
+   */
+  'maintain-partitions',
+
   /** Downsample device samples past 90 days (§9.7). */
   'downsample-samples',
 

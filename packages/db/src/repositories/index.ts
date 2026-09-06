@@ -227,3 +227,13 @@ export type { LifeRepository } from './life.repository';
 export { createPredictionRepository } from './prediction.repository';
 export type { PredictionRepository, ResolvePredictionInput } from './prediction.repository';
 
+
+/* --- Wearable ingestion (§2.3, §9.7) ------------------------------------ */
+export { createSampleRepository } from './sample.repository';
+export type {
+  DownsampleOutcome,
+  Sample,
+  SampleCoverage,
+  SampleImportOutcome,
+  SampleRepository,
+} from './sample.repository';

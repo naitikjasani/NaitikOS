@@ -51,3 +51,6 @@ export * from './money';
 
 /** The Life Timeline — eras, chapters and significant events (§10.8). */
 export * from './life';
+
+/** Wearable ingestion — Apple Health and Google Fit batches (§2.3, §9.7). */
+export * from './samples';

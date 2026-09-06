@@ -9,18 +9,19 @@
  * to re-run, and manually triggerable from `/settings/developer`. Every
  * additional scheduled job must justify itself against C3."
  *
- * ## Two of the twelve steps are registered
+ * ## Not every registered step is implemented, and that is deliberate
  *
- * `JOB_STEPS` names twelve. The ones that do domain work — derivation, rollups,
- * detectors, embeddings — belong to milestones that have not happened, and they
- * arrive with their domains. The two below are operational: they stop the task
- * queue and the upload outbox silently stranding rows, which is what §5.2's
- * "idempotent, safe to re-run" depends on in practice.
+ * `JOB_STEPS` names the full sequence, including steps whose domains have not
+ * been built. Each arrives with its domain rather than as an empty shell —
+ * derivation, rollups, embeddings, thumbnails. What runs tonight is the list in
+ * {@link stepsFor}, and `runNightly` walks `JOB_STEPS` order rather than
+ * registration order so a step landing later slots into its place without
+ * anyone remembering to reorder this file.
  *
- * Running with only two is deliberate rather than incomplete. §5.16's alert
- * watches for the *absence* of a completion record, so a record has to be written
- * from the first night the cron is enabled — otherwise the alert's first firing is
- * a false positive, and an alert that cries wolf once gets muted.
+ * Running a partial list is not incomplete. §5.16's alert watches for the
+ * *absence* of a completion record, so a record has to be written from the
+ * first night the cron is enabled — otherwise the alert's first firing is a
+ * false positive, and an alert that cries wolf once gets muted.
  */
 
 import type { NextRequest } from 'next/server';
@@ -47,13 +48,17 @@ import {
 import type { PlatformContext } from '../../../../lib/platform/context';
 import { loadInsights, recordInsightNight } from '../../../../lib/platform/insights';
 import { generatePredictions, resolveDuePredictions } from '../../../../lib/platform/predictions';
+import { collapseOldSamples, maintainSamplePartitions } from '../../../../lib/platform/samples';
 
 /**
  * The registered steps.
  *
  * Three are operational — they keep the queues from silently stranding rows and
  * the telemetry table from growing without bound, which is the failure §5.2's
- * "safe to re-run" depends on.
+ * "safe to re-run" depends on. Two more are custodial: they keep `sample`
+ * partitioned ahead of itself and collapsed behind itself, which is what stops
+ * §9.7's "tens of millions" of device rows from becoming an operational problem
+ * rather than a storage one.
  *
  * `run-detectors` is the first domain step, and it is here rather than on a page
  * render for a specific reason: §10.6 control 4 confirms a finding by seeing it
@@ -171,6 +176,63 @@ function stepsFor(platform: PlatformContext): readonly JobStep[] {
             notes.length === 0
               ? `${String(predicted)} written`
               : `${String(predicted)} written, ${String(insufficient)} insufficient, ${String(refused)} refused — ${notes.join('; ')}`,
+        });
+      },
+    },
+    {
+      name: 'maintain-partitions',
+      describes: 'Creates the sample partitions for the months ahead, and reports anything stranded in DEFAULT.',
+      /*
+       * Does not halt the run. A missing partition sends the next import to the
+       * DEFAULT partition, where it is stored and findable rather than lost —
+       * so the cost of a failure here is a slower query, not a gap.
+       */
+      haltOnFailure: false,
+      async run() {
+        const outcome = await maintainSamplePartitions(platform.db);
+        if (!outcome.ok) return outcome;
+
+        const { ensured, stranded } = outcome.value;
+        return ok({
+          rowsAffected: ensured.length,
+          /* The stranded count is in the note rather than only in a metric,
+           * because it is the one number on this step that means something is
+           * wrong with an exporting device rather than with this system. */
+          note:
+            stranded === 0
+              ? ensured.join(', ')
+              : `${ensured.join(', ')} — ${String(stranded)} rows in DEFAULT`,
+        });
+      },
+    },
+    {
+      name: 'downsample-samples',
+      describes: 'Collapses device samples past the retention window into hourly averages (§9.7).',
+      /*
+       * Does not halt the run, and it is the step whose failure matters least
+       * on any given night: the raw rows simply stay, and tomorrow's run
+       * collapses them instead. The opposite — halting the integrity check
+       * because a collapse failed — would trade a bounded storage cost for an
+       * unbounded correctness one.
+       */
+      haltOnFailure: false,
+      async run() {
+        const outcome = await collapseOldSamples(platform.db);
+        if (!outcome.ok) return outcome;
+
+        const { written, dropped, preserved, cutoff } = outcome.value;
+        return ok({
+          rowsAffected: written,
+          /*
+           * `preserved` is named rather than counted. A metric appearing here
+           * is keeping its raw rows forever because its aggregation has no
+           * honest hourly form, and that is a decision someone should see
+           * rather than a number that quietly grows.
+           */
+          note:
+            preserved.length === 0
+              ? `${String(dropped)} rows into ${String(written)} hourly averages, before ${cutoff.slice(0, 13)}h`
+              : `${String(dropped)} rows into ${String(written)} hourly averages; kept at full resolution: ${preserved.join(', ')}`,
         });
       },
     },

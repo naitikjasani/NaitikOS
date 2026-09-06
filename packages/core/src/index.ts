@@ -1302,3 +1302,38 @@ export {
   resolvePrediction,
 } from './domain/prediction/calibration';
 
+
+/* --- Wearable ingestion (§2.3, §9.7) ------------------------------------ */
+
+export type { WearableMetricName } from './domain/wearable/metrics';
+export { WEARABLE_METRICS, WEARABLE_METRIC_DEFINITIONS } from './domain/wearable/metrics';
+
+export type { MetricMapping, WearablePlatform } from './domain/wearable/mapping';
+export {
+  WEARABLE_PLATFORMS,
+  WEARABLE_PLATFORM_LABELS,
+  acceptedUnits,
+  mappedIdentifiers,
+  mappingFor,
+  convertToCanonical,
+} from './domain/wearable/mapping';
+
+export type {
+  NormalisedBatch,
+  NormalisedSample,
+  NormaliseOptions,
+  RawSample,
+  RejectedSample,
+} from './domain/wearable/batch';
+export { MAX_REPORTED_REJECTIONS, normaliseBatch, skippedTotal } from './domain/wearable/batch';
+
+export type { SampleAggregate } from './domain/wearable/downsample';
+export {
+  SAMPLE_AGGREGATES,
+  SAMPLE_DOWNSAMPLED_FLAG,
+  SAMPLE_RETENTION_DAYS,
+  aggregateFor,
+  downsampleCutoff,
+  downsampleableAggregations,
+  hourBucket,
+} from './domain/wearable/downsample';

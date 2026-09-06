@@ -21,6 +21,7 @@ import {
   DAILY_CLOSE_METRICS as CORE_DAILY_CLOSE,
   HEALTH_METRICS as CORE_HEALTH,
   NUTRITION_METRICS as CORE_NUTRITION,
+  WEARABLE_METRIC_DEFINITIONS as CORE_WEARABLE,
 } from '@naitikos/core';
 import type { MetricDefinition } from '@naitikos/core';
 
@@ -84,13 +85,29 @@ export const HEALTH_METRICS: readonly MetricSeed[] = CORE_HEALTH.map(toRow);
 export const NUTRITION_METRICS: readonly MetricSeed[] = CORE_NUTRITION.map(toRow);
 
 /**
+ * The device-stream vocabulary (§2.3), as rows.
+ *
+ * These are the only metrics `sample` may reference — its `metric_key` is a
+ * foreign key to the same registry, which is what stops a wearable inventing
+ * its own vocabulary alongside the human one (P3). Seeding them is therefore a
+ * precondition of the importer, not a convenience: an unseeded key fails the
+ * insert on a constraint rather than on anything legible.
+ */
+export const WEARABLE_METRICS: readonly MetricSeed[] = CORE_WEARABLE.map(toRow);
+
+/**
  * Everything the metric table should contain.
  *
  * Asserted unique at seed time. Two definitions for one key would make the
  * upsert order decide which unit a metric has, and a metric whose unit depends
  * on insertion order is §6.2's failure with extra steps.
  */
-export const REGISTERED_METRICS: readonly MetricSeed[] = [...MVP_METRICS, ...HEALTH_METRICS, ...NUTRITION_METRICS];
+export const REGISTERED_METRICS: readonly MetricSeed[] = [
+  ...MVP_METRICS,
+  ...HEALTH_METRICS,
+  ...NUTRITION_METRICS,
+  ...WEARABLE_METRICS,
+];
 
 /** The Daily Close subset, in presentation order. Asserted against §4.0's cap. */
 export const DAILY_CLOSE_METRICS: readonly MetricSeed[] = CORE_DAILY_CLOSE.map(toRow);

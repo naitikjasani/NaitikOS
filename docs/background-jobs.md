@@ -44,26 +44,43 @@ module happened to import first.
 |---|---|---|---|
 | 1 | `derive-observations` | no | First: everything downstream reads what it writes |
 | 2 | `refresh-rollups` | no | §5.6, §9.7 |
-| 3 | `run-detectors` | no | V2 (§10.6). After rollups — a trend must exist first |
-| 4 | `generate-embeddings` | no | V2, local-only (P7) |
-| 5 | `generate-thumbnails` | no | For objects that arrived without them |
-| 6 | `verify-media-integrity` | **yes** | §9.8 + outbox health |
-| 7 | `assert-data-integrity` | no | §5.16's assertions |
-| 8 | `schedule-notifications` | no | §5.9. No separate scheduler |
-| 9 | `rebuild-timeline` | no | When a projector change makes entries stale |
-| 10 | `downsample-samples` | no | §9.7, past 90 days |
-| 11 | `prune-idempotency` | no | Expired records |
-| 12 | `drain-task-queue` | **yes** | **Last**, so work enqueued earlier tonight runs tonight |
+| 3 | `snapshot-goal-progress` | no | §4.10. After rollups — the projection is fitted over them |
+| 4 | `resolve-predictions` | **yes** | §10.9. **Before** `make-predictions`; see below |
+| 5 | `make-predictions` | **yes** | §10.9, over a window that includes today |
+| 6 | `run-detectors` | **yes** | §10.6. After rollups — a trend must exist first |
+| 7 | `generate-embeddings` | no | V2, local-only (P7) |
+| 8 | `generate-thumbnails` | no | For objects that arrived without them |
+| 9 | `verify-media-integrity` | **yes** | §9.8 + outbox health |
+| 10 | `assert-data-integrity` | no | §5.16's assertions |
+| 11 | `schedule-notifications` | no | §5.9. No separate scheduler |
+| 12 | `rebuild-timeline` | no | When a projector change makes entries stale |
+| 13 | `maintain-partitions` | **yes** | §9.7. **Before** the collapse; see below |
+| 14 | `downsample-samples` | **yes** | §9.7, past 90 days |
+| 15 | `prune-idempotency` | no | Expired records |
+| 16 | `prune-telemetry` | **yes** | §5.11's ninety-day retention |
+| 17 | `drain-task-queue` | **yes** | **Last**, so work enqueued earlier tonight runs tonight |
 
-Two are registered. The ten that are not do **domain** work and arrive with their
-domains — a rollup step is meaningless before there is anything to roll up. The
-two that are registered are operational: they stop the task queue and the upload
-outbox silently stranding rows.
+Eight are registered. The nine that are not do **domain** work and arrive with
+their domains — a rollup step is meaningless before there is anything to roll
+up.
 
-Running with two rather than zero is deliberate. §5.16's alert watches for the
-*absence* of a completion record, so a record has to be written from the first
-night the cron is enabled — otherwise the alert's first firing is a false
+Running a partial list is deliberate, not incomplete. §5.16's alert watches for
+the *absence* of a completion record, so a record has to be written from the
+first night the cron is enabled — otherwise the alert's first firing is a false
 positive, and an alert that cries wolf once gets muted.
+
+### Two orderings in this list are load-bearing
+
+**`resolve-predictions` before `make-predictions`.** Tonight's new prediction
+for a metric is fitted over a window that includes today's reading; yesterday's
+prediction *about* today must be scored against that reading before it is
+folded into anything. Reversing them would let a prediction be graded against a
+window its own successor had already been fitted on.
+
+**`maintain-partitions` before `downsample-samples`.** Both touch `sample`, and
+creating a partition takes a brief `ACCESS EXCLUSIVE` lock on the parent. Taking
+it first means the lock lands on a quiet table rather than queueing behind a
+collapse that is deleting a month of rows.
 
 ### Step names are stable identifiers
 

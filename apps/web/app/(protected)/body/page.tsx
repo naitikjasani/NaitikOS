@@ -46,6 +46,12 @@ const MODULES = [
     description: 'Bodyweight and the seven-day trend.',
   },
   {
+    href: '/body/devices',
+    title: 'Devices',
+    description:
+      'What a wearable has put in the record — heart rate, steps, energy, HRV — and where to import more of it.',
+  },
+  {
     href: '/body/health',
     title: 'Health',
     description: 'Vitals, labs, conditions, symptoms, appointments — and the questions worth taking to one.',

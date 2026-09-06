@@ -97,6 +97,12 @@ export const RESET_ORDER: readonly string[] = Object.freeze([
   /* Insights — evidence references the insight */
   'insight_evidence',
   'insight',
+  /*
+   * Device samples. Nothing references them, so position is free — but they
+   * are cleared, unlike `observation_source`, because a re-import test that
+   * inherited last suite's rows would see duplicates it did not create.
+   */
+  'sample',
   /* The knowledge graph — edges reference nodes on both ends */
   'graph_edge',
   'graph_node',

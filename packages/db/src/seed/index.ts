@@ -26,7 +26,14 @@ import { featureFlag } from '../schema/identity';
 import { journalPrompt } from '../schema/mind';
 import { createExerciseRepository } from '../repositories/exercise.repository';
 import { createFoodRepository } from '../repositories/food.repository';
-import { DAILY_CLOSE_METRICS, HEALTH_METRICS, MVP_METRICS, NUTRITION_METRICS, REGISTERED_METRICS } from './metrics';
+import {
+  DAILY_CLOSE_METRICS,
+  HEALTH_METRICS,
+  MVP_METRICS,
+  NUTRITION_METRICS,
+  REGISTERED_METRICS,
+  WEARABLE_METRICS,
+} from './metrics';
 import { SEED_EXERCISES } from './exercises';
 import { SEED_FOODS, SEED_SOURCE_NOTE } from './foods';
 import { SEED_PROMPTS } from './prompts';
@@ -124,6 +131,7 @@ async function main(): Promise<void> {
   console.log(`  ├─ MVP              ${String(MVP_METRICS.length)}`);
   console.log(`  ├─ Health core      ${String(HEALTH_METRICS.length)}`);
   console.log(`  ├─ Nutrition        ${String(NUTRITION_METRICS.length)}`);
+  console.log(`  ├─ Wearable         ${String(WEARABLE_METRICS.length)}`);
   console.log(`  └─ in Daily Close   ${String(DAILY_CLOSE_METRICS.length)} of ${String(DAILY_CLOSE_ELEMENT_BUDGET)} budget`);
 
   /* --- Feature flags -------------------------------------------------- */
