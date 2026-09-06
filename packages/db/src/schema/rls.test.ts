@@ -18,6 +18,19 @@
  *
  * A policy appearing here is not a test failure to be patched; it is an
  * architectural change requiring an ADR.
+ *
+ * ## `relkind IN ('r', 'p')`, not just `'r'`
+ *
+ * Ordinary tables are `r`; a **partitioned parent** is `p`. Migration 0015 made
+ * `sample` partitioned, and until this predicate was widened the parent was
+ * simply invisible to every assertion below — the suite would have passed with
+ * RLS off on the largest table in the schema. Partitions themselves are `r` and
+ * were always covered, but the parent is where a policy would be declared and
+ * where `FORCE` has to be set.
+ *
+ * This is the failure mode the file's own header warns about, one level up: the
+ * migration cannot cover a table added later, and the test cannot cover a
+ * *kind* of table nobody thought of.
  */
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -55,7 +68,7 @@ describe.skipIf(client === undefined)('row level security (§5.4)', () => {
         FROM pg_class c
         JOIN pg_namespace n ON n.oid = c.relnamespace
        WHERE n.nspname = 'public'
-         AND c.relkind = 'r'
+         AND c.relkind IN ('r', 'p')
          AND c.relname <> ${EXCLUDED}
          AND NOT c.relrowsecurity
        ORDER BY c.relname`;
@@ -71,7 +84,7 @@ describe.skipIf(client === undefined)('row level security (§5.4)', () => {
         FROM pg_class c
         JOIN pg_namespace n ON n.oid = c.relnamespace
        WHERE n.nspname = 'public'
-         AND c.relkind = 'r'
+         AND c.relkind IN ('r', 'p')
          AND c.relname <> ${EXCLUDED}
          AND NOT c.relforcerowsecurity
        ORDER BY c.relname`;
@@ -95,7 +108,7 @@ describe.skipIf(client === undefined)('row level security (§5.4)', () => {
              count(*) FILTER (WHERE c.relrowsecurity)::int AS secured
         FROM pg_class c
         JOIN pg_namespace n ON n.oid = c.relnamespace
-       WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname <> ${EXCLUDED}`;
+       WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p') AND c.relname <> ${EXCLUDED}`;
 
     expect(counts?.total).toBeGreaterThan(0);
     expect(counts?.secured).toBe(counts?.total);

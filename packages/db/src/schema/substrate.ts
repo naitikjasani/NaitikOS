@@ -25,8 +25,10 @@ import {
   integer,
   jsonb,
   pgTable,
+  primaryKey as primaryKeyConstraint,
   text,
   uniqueIndex,
+  uuid,
 } from 'drizzle-orm/pg-core';
 
 import { aggregation, domain, metricValueType, sourceKind } from './enums';
@@ -297,17 +299,30 @@ export const observation = pgTable(
  *    accommodate device data whose value beyond 90 days is entirely in its
  *    aggregates anyway."
  *
- * **Partitioning is not expressible in Drizzle.** This declares the logical
- * table; a later migration converts it to `PARTITION BY RANGE (observed_at)`
- * with monthly children and installs the 90-day downsample job. That is
- * deliberately deferred: wearable ingestion is V3 (§2.3), the table stays empty
- * until then, and converting an empty table is free — whereas partitioning a
- * populated one is not.
+ * **Partitioning is not expressible in Drizzle**, so the physical shape lives in
+ * migration 0015 rather than here: `PARTITION BY RANGE (observed_at)`, monthly
+ * children, and a DEFAULT partition so a row outside every declared range is
+ * stored rather than rejected.
+ *
+ * That migration ran while the table was empty, which was the whole point of
+ * deferring it — converting an empty table is free and partitioning a populated
+ * one is not. It also asserts emptiness and refuses rather than proceeding, so
+ * re-running it against a database that has since ingested cannot destroy
+ * anything.
+ *
+ * The primary key is composite because Postgres requires the partition key to
+ * be part of every unique constraint on a partitioned table. `id` alone is
+ * still unique in practice — it is a UUIDv7 — but the database can only enforce
+ * that per partition, which is why {@link sampleRepository} deduplicates on
+ * `(source_id, metric_key, observed_at)` instead of relying on the key.
  */
 export const sample = pgTable(
   'sample',
   {
-    id: primaryKey(),
+    /* Not `primaryKey()` — see the header. The key is declared below as a
+     * composite, because a partitioned table cannot have a unique constraint
+     * that omits its partition key. */
+    id: uuid().notNull(),
     metricKey: text()
       .notNull()
       .references(() => metric.key, { onUpdate: 'cascade' }),
@@ -322,7 +337,17 @@ export const sample = pgTable(
     /** Set once the raw rows behind this window have been dropped (§9.7). */
     isDownsampled: boolean().notNull().default(false),
   },
-  (t) => [index('sample_metric_observed_idx').on(t.metricKey, t.observedAt.desc())],
+  (t) => [
+    primaryKeyConstraint({ columns: [t.id, t.observedAt] }),
+    index('sample_metric_observed_idx').on(t.metricKey, t.observedAt.desc()),
+    /*
+     * The real deduplication key for an import. A wearable export re-read
+     * overlaps the previous one by design, and one device cannot have produced
+     * two readings of the same metric at the same instant — so this is what
+     * makes a re-import a no-op rather than a doubling.
+     */
+    uniqueIndex('sample_source_metric_observed_unique').on(t.sourceId, t.metricKey, t.observedAt),
+  ],
 );
 
 /**
