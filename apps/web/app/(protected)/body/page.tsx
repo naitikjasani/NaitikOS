@@ -46,6 +46,11 @@ const MODULES = [
     description: 'Bodyweight and the seven-day trend.',
   },
   {
+    href: '/body/appearance',
+    title: 'Appearance',
+    description: 'Skin and physique over the same window — two figures next to each other, and no number combining them.',
+  },
+  {
     href: '/body/devices',
     title: 'Devices',
     description:
