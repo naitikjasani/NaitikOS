@@ -43,9 +43,11 @@ export const RESET_ORDER: readonly string[] = Object.freeze([
   'anxiety_episode',
   'journal_entry',
   'practice_session',
-  /* Gym */
+  /* Gym — sets before sessions, sessions before the program they cite */
   'workout_set',
   'workout_session',
+  'program_block',
+  'program',
   /* Health core — subtypes first */
   'lab_result',
   'lab_panel',

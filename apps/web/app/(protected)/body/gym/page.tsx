@@ -20,6 +20,11 @@ const VIEWS = [
   { href: '/body/gym/history', title: 'History', description: 'Past sessions and training days.' },
   { href: '/body/gym/exercises', title: 'Exercises', description: 'The library, and per-movement progression.' },
   { href: '/body/gym/volume', title: 'Volume', description: 'Work done, by muscle group.' },
+  {
+    href: '/body/gym/programs',
+    title: 'Programs',
+    description: 'The plan your training is measured against — and how the fortnight went against it.',
+  },
 ] as const;
 
 export default function GymPage(): ReactNode {

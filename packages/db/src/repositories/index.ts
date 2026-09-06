@@ -57,7 +57,8 @@ export type {
   ClosedSession,
 } from './workout.repository';
 
-export { createProgramRepository } from './program.repository';
+export { createProgramRepository, createProgramWriter } from './program.repository';
+export type { ProgramWriter } from './program.repository';
 export type { ProgramRepository } from './program.repository';
 
 /* --- Mind (§4.7) ------------------------------------------------------- */

@@ -60,3 +60,6 @@ export * from './social';
 
 /** Saved lines of enquiry — §3.2's `/ask/:threadId`. */
 export * from './enquiry';
+
+/** Training programs — §4.1's definition and adherence. */
+export * from './programs';

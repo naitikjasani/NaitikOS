@@ -300,8 +300,17 @@ export type {
   PrescribedExercise,
   AdherenceWindow,
   ProgramAdherence,
+  ProgramInput,
+  ProgramBlockInput,
 } from './domain/gym/program';
-export { parsePrescription, programAdherence, nextBlock } from './domain/gym/program';
+export {
+  MAX_TARGET_FREQUENCY,
+  nextBlock,
+  parsePrescription,
+  programAdherence,
+  validateProgram,
+  validateProgramBlock,
+} from './domain/gym/program';
 
 /* -------------------------------------------------------------------------
  * Mind (§4.7) — the module with the highest duty of care.

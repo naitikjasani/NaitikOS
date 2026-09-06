@@ -18,3 +18,8 @@ export { ProgramCard } from './components/ProgramCard';
 
 export { useRestTimer, DEFAULT_REST_SECONDS } from './hooks/useRestTimer';
 export type { RestTimer as RestTimerState } from './hooks/useRestTimer';
+
+/* Program definition (§4.1). Server-rendered; the forms are the only client
+ * state, and a plan is written once a mesocycle rather than watched. */
+export { ProgramsScreen } from './screens/ProgramsScreen';
+export { ProgramDetailScreen } from './screens/ProgramDetailScreen';

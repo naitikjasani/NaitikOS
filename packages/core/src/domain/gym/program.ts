@@ -31,6 +31,11 @@
  * could read rather than throwing on a row it could not.
  */
 
+import type { Result } from '@naitikos/shared';
+import { err, ok } from '@naitikos/shared';
+
+import type { DomainError } from '../../errors/domain-error';
+import { validationError } from '../../errors/domain-error';
 import { dayKeyIndex } from '../../temporal/instant';
 
 export type Program = {
@@ -188,4 +193,123 @@ export function nextBlock(
   if (lastIndex === -1) return first;
 
   return ordered[(lastIndex + 1) % ordered.length] ?? first;
+}
+
+/* =========================================================================
+ * Writing a program
+ * ====================================================================== */
+
+export type ProgramInput = {
+  readonly id: string;
+  readonly name: string;
+  readonly description?: string | null;
+  readonly startedAt?: string | null;
+  readonly endedAt?: string | null;
+  readonly isActive?: boolean;
+  readonly targetFrequency?: number | null;
+};
+
+export type ProgramBlockInput = {
+  readonly id: string;
+  readonly programId: string;
+  readonly name: string;
+  readonly orderIndex: number;
+  readonly prescription?: readonly PrescribedExercise[];
+  readonly notes?: string | null;
+};
+
+/**
+ * The most sessions a week a target may claim.
+ *
+ * Fourteen — twice a day, every day. Not a judgement about training, which this
+ * system does not make (§10.0); a bound that catches a typed `30` before it
+ * becomes a permanently unreachable adherence ratio the operator reads as
+ * failure every week for a year.
+ */
+export const MAX_TARGET_FREQUENCY = 14;
+
+const NAME_MAX = 120;
+const NOTES_MAX = 2000;
+
+export function validateProgram(input: ProgramInput): Result<Program, DomainError> {
+  const name = input.name.trim();
+  if (name === '') return err(validationError('name', 'A program needs a name.'));
+  if (name.length > NAME_MAX) {
+    return err(validationError('name', `A name is at most ${String(NAME_MAX)} characters.`));
+  }
+
+  const description = input.description?.trim() ?? '';
+  if (description.length > NOTES_MAX) {
+    return err(validationError('description', `Keep the description under ${String(NOTES_MAX)} characters.`));
+  }
+
+  const target = input.targetFrequency ?? null;
+  if (target !== null && (!Number.isInteger(target) || target < 1 || target > MAX_TARGET_FREQUENCY)) {
+    return err(
+      validationError(
+        'targetFrequency',
+        `A weekly target is between 1 and ${String(MAX_TARGET_FREQUENCY)} sessions, or nothing.`,
+      ),
+    );
+  }
+
+  const startedAt = input.startedAt ?? null;
+  const endedAt = input.endedAt ?? null;
+  if (startedAt !== null && endedAt !== null && endedAt < startedAt) {
+    return err(validationError('endedAt', 'A program cannot end before it starts.'));
+  }
+
+  /*
+   * A finished program cannot be the active one. The database enforces "at most
+   * one active" and nothing enforces this, which is the gap that would leave a
+   * retired program still prefilling the session logger.
+   */
+  const isActive = input.isActive ?? false;
+  if (isActive && endedAt !== null) {
+    return err(validationError('isActive', 'A program that has ended cannot be the active one.'));
+  }
+
+  return ok({
+    id: input.id,
+    name,
+    description: description === '' ? null : description,
+    startedAt,
+    endedAt,
+    isActive,
+    targetFrequency: target,
+  });
+}
+
+export function validateProgramBlock(input: ProgramBlockInput): Result<ProgramBlock, DomainError> {
+  const name = input.name.trim();
+  if (name === '') return err(validationError('name', 'A block needs a name — Push A, Deload.'));
+  if (name.length > NAME_MAX) {
+    return err(validationError('name', `A name is at most ${String(NAME_MAX)} characters.`));
+  }
+
+  if (!Number.isInteger(input.orderIndex) || input.orderIndex < 0) {
+    return err(validationError('orderIndex', 'A block\u2019s position is a whole number from zero.'));
+  }
+
+  const notes = input.notes?.trim() ?? '';
+  if (notes.length > NOTES_MAX) {
+    return err(validationError('notes', `Keep the notes under ${String(NOTES_MAX)} characters.`));
+  }
+
+  /*
+   * The prescription is normalised through `parsePrescription` rather than
+   * trusted, even though it arrives typed. It is the one field stored as
+   * `jsonb`, so this is the last point at which its shape is checked by
+   * anything — the database will accept whatever JSON it is handed.
+   */
+  const prescription = parsePrescription(input.prescription ?? []);
+
+  return ok({
+    id: input.id,
+    programId: input.programId,
+    name,
+    orderIndex: input.orderIndex,
+    prescription,
+    notes: notes === '' ? null : notes,
+  });
 }
