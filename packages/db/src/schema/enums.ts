@@ -690,6 +690,57 @@ export const graphNodeKind = pgEnum('graph_node_kind', [
 ]);
 
 /* =========================================================================
+ * People and Places (§3.2's `/life/people` and `/life/places`)
+ * ====================================================================== */
+
+/**
+ * How someone stands in relation to the operator.
+ *
+ * Deliberately coarse. A finer taxonomy — "close friend" against "friend" —
+ * would be a judgement the system asks the operator to make about a person and
+ * then stores, permanently, where that person cannot see or correct it. §9.4's
+ * soft-delete posture protects the operator's record; nothing protects someone
+ * else's characterisation in it. Six buckets are enough to answer "who have I
+ * not spoken to", which is the question this table exists for.
+ */
+export const relationshipKind = pgEnum('relationship_kind', [
+  'family',
+  'friend',
+  'colleague',
+  'professional',
+  'acquaintance',
+  'other',
+]);
+
+/** How a contact happened. `in_person` is first because it is the one that counts. */
+export const interactionKind = pgEnum('interaction_kind', [
+  'in_person',
+  'call',
+  'video',
+  'message',
+  'other',
+]);
+
+/**
+ * What kind of place this is.
+ *
+ * `home` is a kind rather than a flag because there is more than one over
+ * twenty years, and "where did I live in 2031" is a question the Life Timeline
+ * should be able to answer without inference.
+ */
+export const placeKind = pgEnum('place_kind', [
+  'home',
+  'city',
+  'country',
+  'venue',
+  'workplace',
+  'other',
+]);
+
+/** Why a trip happened. Shapes nothing; explains a discontinuity in every series. */
+export const tripPurpose = pgEnum('trip_purpose', ['leisure', 'work', 'family', 'medical', 'other']);
+
+/* =========================================================================
  * Operations (§9.4, §5.11)
  * ====================================================================== */
 
@@ -766,5 +817,9 @@ export type ExtractionMethod = (typeof extractionMethod.enumValues)[number];
 export type AiPurpose = (typeof aiPurpose.enumValues)[number];
 export type ConsentScope = (typeof consentScope.enumValues)[number];
 export type GraphNodeKind = (typeof graphNodeKind.enumValues)[number];
+export type RelationshipKind = (typeof relationshipKind.enumValues)[number];
+export type InteractionKind = (typeof interactionKind.enumValues)[number];
+export type PlaceKind = (typeof placeKind.enumValues)[number];
+export type TripPurpose = (typeof tripPurpose.enumValues)[number];
 export type AuditOperation = (typeof auditOperation.enumValues)[number];
 export type JobStatus = (typeof jobStatus.enumValues)[number];

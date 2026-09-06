@@ -97,6 +97,12 @@ export const RESET_ORDER: readonly string[] = Object.freeze([
   /* Insights — evidence references the insight */
   'insight_evidence',
   'insight',
+  /* People and places — interactions before people, visits before places and trips */
+  'interaction',
+  'person',
+  'visit',
+  'trip',
+  'place',
   /*
    * Device samples. Nothing references them, so position is free — but they
    * are cleared, unlike `observation_source`, because a re-import test that

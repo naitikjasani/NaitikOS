@@ -50,6 +50,9 @@ export * from './sleep';
 /** Work: projects, tasks, career log, learning, calendar, focus (§4.8). */
 export * from './work';
 
+/** People and places — §3.2's `/life/people` and `/life/places`. */
+export * from './social';
+
 /** Goals, insights, reviews, documents, media. */
 export * from './crosscutting';
 
