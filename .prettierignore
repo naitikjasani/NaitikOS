@@ -1,0 +1,22 @@
+# Generated artefacts. Prettier rewriting these is never right — the generator
+# owns the formatting, and a reformat is churn that the next generation undoes.
+
+# Drizzle owns these. The SQL is emitted by `db:generate` and the snapshots in
+# meta/ are what it diffs against to produce the next migration. Reformatting a
+# migration also edits history that has already been applied, which §13.2
+# forbids for a different reason but forbids all the same.
+packages/db/migrations/
+
+# pnpm rewrites this on every install. Prettier and pnpm would take turns.
+pnpm-lock.yaml
+
+# Derived from tokens/*.json, never hand-edited. Gitignored too; listed here so
+# a local build does not produce a spurious `format:check` failure.
+packages/design-system/src/tokens/generated/
+
+# Build and test output. Gitignored, listed for the same reason.
+.next/
+.turbo/
+dist/
+out/
+coverage/
