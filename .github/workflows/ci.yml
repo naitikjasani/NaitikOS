@@ -1,0 +1,148 @@
+# Continuous integration — §12 Week 1's exit criterion, and §11.5's gate.
+#
+#   "CI: lint, typecheck, unit, integration against Postgres." — §12, Week 1
+#
+# That line has been an exit criterion since 3 August 2026 and there was no
+# workflow behind it until 7 September. §5.14 assumes this exists —
+#
+#   "`main` is protected even so. CI must pass; force-push is disabled. The
+#    protection is not against a colleague — it is against a tired maintainer at
+#    midnight, which is a more likely adversary."
+#
+# — and branch protection cannot require a check that was never defined, so the
+# midnight maintainer had nothing standing in their way.
+#
+# ## Why the database is a service container and not a mock
+#
+# §5.3 refused SQLite for local development, and the reasoning applies with more
+# force here: "Dialect drift between development and production is exactly the
+# class of bug that costs a weekend and cannot be reproduced." The RLS suite,
+# the schema invariants, the exclusion constraint and the append-only trigger
+# are all *Postgres* behaviour. Nothing about them can be tested without one.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # So the pipeline can be exercised without inventing a commit — which is how
+  # a workflow's first green run usually happens.
+  workflow_dispatch:
+
+# A second push to the same branch makes the first run irrelevant. `main` is
+# excluded from cancellation: a cancelled run on the protected branch leaves a
+# commit with no verdict, which is indistinguishable from one that failed.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Typecheck, lint, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        # Pinned to the same image as docker-compose.yml, and the pin is load
+        # bearing for the same reason stated there: production is Supabase and
+        # Supabase's current major is 17. A CI database on 18 would green-light
+        # migrations that fail in production, which is the drift §5.3 refuses.
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: naitikos
+          POSTGRES_PASSWORD: naitikos
+          POSTGRES_DB: naitikos
+          # Matches compose. Collation changes silently corrupt text index
+          # ordering, and a CI database collated differently from the developer
+          # machine would make ordering bugs appear and vanish by environment.
+          POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
+        ports:
+          # 5433 on the host, as compose does, so DATABASE_URL is identical to
+          # the one in .env.example and nothing has to special-case CI.
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U naitikos -d naitikos"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
+
+    env:
+      DATABASE_URL: postgresql://naitikos:naitikos@localhost:5433/naitikos
+      # Declared in turbo.json's `test` task env list, so they participate in
+      # the cache key. Values are placeholders that satisfy shape validation in
+      # apps/web/lib/env.ts and reach nothing — CI has no Supabase project and
+      # must not have credentials for one.
+      NEXT_PUBLIC_SUPABASE_URL: https://ci.invalid
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key-not-a-secret
+      NEXT_PUBLIC_SITE_URL: https://ci.invalid
+      AUTH_ALLOWLIST: ci@ci.invalid
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install extensions
+        # Compose mounts packages/db/docker/init into the container's
+        # entrypoint directory. A GitHub service container starts *before* the
+        # repository is checked out, so there is nothing to mount and the same
+        # SQL has to be applied afterwards instead.
+        #
+        # The file is applied rather than retyped, so it cannot drift from the
+        # one developers get. §9.4 keeps CREATE EXTENSION out of the migrations
+        # deliberately — an unprivileged role cannot run it — which is exactly
+        # why this step is separate from `db:migrate`.
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f packages/db/docker/init/001-extensions.sql
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Pinned, not read from `engines.node`. That field is the range
+          # `>=24.0.0`, and setup-node resolves a range to the newest release
+          # satisfying it — so CI would silently move to Node 25 the day it
+          # ships, and the first sign would be a failure on an unrelated commit.
+          # A pipeline exists to tell you what your change did.
+          node-version: '24'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Apply migrations
+        run: pnpm db:migrate
+
+      - name: Prove the integration suites can actually see the database
+        # This step exists because of a real hole, measured on 7 September 2026.
+        #
+        # `rls.test.ts` and `invariants.test.ts` open with
+        # `describe.skipIf(client === undefined)`, and `client` is undefined
+        # when DATABASE_URL is unset — which it is by default, because nothing
+        # in this repository loads `.env`. Running one of those files alone in
+        # that state prints "1 skipped" and **exits 0**.
+        #
+        # Those two files carry the guarantees least likely to be noticed if
+        # they vanish: RLS enabled, FORCEd, with zero policies, and the
+        # append-only trigger. A pipeline that reported success while silently
+        # testing neither would be worse than no pipeline, because it would be
+        # believed. So the skip is made fatal here rather than trusted not to
+        # happen.
+        working-directory: packages/db
+        run: |
+          set -o pipefail
+          npx vitest run src/schema/rls.test.ts src/schema/invariants.test.ts 2>&1 | tee result.log
+          if grep -qE '[0-9]+ (test|tests)? *skipped|[0-9]+ skipped' result.log; then
+            echo "::error::Integration suites skipped. DATABASE_URL is not reaching vitest, so RLS and the schema invariants were never checked."
+            exit 1
+          fi
+          rm -f result.log
+
+      - name: Typecheck, lint, test, build
+        # One Turbo invocation rather than four steps: the task graph already
+        # encodes the dependencies, and splitting it would rebuild what an
+        # earlier step had built. `verify` is the same command used locally, so
+        # a green pipeline and a green working copy mean the same thing.
+        run: pnpm verify
