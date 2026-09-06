@@ -97,6 +97,9 @@ export const RESET_ORDER: readonly string[] = Object.freeze([
   /* Insights — evidence references the insight */
   'insight_evidence',
   'insight',
+  /* Saved lines of enquiry — turns before threads */
+  'ask_turn',
+  'ask_thread',
   /* People and places — interactions before people, visits before places and trips */
   'interaction',
   'person',

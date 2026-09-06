@@ -53,6 +53,9 @@ export * from './work';
 /** People and places — §3.2's `/life/people` and `/life/places`. */
 export * from './social';
 
+/** Saved lines of enquiry — §3.2's `/ask/:threadId`. */
+export * from './enquiry';
+
 /** Goals, insights, reviews, documents, media. */
 export * from './crosscutting';
 
