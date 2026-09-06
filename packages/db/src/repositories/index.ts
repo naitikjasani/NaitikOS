@@ -237,3 +237,7 @@ export type {
   SampleImportOutcome,
   SampleRepository,
 } from './sample.repository';
+
+/* --- People and Places (§3.2) ------------------------------------------- */
+export { createSocialRepository } from './social.repository';
+export type { SocialRepository, PersonRow } from './social.repository';

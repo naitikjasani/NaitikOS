@@ -54,3 +54,6 @@ export * from './life';
 
 /** Wearable ingestion — Apple Health and Google Fit batches (§2.3, §9.7). */
 export * from './samples';
+
+/** People and places — §3.2's `/life/people` and `/life/places`. */
+export * from './social';

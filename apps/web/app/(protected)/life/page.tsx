@@ -1,9 +1,10 @@
 /**
  * `/life` — the pillar overview.
  *
- * Four modules. §3.3 R6 keeps People and Places absent rather than listed and
- * empty: "A visible-but-empty module teaches the user that the system is a
- * graveyard." Reviews joined the list when it acquired a surface.
+ * Six modules. §3.3 R6 keeps a route absent until it has a surface — "A
+ * visible-but-empty module teaches the user that the system is a graveyard" —
+ * so each of these joined the list on the commit that gave it one. People and
+ * Places were the last two to arrive.
  */
 
 import type { ReactNode } from 'react';
@@ -34,6 +35,16 @@ const MODULES = [
     href: '/life/documents',
     title: 'Documents',
     description: 'Where the paperwork is, what it says, and what it adds to your record.',
+  },
+  {
+    href: '/life/people',
+    title: 'People',
+    description: 'Who you have not spoken to, measured against a rhythm you set. Nothing is stored about them that they could not read over your shoulder.',
+  },
+  {
+    href: '/life/places',
+    title: 'Places',
+    description: 'Where you were and for how long — the record that stops a fortnight abroad reading as a finding.',
   },
 ] as const;
 

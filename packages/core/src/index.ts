@@ -1337,3 +1337,65 @@ export {
   downsampleableAggregations,
   hourBucket,
 } from './domain/wearable/downsample';
+
+/* --- People and Places (§3.2's /life/people and /life/places) ----------- */
+
+export type {
+  ContactState,
+  ContactStatus,
+  Interaction,
+  InteractionInput,
+  InteractionKind,
+  Person,
+  PersonInput,
+  PersonWithStatus,
+  RelationshipKind,
+  UpcomingBirthday,
+} from './domain/social/person';
+export {
+  BIRTHDAY_HORIZON_DAYS,
+  INTERACTION_KINDS,
+  INTERACTION_LABELS,
+  MAX_CADENCE_DAYS,
+  RELATIONSHIP_KINDS,
+  RELATIONSHIP_LABELS,
+  contactStatus,
+  dueGraceDays,
+  isInteractionKind,
+  isRelationshipKind,
+  orderByAttention,
+  upcomingBirthdays,
+  validateInteraction,
+  validatePerson,
+} from './domain/social/person';
+
+export type {
+  Place,
+  PlaceInput,
+  PlaceKind,
+  ResolvedVisit,
+  Trip,
+  TripInput,
+  TripPurpose,
+  Visit,
+  VisitInput,
+  VisitOverlap,
+} from './domain/social/place';
+export {
+  PLACE_KINDS,
+  PLACE_LABELS,
+  TRIP_PURPOSES,
+  TRIP_PURPOSE_LABELS,
+  findOverlaps,
+  isPlaceKind,
+  isTripPurpose,
+  nightsAway,
+  placeOnDay,
+  resolveVisits,
+  resolvedCovers,
+  travelDays,
+  validatePlace,
+  validateTrip,
+  validateVisit,
+  visitCovers,
+} from './domain/social/place';
