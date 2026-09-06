@@ -24,6 +24,7 @@
     "tokens:build": "pnpm --filter @naitikos/design-system run tokens:build",
     "db:generate": "pnpm --filter @naitikos/db run generate",
     "db:migrate": "pnpm --filter @naitikos/db run migrate",
+    "db:seed": "pnpm --filter @naitikos/db run seed",
     "db:studio": "pnpm --filter @naitikos/db run studio",
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",

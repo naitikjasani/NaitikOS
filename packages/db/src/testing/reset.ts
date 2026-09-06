@@ -117,7 +117,70 @@ export const RESET_ORDER: readonly string[] = Object.freeze([
   /* The knowledge graph — edges reference nodes on both ends */
   'graph_edge',
   'graph_node',
+  /*
+   * Media. Four tables carry a foreign key to `media_object`, so all four go
+   * first. `media_access_log` is included despite reading like operational
+   * logging: §9.10 makes it a record of who looked at a photograph, which is
+   * domain data with a foreign key, and a stale row here fails an insert
+   * exactly as a stale `condition` row once did.
+   */
+  'media_access_log',
+  'media_attachment',
+  'media_thumbnail',
+  'upload_outbox',
+  'media_object',
+  /* Tags — the join before the vocabulary it cites */
+  'entity_tag',
+  'tag',
+  /* Domain tables with no dependants, added when the gap below was found */
+  'body_measurement',
+  'therapy_session',
+  'note',
+  'crisis_plan',
+  'review',
+  /* Embeddings and remembered facts (§10.2, §10.4) */
+  'embedding',
+  'memory_fact',
 ]);
+
+/**
+ * What is deliberately *not* here, so the question is not re-asked.
+ *
+ * The fourteen entries above were missing until 7 September 2026 — found while
+ * writing `docs/runbooks/migration.md`, by listing every table in the database
+ * and subtracting this array. None of them leaks today, because no suite writes
+ * to them yet. Each was one test away from the failure this file's header
+ * describes, which is the same reason `program` and `program_block` were added
+ * after a count returned 9 instead of 1.
+ *
+ * Everything still absent falls into one of four groups, and none of them is an
+ * oversight:
+ *
+ * - **Seeded reference data** the suites read rather than write: `metric`,
+ *   `exercise`, `food`-adjacent rows, `journal_prompt`, `feature_flag`. The
+ *   seed script populates these once; clearing them would break every suite
+ *   that assumes a registered metric key exists.
+ * - **`observation` and `observation_source`**, handled above and below for the
+ *   reasons given there.
+ * - **Derived projections** rebuilt from their inputs — `timeline_entry`,
+ *   `metric_rollup`. A stale row is overwritten rather than accumulated, and a
+ *   projector test that needs a clean slate should say so itself.
+ * - **Operational tables** that are not domain data: `job_run`, `app_event`,
+ *   `app_metric`, `domain_event`, `event_handled`, `event_dead_letter`,
+ *   `deferred_task`, `idempotency_record`, `sync_state`, `setting`,
+ *   `auth_identity`, `ai_interaction`, `schema_migration`, and the `sample_*`
+ *   partitions, which are cleared through their parent.
+ *
+ * `audit_log` is the one judgement call. §9.4 calls it domain data rather than
+ * operational logging — "application logs expire, this does not" — and it is
+ * retained forever. It stays out because a suite asserting on the audit trail
+ * of its *own* writes wants the rows it just made, and clearing the table
+ * between tests within a file would defeat that. A suite that needs it empty
+ * should clear it explicitly, and thereby say why.
+ *
+ * `profile` is a singleton with a database constraint enforcing it, so
+ * deleting it would break every suite that resolves the profile.
+ */
 
 /**
  * Clear the observation log and every domain table.
