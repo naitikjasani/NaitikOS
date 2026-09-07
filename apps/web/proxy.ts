@@ -37,6 +37,7 @@ import {
   generateNonce,
 } from '@naitikos/api';
 
+import { csrfCookieAttributes } from './lib/auth/cookies';
 import { clientEnv, isDevelopment } from './lib/env';
 import { SESSION_COOKIE_OPTIONS } from './lib/supabase/clients';
 import {
@@ -185,15 +186,27 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   /* --- 3. CSRF seed --------------------------------------------------- */
 
   if (request.cookies.get(CSRF_COOKIE_OPTIONS.name) === undefined) {
-    response.cookies.set(CSRF_COOKIE_OPTIONS.name, generateCsrfToken(), {
-      httpOnly: CSRF_COOKIE_OPTIONS.httpOnly,
-      sameSite: CSRF_COOKIE_OPTIONS.sameSite,
-      // Same reasoning as the session cookie: browsers reject `Secure` over
-      // plain http, which would break local development entirely.
-      secure: !isDevelopment(),
-      path: CSRF_COOKIE_OPTIONS.path,
-      maxAge: CSRF_COOKIE_OPTIONS.maxAge,
-    });
+    /*
+     * The attributes come from `lib/auth/cookies.ts`, which decides `Secure`
+     * from the deployment's configured origin rather than from `NODE_ENV`.
+     *
+     * This used to be `secure: !isDevelopment()`, with a comment reasoning that
+     * browsers reject `Secure` over plain http and local development would
+     * break. The premise was right and the predicate was wrong: `NODE_ENV`
+     * describes a *build*, and `next build && next start` over
+     * `http://localhost` is a production build on a plaintext connection. The
+     * browser dropped the cookie, `csrfGuard`'s double-submit check then found
+     * nothing to compare, and every mutation answered 403 with nothing
+     * explaining why.
+     *
+     * See that file for why the origin is trustworthy here and the `Host`
+     * header and `x-forwarded-proto` are not.
+     */
+    response.cookies.set(
+      CSRF_COOKIE_OPTIONS.name,
+      generateCsrfToken(),
+      csrfCookieAttributes(clientEnv.NEXT_PUBLIC_SITE_URL),
+    );
   }
 
   /* --- 4. Headers ----------------------------------------------------- */
