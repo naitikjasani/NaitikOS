@@ -10,11 +10,12 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { visiblePermissions } from '@naitikos/api';
 
 import { getAuthState } from '../../../../lib/auth/session';
-import {
-  internalErrorResponse,
-  rateLimitGuard,
-  traceIdFor,
-} from '../../../../lib/auth/handler-context';
+import { rateLimitGuard, traceIdFor } from '../../../../lib/auth/handler-context';
+// `unhandledErrorResponse` lives beside the platform guard chain rather than in
+// `handler-context` because that is where the shared route plumbing is kept; it
+// needs nothing from the platform context itself. See its own doc comment for
+// what it does and does not put in the log.
+import { unhandledErrorResponse } from '../../../../lib/platform/context';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const traceId = traceIdFor(request);
@@ -49,7 +50,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       // be a correctness bug even at n=1.
       { headers: { 'Cache-Control': 'no-store, private' } },
     );
-  } catch {
-    return internalErrorResponse(traceId);
+  } catch (error: unknown) {
+    /*
+     * This endpoint is hit on nearly every navigation, so a throw here is the
+     * one most likely to be seen as "the app is broken" with no other symptom.
+     * Silence made it the hardest to diagnose.
+     */
+    return unhandledErrorResponse('auth.session.get', traceId, error);
   }
 }

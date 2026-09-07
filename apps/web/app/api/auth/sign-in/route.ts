@@ -21,11 +21,15 @@ import { DEFAULT_AUTHENTICATED_PATH } from '../../../../lib/auth/routes';
 import {
   csrfGuard,
   errorResponse,
-  internalErrorResponse,
   rateLimitGuard,
   resetRateLimit,
   traceIdFor,
 } from '../../../../lib/auth/handler-context';
+// `unhandledErrorResponse` lives beside the platform guard chain rather than in
+// `handler-context` because that is where the shared route plumbing is kept; it
+// needs nothing from the platform context itself. See its own doc comment for
+// what it does and does not put in the log.
+import { unhandledErrorResponse } from '../../../../lib/platform/context';
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const traceId = traceIdFor(request);
@@ -131,8 +135,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       },
       redirectTo: parsed.data.redirectTo ?? DEFAULT_AUTHENTICATED_PATH,
     });
-  } catch {
-    // Never leak. An exception message in this system could contain anything.
-    return internalErrorResponse(traceId);
+  } catch (error: unknown) {
+    /*
+     * The response still leaks nothing — an exception message on this path
+     * could contain a credential, and §5.12 keeps it out of the body. What
+     * changed is that the trace id the body points at now exists in the log.
+     * The message and stack stay out of the log too, for the same reason; the
+     * helper's doc comment argues that case in full.
+     */
+    return unhandledErrorResponse('auth.sign-in.post', traceId, error);
   }
 }

@@ -231,6 +231,40 @@ which is still ahead of everything that device wrote before.
 
 ## What is not built
 
+**Any server-side reading of this outbox** (§5.16). §5.16 asks for an alert on
+"an outbox entry older than 24 hours … because it means data the user believes
+is saved is not". There is no such alert for the queue on this page, and it is
+not an oversight — the queue is IndexedDB in one browser profile on one device,
+and no query on the server can see it.
+
+Be careful with the two gauges that used to look like they cover it. Until
+7 September 2026 `sync.outbox.depth` and `sync.outbox.oldest_age_seconds` were
+emitted by `verify-media-integrity` and
+by `GET /api/media/uploads`, and both read `upload_outbox` — the **media**
+outbox, photographs waiting for a signed URL. The queue described on this page
+contributes nothing to either. They are now named `media.outbox.depth` and
+`media.outbox.oldest_age_seconds`, and `sync.outbox.*` is reserved for **this**
+queue — the capture outbox — because only the client can report it and
+`telemetryNameSchema` already accepted the name. Nothing emits it yet.
+`docs/background-jobs.md` §8 has the full note.
+
+Two ways to give this queue a real signal were priced and both declined for now.
+Having the client report its own depth on the existing `/api/telemetry` beacon is
+one `record()` call — and useless as an alert, because a backed-up outbox means a
+device with no network, telemetry deliberately does not queue, and the reading
+would therefore arrive only after the drain had already succeeded. The shape that
+works is a drain **heartbeat** the server can notice the absence of: stamp
+`sync_state.last_synced_at` per device on a successful drain and flag anything
+older than 24 hours in the nightly run. `sync_state` has the columns and
+`lib/offline/device.ts` has the device id, so the pieces exist — what does not is
+a write path, a repository, and an answer to the case the heartbeat cannot
+distinguish, which is that a phone that is stuck looks exactly like a phone that
+is switched off. At n=1 with a tablet in a drawer, that is the common case.
+
+Inventing a server-side number for this queue in the meantime would be worse
+than the gap. A gauge that reads zero because nothing reports to it is
+indistinguishable from a gauge that reads zero because nothing is stuck.
+
 **Per-device sync watermarks and delta sync** (§5.8). `sync_state` exists and is
 unpopulated. The current read path refetches rather than requesting a delta,
 which at this volume is the right trade — a delta protocol is worth building

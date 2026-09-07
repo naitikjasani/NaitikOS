@@ -17,10 +17,10 @@ import { timelineQuerySchema } from '@naitikos/api';
 import {
   errorResponse,
   guard,
-  internalErrorResponse,
   isGuardFailure,
   parseQuery,
   traceIdFor,
+  unhandledErrorResponse,
   withoutUndefined,
 } from '../../../lib/platform/context';
 
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         'cache-control': 'private, no-store',
       },
     });
-  } catch {
-    return internalErrorResponse(traceId);
+  } catch (error: unknown) {
+    return unhandledErrorResponse('timeline.get', traceId, error);
   }
 }

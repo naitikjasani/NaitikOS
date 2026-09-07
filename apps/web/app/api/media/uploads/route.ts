@@ -31,10 +31,10 @@ import { createSupabaseStorageProvider } from '../../../../lib/storage/supabase-
 import {
   errorResponse,
   guard,
-  internalErrorResponse,
   isGuardFailure,
   parseJson,
   traceIdFor,
+  unhandledErrorResponse,
 } from '../../../../lib/platform/context';
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -100,8 +100,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       { status: 'reserved' as const, entry: reserved.value, upload: signed.value },
       { status: 201, headers: { 'cache-control': 'private, no-store' } },
     );
-  } catch {
-    return internalErrorResponse(traceId);
+  } catch (error: unknown) {
+    /*
+     * Logged before the generic 500. The reservation may or may not have landed
+     * before the throw — §5.7 makes that survivable, because a replay of the
+     * same `idempotencyKey` finds the row rather than creating a second — but
+     * the operator can only reason about which happened if the failure left a
+     * trace id in the log to join against `upload_outbox`.
+     */
+    return unhandledErrorResponse('media.uploads.post', traceId, error);
   }
 }
 
@@ -168,8 +175,8 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
       { status: 'uploaded' as const },
       { headers: { 'cache-control': 'private, no-store' } },
     );
-  } catch {
-    return internalErrorResponse(traceId);
+  } catch (error: unknown) {
+    return unhandledErrorResponse('media.uploads.patch', traceId, error);
   }
 }
 
@@ -194,13 +201,36 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       platform.outbox.health(now),
     ]);
 
-    platform.observability.metrics.gauge('sync.outbox.depth', health.pending + health.failed);
+    /*
+     * The `sync.` prefix is wrong, and the comment that used to sit here made
+     * the mistake it describes.
+     *
+     * `platform.outbox` is `createUploadOutboxRepository` — `upload_outbox`,
+     * photographs waiting for a signed URL. §5.7's capture outbox, the one
+     * holding a Daily Close made in aeroplane mode, is IndexedDB in
+     * `lib/offline/outbox.ts` and contributes nothing to these numbers. The
+     * previous note here — "§5.16 alerts on this: an entry older than 24 hours
+     * means data the user believes is saved is not" — quoted §5.16 correctly
+     * and pointed it at the wrong queue.
+     *
+     * The rename to `media.outbox.*` is the real fix and is not made here: the
+     * names are a closed union in `packages/core` and a client wire contract in
+     * `packages/api`, with a cross-package test asserting the two agree. See
+     * the long note on `verify-media-integrity` in `app/api/jobs/nightly` and
+     * `docs/background-jobs.md` §8.
+     *
+     * The `route` dimension is added so the two server emitters are at least
+     * separable in `app_event`, which has a `route` column and no column for
+     * any other dimension.
+     */
+    platform.observability.metrics.gauge('media.outbox.depth', health.pending + health.failed, {
+      route: '/api/media/uploads',
+    });
     if (health.oldestAgeSeconds !== null) {
-      // §5.16 alerts on this: an entry older than 24 hours means data the user
-      // believes is saved is not.
       platform.observability.metrics.gauge(
-        'sync.outbox.oldest_age_seconds',
+        'media.outbox.oldest_age_seconds',
         health.oldestAgeSeconds,
+        { route: '/api/media/uploads' },
       );
     }
 
@@ -208,7 +238,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       { entries, health },
       { headers: { 'cache-control': 'private, no-store' } },
     );
-  } catch {
-    return internalErrorResponse(traceId);
+  } catch (error: unknown) {
+    return unhandledErrorResponse('media.uploads.get', traceId, error);
   }
 }

@@ -22,10 +22,14 @@ import { getAuthState, getDb } from '../../../../lib/auth/session';
 import {
   csrfGuard,
   errorResponse,
-  internalErrorResponse,
   rateLimitGuard,
   traceIdFor,
 } from '../../../../lib/auth/handler-context';
+// `unhandledErrorResponse` lives beside the platform guard chain rather than in
+// `handler-context` because that is where the shared route plumbing is kept; it
+// needs nothing from the platform context itself. See its own doc comment for
+// what it does and does not put in the log.
+import { unhandledErrorResponse } from '../../../../lib/platform/context';
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const traceId = traceIdFor(request);
@@ -82,8 +86,20 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         occurredAt: systemClock.now(),
         traceId,
       });
+      /*
+       * `undefined` is not a rejected password — it is the configured provider
+       * not implementing `reauthenticate` at all, which means §5.4's step-up
+       * gate cannot be satisfied by anyone and export, key access and deletion
+       * are unreachable. A 500 is the right answer and it was also a silent
+       * one; the code distinguishes it in the log from a genuine throw.
+       */
       return result === undefined
-        ? internalErrorResponse(traceId)
+        ? unhandledErrorResponse(
+            'auth.step-up.post',
+            traceId,
+            result,
+            'reauthenticate_unsupported',
+          )
         : errorResponse(result.error, traceId);
     }
 
@@ -99,7 +115,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       status: 'reauthenticated' as const,
       authenticatedAt: result.value.authenticatedAt.toISOString(),
     });
-  } catch {
-    return internalErrorResponse(traceId);
+  } catch (error: unknown) {
+    return unhandledErrorResponse('auth.step-up.post', traceId, error);
   }
 }

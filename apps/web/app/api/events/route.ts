@@ -24,10 +24,10 @@ import type { CorrelationId, EventDraft, EventId } from '@naitikos/core';
 import {
   errorResponse,
   guard,
-  internalErrorResponse,
   isGuardFailure,
   parseJson,
   traceIdFor,
+  unhandledErrorResponse,
   withoutUndefined,
 } from '../../../lib/platform/context';
 
@@ -107,7 +107,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       },
       { status: 201, headers: { 'cache-control': 'private, no-store' } },
     );
-  } catch {
-    return internalErrorResponse(traceId);
+  } catch (error: unknown) {
+    /*
+     * Logged before the generic 500. A throw here is ambiguous in a way the
+     * caller cannot resolve on its own: `publish` may have appended to
+     * `event_log` before failing, and the offline outbox will replay the batch
+     * on its next drain. The trace id is what lets an operator decide whether a
+     * duplicate needs looking at.
+     */
+    return unhandledErrorResponse('events.post', traceId, error);
   }
 }

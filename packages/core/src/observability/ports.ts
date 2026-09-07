@@ -120,9 +120,35 @@ export const METRIC_NAMES = [
   'job.run.duration',
   'job.step.duration',
   'job.step.failed',
+  /*
+   * Two outboxes, two vocabularies, and conflating them was a real bug.
+   *
+   * `sync.outbox.*` is §5.7's **capture** outbox — the IndexedDB queue holding
+   * a Daily Close made in aeroplane mode. It is the one §5.16 wants an alert
+   * on, because an entry older than 24h means data the operator believes is
+   * saved is not.
+   *
+   * It lives on the client, so **only the client can report it**, which is why
+   * these two names are in `telemetryNameSchema` as well. Nothing emits them
+   * today: see `docs/offline.md` for the two options considered and why both
+   * were declined. A name in this vocabulary with no emitter reads as zero
+   * rather than as broken, which is exactly the failure the equality test in
+   * `telemetry.test.ts` warns about — so it is said here plainly instead.
+   */
   'sync.outbox.depth',
-  /** §5.16 alerts on this: an entry older than 24h means data believed saved is not. */
   'sync.outbox.oldest_age_seconds',
+  /*
+   * `media.outbox.*` is the **upload** outbox — `upload_outbox`, server-side,
+   * for encrypted media objects.
+   *
+   * These names exist because the nightly job emitted the *capture* names for
+   * this data. §5.16's sync-health alert would therefore have watched media
+   * uploads — of which there are currently zero, because nothing inserts
+   * `media_object` — and stayed silent while the capture queue backed up. The
+   * alert would have been perfectly healthy and perfectly useless.
+   */
+  'media.outbox.depth',
+  'media.outbox.oldest_age_seconds',
   'sync.failed',
   'api.request.duration',
   'api.request.failed',

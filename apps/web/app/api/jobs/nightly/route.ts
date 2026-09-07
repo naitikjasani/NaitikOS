@@ -41,10 +41,10 @@ import { ok } from '@naitikos/shared';
 
 import {
   guard,
-  internalErrorResponse,
   isGuardFailure,
   parseJson,
   traceIdFor,
+  unhandledErrorResponse,
 } from '../../../../lib/platform/context';
 import type { PlatformContext } from '../../../../lib/platform/context';
 import { loadInsights, recordInsightNight } from '../../../../lib/platform/insights';
@@ -95,23 +95,60 @@ function stepsFor(platform: PlatformContext): readonly JobStep[] {
     },
     {
       name: 'verify-media-integrity',
-      describes: 'Reports outbox health, which §5.16 alerts on.',
+      describes: 'Reports the media upload outbox — depth and oldest age. Not the capture outbox.',
       haltOnFailure: false,
+      /*
+       * ## These gauges measure the media outbox, and their names say `sync`
+       *
+       * `platform.outbox` is `createUploadOutboxRepository` — `upload_outbox`,
+       * the table that holds a *photograph* waiting for a signed URL. It is not
+       * §5.7's capture outbox, which is the IndexedDB queue in
+       * `lib/offline/outbox.ts` holding a Daily Close made in aeroplane mode.
+       *
+       * The names `sync.outbox.depth` and `sync.outbox.oldest_age_seconds` read
+       * as the second. Anyone building §5.16's alert — "an outbox entry older
+       * than 24 hours is an alert, because it means data the user believes is
+       * saved is not" — would wire it to these and get a watch on media
+       * uploads, of which there are currently zero because nothing in shipped
+       * code inserts `media_object`. The alert would sit at zero and silent
+       * while the capture outbox backed up, which is worse than no alert: a
+       * green signal is read as evidence.
+       *
+       * **The rename is the honest fix and it is not made here.** These strings
+       * are not local: `METRIC_NAMES` in `packages/core/src/observability/
+       * ports.ts` is a closed union, `telemetryNameSchema` in
+       * `packages/api/src/contracts/telemetry.ts` restates it as the client
+       * wire contract, a test in each package asserts the two agree, and
+       * `docs/runbooks/incident.md` names both gauges twice. Renaming to
+       * `media.outbox.*` means five files across three packages plus a runbook,
+       * and it leaves the client half of the enum wanting `sync.outbox.*` back
+       * for the capture outbox it will one day report. That is a coordinated
+       * change, not a line in a job step.
+       *
+       * What is done here instead is the cheap half: the `route` dimension, so
+       * the two emitters are at least separable in `app_event`. `route` and not
+       * `stepName` — `stepName` is on `MetricDimensions` but
+       * `createPostgresMetrics` never writes it, because `app_event` has no
+       * column for it, so a `stepName` here would be discarded silently.
+       */
       async run() {
         const health = await platform.outbox.health(systemClock.now().toISOString());
         const stale = await platform.outbox.recoverStale(staleThreshold);
 
-        platform.observability.metrics.gauge('sync.outbox.depth', health.pending + health.failed);
+        platform.observability.metrics.gauge('media.outbox.depth', health.pending + health.failed, {
+          route: '/api/jobs/nightly',
+        });
         if (health.oldestAgeSeconds !== null) {
           platform.observability.metrics.gauge(
-            'sync.outbox.oldest_age_seconds',
+            'media.outbox.oldest_age_seconds',
             health.oldestAgeSeconds,
+            { route: '/api/jobs/nightly' },
           );
         }
 
         return ok({
           rowsAffected: stale.ok ? stale.value : 0,
-          note: `${String(health.pending)} pending, ${String(health.failed)} failed`,
+          note: `${String(health.pending)} pending, ${String(health.failed)} failed (media uploads)`,
         });
       },
     },
@@ -349,8 +386,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       status: 200,
       headers: { 'cache-control': 'private, no-store' },
     });
-  } catch {
-    return internalErrorResponse(traceId);
+  } catch (error: unknown) {
+    /*
+     * Logged before the generic 500. `unhandledErrorResponse` returns nothing
+     * but a trace id (§5.12), so this line is the only record that the run was
+     * attempted at all — and a nightly invocation that threw here wrote no
+     * `job_run` finish record either, which means §5.16's absence alert will
+     * fire in the morning with nothing to explain it.
+     */
+    return unhandledErrorResponse('jobs.nightly.post', traceId, error);
   }
 }
 
@@ -377,7 +421,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       },
       { headers: { 'cache-control': 'private, no-store' } },
     );
-  } catch {
-    return internalErrorResponse(traceId);
+  } catch (error: unknown) {
+    return unhandledErrorResponse('jobs.nightly.get', traceId, error);
   }
 }

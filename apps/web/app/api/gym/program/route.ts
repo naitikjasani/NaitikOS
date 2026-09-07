@@ -74,7 +74,22 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     const start = zonedDayBounds(fromDayKey, zone);
     const end = zonedDayBounds(toDayKey, zone);
-    if (start === null || end === null) return internalErrorResponse(traceId);
+    if (start === null || end === null) {
+      /*
+       * A 500 with no throw behind it, which is exactly the kind that gets
+       * returned silently. `zone` is a constant and both day keys were derived
+       * from the clock a line earlier, so a null here is a defect in
+       * `zonedDayBounds` or in `shiftDayKey` rather than bad input — and the
+       * response body sends the operator to the log for a trace id that,
+       * before this, was never written there.
+       */
+      platform.observability.logger.error('unhandled error in gym.program.get', {
+        traceId,
+        component: 'gym.program.get',
+        code: 'zoned_day_bounds_null',
+      });
+      return internalErrorResponse(traceId);
+    }
 
     const days = await createWorkoutRepository(platform.db).sessionDays(start.start, end.end);
     if (!days.ok) return errorResponse(days.error, traceId);

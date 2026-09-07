@@ -50,7 +50,7 @@ module happened to import first.
 | 6 | `run-detectors` | **yes** | §10.6. After rollups — a trend must exist first |
 | 7 | `generate-embeddings` | no | V2, local-only (P7) |
 | 8 | `generate-thumbnails` | no | For objects that arrived without them |
-| 9 | `verify-media-integrity` | **yes** | §9.8 + outbox health |
+| 9 | `verify-media-integrity` | **yes** | §9.8 + the **media upload** outbox's health, not the capture outbox's — see §8 |
 | 10 | `assert-data-integrity` | no | §5.16's assertions |
 | 11 | `schedule-notifications` | no | §5.9. No separate scheduler |
 | 12 | `rebuild-timeline` | no | When a projector change makes entries stale |
@@ -267,6 +267,84 @@ adds a field and forgets — relying on a *type* fails loudly at compile time."
 `METRIC_NAMES` is a closed union for the same reason. §1.4 warns that "vanity
 metrics are actively harmful in a single-user product because there is no one to
 impress."
+
+### Two outboxes, and the metrics used to conflate them
+
+Read this before wiring §5.16's sync-health alert, because the old names
+invited the wrong conclusion and the wrong conclusion is a green light.
+
+Until 7 September 2026, `verify-media-integrity` and `GET /api/media/uploads`
+both emitted `sync.outbox.depth` and `sync.outbox.oldest_age_seconds`. Both read
+`platform.outbox`, which is `createUploadOutboxRepository` — the `upload_outbox`
+table, holding a **photograph** waiting for a signed URL.
+
+§5.7's **capture** outbox is a different thing entirely: the IndexedDB queue in
+`apps/web/lib/offline/outbox.ts`, holding a Daily Close made in aeroplane mode.
+It contributes nothing to either gauge, and no server-side query can see it —
+one browser profile on one device.
+
+So an alert built on the old names would have watched media uploads, of which
+there are currently **zero**: nothing in shipped code inserts `media_object`,
+and `completeUploadSchema` requires a `media_object_id` that would fail its
+foreign key. The alert would have sat at zero and silent while a Close the
+operator believes is saved waited in a phone in a drawer. That is worse than no
+alert, because a green signal reads as evidence.
+
+The two server emitters now carry a `route` dimension —
+`/api/jobs/nightly` and `/api/media/uploads` — so they are at least separable in
+`app_event`, which has a `route` column and no column for any other dimension
+(`stepName`, `outcome` and `eventType` are on `MetricDimensions` and are
+discarded by `createPostgresMetrics`).
+
+**The rename has been made, and it went the other way round.** The server's
+media gauges became `media.outbox.depth` and `media.outbox.oldest_age_seconds`;
+`sync.outbox.*` was *kept* and reserved for the capture outbox. That direction
+follows from where the reading has to come from: the capture queue is in
+IndexedDB on one device, so only the client can report it, and
+`telemetryNameSchema` — the client wire contract — already accepted
+`sync.outbox.depth`. Renaming the client's name to make room for the server's
+would have moved the wrong one.
+
+The vocabulary now carries four names across `METRIC_NAMES` (`packages/core`)
+and `telemetryNameSchema` (`packages/api`), which a test in each package asserts
+are identical. Two of the four — the `sync.outbox.*` pair — have **no emitter**,
+and that is stated in `METRIC_NAMES` beside them rather than left to be
+discovered: a name in the vocabulary with nothing emitting it reads as zero
+rather than as broken, which is the exact failure that equality test exists to
+prevent.
+
+### Why the capture outbox has no server-side signal, and what one would cost
+
+Nothing on the server can observe the capture outbox, and no fake signal has
+been invented for it. Two options were priced:
+
+**The client reports its own depth on the existing beacon.** `/api/telemetry`
+already accepts `sync.outbox.depth` from `telemetryNameSchema`, and
+`lib/telemetry/client.ts` already batches and flushes to it — so this is one
+`record()` call in the drain loop. It was rejected as *not* the signal §5.16
+asks for. A backed-up capture outbox means a device with no network; a device
+with no network cannot beacon, and telemetry deliberately does not queue (see
+the header of `app/api/telemetry/route.ts` — "it does not go through the
+outbox"). The reading would therefore arrive only *after* the drain succeeded,
+which makes it an after-the-fact depth measurement rather than an alert: silent
+for the entire duration of the condition it exists to detect. It would also land
+under the same `app_event.name` as the media gauges with nothing but `route` to
+separate them, so it would corrupt the reading it was added beside.
+
+**A drain heartbeat the server can miss.** This is the shape that works, because
+§5.16 alerts on *absence* — the same mechanism that makes `job_run` trustworthy.
+`sync_state` already has the columns (`device_id`, `watermark`, `last_synced_at`)
+and `lib/offline/device.ts` already holds a stable device id; a successful drain
+would stamp `last_synced_at`, and a nightly step would flag any device whose
+stamp is older than 24 hours. Not built: it needs a write path for `sync_state`
+(which nothing writes today), a repository, a device-registration story, and an
+answer to the case it cannot distinguish — a phone that is stuck looks exactly
+like a phone that is switched off, and at n=1 with a tablet in a drawer that is
+the common case, not the edge one. That is a milestone with a design question in
+it, not a patch.
+
+Until one of those lands, the honest position is the one
+`docs/runbooks/incident.md` already takes: the SQL query is the alert.
 
 ### Metrics can be lost, and that is the trade
 

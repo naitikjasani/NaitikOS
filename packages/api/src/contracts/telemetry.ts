@@ -49,8 +49,13 @@ export const telemetryNameSchema = z.enum([
   'job.run.duration',
   'job.step.duration',
   'job.step.failed',
+  /* The capture outbox (client-reported) and the media upload outbox
+   * (server-reported). Distinct on purpose — see `METRIC_NAMES` in
+   * `@naitikos/core` for why conflating them made §5.16's alert useless. */
   'sync.outbox.depth',
   'sync.outbox.oldest_age_seconds',
+  'media.outbox.depth',
+  'media.outbox.oldest_age_seconds',
   'sync.failed',
   'api.request.duration',
   'api.request.failed',

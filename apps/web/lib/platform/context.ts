@@ -21,6 +21,7 @@ import type { Actor, EventBus, Permission } from '@naitikos/core';
 import { createEventBus, systemClock } from '@naitikos/core';
 import type { Database } from '@naitikos/db';
 import {
+  createConsoleLogger,
   createDeadLetterSink,
   createEventStore,
   createHandledLedger,
@@ -162,6 +163,100 @@ export function isGuardFailure(
   result: Awaited<ReturnType<typeof guard>>,
 ): result is { response: NextResponse } {
   return 'response' in result;
+}
+
+/* =========================================================================
+ * Failing honestly
+ * ====================================================================== */
+
+/**
+ * The 500 an unhandled throw earns — *and* the log line that makes it findable.
+ *
+ * `internalErrorResponse` returns nothing but a trace id, deliberately: §5.12
+ * says an unexpected error must not leak its shape to the caller, and §5.14
+ * names "a compromised third-party dependency exfiltrating data" as the
+ * adversary that makes a verbose 500 a real risk rather than a stylistic one.
+ * The body it produces therefore points the operator at the server log.
+ *
+ * Eleven handlers returned that body from a bare `catch { }`. Nothing was
+ * logged, so the trace id the response named appeared nowhere, and the operator
+ * was sent to search a log for a trace that did not exist. A 500 that lies
+ * about where the evidence is costs more than one that says nothing at all —
+ * the search happens either way, and only in the first case does it fail
+ * silently.
+ *
+ * ## Why a helper rather than the inline call the other handlers use
+ *
+ * Most route handlers run `guard` *outside* their `try`, which leaves
+ * `platform` in scope in the `catch` and lets them write
+ * `platform.observability.logger.error(...)` directly. The handlers this
+ * function serves keep `guard` *inside* the `try` on purpose — that is what
+ * makes a throw from the guard chain itself (a database handle that will not
+ * open, a rate-limit store that faults) come back as a 500 carrying a trace id
+ * rather than as Next's opaque digest — and the four `/api/auth` routes never
+ * build a platform context at all. Restructuring eleven handlers to match the
+ * majority would have traded that guarantee away for symmetry.
+ *
+ * The emitted line is the same shape the other handlers emit, down to the
+ * message. Only the logger's provenance differs, and not in substance:
+ * `createObservability` builds its logger from this same `createConsoleLogger`,
+ * and §9.4 keeps application logs out of Postgres, so both write the same JSON
+ * to the same stdout. Constructed per call rather than at module scope, in line
+ * with the rule stated on {@link createPlatformContext} — it holds no handles,
+ * but a serverless container that caches one thing at module scope tends to
+ * acquire a second.
+ *
+ * ## What is deliberately not logged
+ *
+ * The caught error's `message` and `stack` stay out, and this is the one place
+ * where that decision is worth spelling out because an incident is exactly when
+ * someone reaches for them.
+ *
+ * §5.11 permits "event names and numeric measurements only. **No payloads,
+ * ever.**" A driver's message is not a message we wrote: a Postgres
+ * unique-violation reads `Key (content_hash)=(…)` with the conflicting value
+ * inline, and `Error.prototype.stack` opens with that same message before the
+ * first frame — so logging the stack logs the message, and there is no version
+ * of this that takes one without the other. `ErrorReport.stack` in
+ * `core/observability/ports.ts` does call a stack safe, but read the reason it
+ * gives: "constructing errors with static messages and structured fields
+ * (§5.12's `DomainError`) is what keeps that true." That holds for the errors
+ * this codebase constructs and not for whatever `pg` throws from inside a
+ * connection pool.
+ *
+ * `LogContext` has nowhere to put them regardless — no `data` field, by
+ * construction — so the alternative would have meant smuggling a stack through
+ * `identifiers`, a field documented as "identifiers … never content".
+ *
+ * The class name and the trace id are what every other handler in the codebase
+ * records. That is enough to find the request in the platform log and to say
+ * which failure class it was; the frames belong in a reproduction, where they
+ * are read once rather than retained.
+ */
+export function unhandledErrorResponse(
+  /** Dotted, matching the other handlers: `media.uploads.post`, `timeline.get`. */
+  component: string,
+  traceId: string,
+  error: unknown,
+  /**
+   * A stable code, for the 500s that are a *condition* rather than a throw.
+   *
+   * Not every unlogged 500 came from a `catch`. A handler that finds its auth
+   * provider missing a method returns the same opaque body, and without a code
+   * its log line would be indistinguishable from a genuine exception — which is
+   * the difference between "the database blinked" and "this deployment is
+   * misconfigured".
+   */
+  code?: string,
+): NextResponse {
+  createConsoleLogger().error(`unhandled error in ${component}`, {
+    traceId,
+    component,
+    ...(code === undefined ? {} : { code }),
+    identifiers: { name: error instanceof Error ? error.name : 'unknown' },
+  });
+
+  return internalErrorResponse(traceId);
 }
 
 /* =========================================================================

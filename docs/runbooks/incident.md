@@ -725,7 +725,7 @@ IndexedDB half belongs to the PWA/offline milestone."
 **So the practical position on 7 September 2026: the only rows that can exist in
 `upload_outbox` are ones an external HTTP call created, and they will sit in
 `pending` indefinitely and show up in `health().pending` and in the
-`sync.outbox.depth` gauge.** If you are looking at a stuck upload, the first
+`media.outbox.depth` gauge.** If you are looking at a stuck upload, the first
 hypothesis is not a bug in the retry logic — it is that the upload path is not
 wired yet.
 
@@ -757,12 +757,15 @@ SELECT id, status, tier, content_type, attempts, last_error_code,
 
 §5.16 says "an outbox entry older than 24 hours is an alert, because it means
 data the user believes is saved is not". There is no 24-hour constant anywhere
-in the code. The gauges `sync.outbox.depth` and `sync.outbox.oldest_age_seconds`
+in the code. The gauges `media.outbox.depth` and `media.outbox.oldest_age_seconds`
 are emitted to `app_event` by the nightly job and by `GET /api/media/uploads`,
 and nothing reads them back against a threshold. The query above is the alert.
 
-Note also that both gauges measure the *media* outbox despite their names. The
-capture outbox contributes nothing to them.
+Both gauges measure the *media* outbox, and until 7 September 2026 they were
+named `sync.outbox.*`, which read as §5.7's capture outbox and would have made
+any alert built on them silently useless. `sync.outbox.*` is now reserved for
+the capture queue and has no emitter — see `../offline.md` for why only the
+client could provide one and why neither option was built.
 
 ---
 
