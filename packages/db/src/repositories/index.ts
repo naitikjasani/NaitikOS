@@ -182,8 +182,19 @@ export {
   lastJobRun,
   hasCompletedRunSince,
   abandonedJobRuns,
+  recentJobRuns,
   NIGHTLY_JOB_NAME,
 } from './job-run.repository';
+export type { JobRunDetail, JobRunStepRecord } from './job-run.repository';
+
+/* --- The three tables only `/settings/developer` reads (§3.2) ---------- */
+export { createDiagnosticsReader } from './diagnostics.repository';
+export type {
+  DiagnosticsReader,
+  DatabaseIdentity,
+  FeatureFlagRow,
+  SchemaMigrationRow,
+} from './diagnostics.repository';
 
 /* --- Observability, in our own Postgres (§5.11 — no vendor) ------------ */
 export {

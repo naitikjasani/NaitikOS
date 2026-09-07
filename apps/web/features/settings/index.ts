@@ -17,3 +17,9 @@ export { IntegrationsSettingsScreen } from './screens/IntegrationsSettingsScreen
  * because of one toggle; the audit viewer only because of one filter. */
 export { ExportBuilderScreen } from './screens/ExportBuilderScreen';
 export { AuditScreen } from './screens/AuditScreen';
+
+/* §3.2's `/settings/developer` — flags, diagnostics, schema version, and §5.2's
+ * manual trigger. Server-rendered like the rest; the trigger button is a client
+ * island inside it, and it is not exported because nothing else may start a job
+ * run out of context. */
+export { DiagnosticsScreen } from './screens/DiagnosticsScreen';

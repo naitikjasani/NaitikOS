@@ -14,7 +14,9 @@
  */
 
 import { and, desc, eq, gte, sql } from 'drizzle-orm';
-import type { JobRunRecorder, JobRunSummary } from '@naitikos/core';
+import type { Result } from '@naitikos/shared';
+import { ok } from '@naitikos/shared';
+import type { DomainError, JobRunRecorder, JobRunSummary } from '@naitikos/core';
 
 import type { Database } from '../client';
 import { jobRun } from '../schema/operations';
@@ -150,4 +152,123 @@ export async function abandonedJobRuns(
     .from(jobRun)
     .where(and(eq(jobRun.status, 'running'), sql`${jobRun.startedAt} < ${olderThan}`))
     .orderBy(desc(jobRun.startedAt));
+}
+
+/* =========================================================================
+ * Reading runs back — `/settings/developer`
+ *
+ * `lastJobRun` above answers the alert's question ("did a run finish?") and is
+ * deliberately narrow: it omits `steps`, because §5.16's check has no use for
+ * the blob and widening it would push a jsonb column into the alert path and
+ * into every `GET /api/jobs/nightly` response.
+ *
+ * The dashboard asks a different question — *what did the run actually do, step
+ * by step, over the last few nights* — so it gets its own read rather than a
+ * widened one. Two small queries, each honest about its caller.
+ * ====================================================================== */
+
+/**
+ * One step's outcome, as {@link createJobRunRecorder}'s `finish` wrote it.
+ *
+ * **`note` is absent, and its absence is the interesting part.** A step returns
+ * a `note` in its `JobStepOutcome` — "3 recovered, 0 pending" — and
+ * `docs/background-jobs.md` states that the note is surfaced on
+ * `/settings/developer`. It is not, and it cannot be: `runNightly` builds each
+ * entry of `JobRunSummary['steps']` from the name, status, duration,
+ * `rowsAffected` and error code only, so the note is discarded before the
+ * recorder ever sees it. Nothing in this file can recover what was never
+ * persisted, and inventing a column to hold it belongs with the fix in `core`.
+ */
+export type JobRunStepRecord = {
+  readonly name: string;
+  readonly status: string;
+  readonly durationMs: number;
+  /** Null when the step reported no row count, which is not the same as zero. */
+  readonly rowsAffected: number | null;
+  readonly errorCode: string | null;
+};
+
+/** A run with its per-step detail. See {@link recentJobRuns}. */
+export type JobRunDetail = {
+  readonly id: string;
+  readonly jobName: string;
+  readonly status: string;
+  readonly startedAt: string;
+  readonly finishedAt: string | null;
+  readonly durationMs: number | null;
+  readonly isManual: boolean;
+  readonly rowsAffected: number | null;
+  readonly errorMessage: string | null;
+  readonly steps: readonly JobRunStepRecord[];
+};
+
+/**
+ * Narrow the `steps` jsonb, defensively.
+ *
+ * This column is written by our own recorder, so the shape *should* be known —
+ * but it is `jsonb` on a table that will be read in year twelve, and a run
+ * recorded by an older build of this application is exactly the row a cast
+ * would render as `undefined` somewhere in a component tree. An entry that does
+ * not parse is dropped rather than faked; a dashboard showing four steps from a
+ * five-step run is wrong, and one showing `[object Object]` is worse.
+ */
+function toStepRecords(value: unknown): readonly JobRunStepRecord[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.flatMap((entry: unknown): readonly JobRunStepRecord[] => {
+    if (typeof entry !== 'object' || entry === null) return [];
+    const record: Record<string, unknown> = { ...entry };
+
+    const name = record['name'];
+    const status = record['status'];
+    if (typeof name !== 'string' || typeof status !== 'string') return [];
+
+    const durationMs = record['durationMs'];
+    const rowsAffected = record['rowsAffected'];
+    const errorCode = record['errorCode'];
+
+    return [
+      {
+        name,
+        status,
+        durationMs: typeof durationMs === 'number' ? durationMs : 0,
+        rowsAffected: typeof rowsAffected === 'number' ? rowsAffected : null,
+        errorCode: typeof errorCode === 'string' ? errorCode : null,
+      },
+    ];
+  });
+}
+
+/**
+ * The most recent runs, newest first, with their steps.
+ *
+ * @param jobName - restrict to one job. Omitted means *every* job name, which
+ * is the right default for a dashboard: the recorder takes a name so that a
+ * single step re-run files under its own rather than satisfying §5.16's alert,
+ * and a viewer filtered to `nightly` would be the one surface that could not
+ * show the run somebody had just triggered by hand.
+ */
+export async function recentJobRuns(
+  db: Database,
+  options: { readonly limit: number; readonly jobName?: string } = { limit: 10 },
+): Promise<Result<readonly JobRunDetail[], DomainError>> {
+  const rows = await db
+    .select({
+      id: jobRun.id,
+      jobName: jobRun.jobName,
+      status: jobRun.status,
+      startedAt: jobRun.startedAt,
+      finishedAt: jobRun.finishedAt,
+      durationMs: jobRun.durationMs,
+      isManual: jobRun.isManual,
+      rowsAffected: jobRun.rowsAffected,
+      errorMessage: jobRun.errorMessage,
+      steps: jobRun.steps,
+    })
+    .from(jobRun)
+    .where(options.jobName === undefined ? undefined : eq(jobRun.jobName, options.jobName))
+    .orderBy(desc(jobRun.startedAt))
+    .limit(options.limit);
+
+  return ok(rows.map((row) => ({ ...row, steps: toStepRecords(row.steps) })));
 }
