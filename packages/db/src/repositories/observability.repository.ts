@@ -193,6 +193,25 @@ export function createPostgresMetrics(db: Database, options: ObservabilityOption
           ? {}
           : { deviceClass: dimensions?.deviceClass ?? options.deviceClass }),
         ...(options.schemaVersion === undefined ? {} : { schemaVersion: options.schemaVersion }),
+        /*
+         * The other three dimensions, which this writer accepted and dropped
+         * until migration 0018 gave them columns.
+         *
+         * Dropping them was not a rounding error. `job.step.failed` without
+         * `stepName` is one counter for a seventeen-step pipeline, and `time()`
+         * sets `outcome` precisely so that a slow failure is distinguishable
+         * from a slow success — the case its own comment calls "the case worth
+         * knowing about". Both facts were computed, passed in, and discarded at
+         * the last step.
+         *
+         * Spread conditionally like the two above, because
+         * `exactOptionalPropertyTypes` makes an explicit `undefined` a
+         * different thing from an absent key, and Drizzle would write a NULL
+         * over a column default rather than leaving it unset.
+         */
+        ...(dimensions?.eventType === undefined ? {} : { eventType: dimensions.eventType }),
+        ...(dimensions?.stepName === undefined ? {} : { stepName: dimensions.stepName }),
+        ...(dimensions?.outcome === undefined ? {} : { outcome: dimensions.outcome }),
       })
       .catch((error: unknown) => {
         options.onWriteFailure?.(error, `metric:${name}`);
