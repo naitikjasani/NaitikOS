@@ -10,7 +10,7 @@
 ```bash
 pnpm db:up        # Postgres 17 + pgvector on :5433
 pnpm db:migrate   # apply migrations — never runs automatically (§5.15)
-pnpm db:seed      # metric registry + feature flags; idempotent
+pnpm db:seed      # metric registry, feature flags, journal prompts; idempotent
 pnpm --filter @naitikos/db test   # integration tests against the running database
 ```
 
@@ -18,14 +18,18 @@ pnpm --filter @naitikos/db test   # integration tests against the running databa
 
 ## Layout
 
+Verified against the running database on 7 September 2026 — every figure below
+came from a catalogue query rather than from memory, because the previous
+version of this table was wrong in four places at once.
+
 | Path | Owns | Status |
 | --- | --- | --- |
-| `src/schema/` | Table definitions, one file per domain | **Implemented — all 71 tables** |
-| `migrations/` | ★ Generated SQL, committed, append-only, never edited | **0000–0002 applied** |
-| `src/seed/` | Reference data and (later) synthetic generators | Reference data done |
+| `src/schema/` | Table definitions, one file per domain | **Implemented — 103 tables** |
+| `migrations/` | ★ Generated SQL, committed, append-only, never edited | **0000–0017, all 18 applied** |
+| `src/seed/` | Reference data and (later) synthetic generators | Reference data done; no synthetic generators |
 | `src/client.ts` | Connection factory | **Implemented** |
-| `src/repositories/` | Query implementations behind `core`-defined interfaces | Week 2 |
-| `src/views/` | Materialised rollup definitions | Week 3 |
+| `src/repositories/` | Query implementations behind `core`-defined interfaces | **Implemented — 43 repositories** |
+| `src/views/` | Materialised rollup definitions | **Empty, and see below** |
 
 The complete §9 model ships now, including domains with no UI for a year. §2.1: *"The schema is the expensive thing to change later; the UI is not."*
 
@@ -64,8 +68,43 @@ These are not conventions. Each fails at the database, and each has a test in `s
 4. A migration applied anywhere is immutable. Corrections are new migrations, never edits (§9.4).
 5. Every migration must be forward-compatible with the previous application version — §5.15 calls this "the single most important operational discipline in the document", because database rollback is not assumed to exist.
 
-## Two recorded deviations from §9
+## Recorded deviations from §9
 
 **No date-truncated expression index on `observation`.** §9.6 asks for one. `date_trunc(text, timestamptz)` is `STABLE`, not `IMMUTABLE` — its result depends on the session `TimeZone` — so Postgres refuses it in an index. Forcing it with `AT TIME ZONE 'UTC'` would compile and be wrong: in `Asia/Kolkata` every observation before 05:30 would land on the previous day. Day queries are half-open range scans over `observation_observed_at_idx`, with bounds computed in the correct zone by `core/temporal`.
 
-**`sample` is not yet partitioned.** §9.7 specifies monthly partitions and a 90-day retention policy. Deferred until wearable ingestion (V3): the table stays empty until then, and converting an empty table is free.
+**No materialised views, despite `src/views/` and §5.6.** §5.6 specifies
+"Postgres materialised views" for rollups. There are zero in the database and
+`src/views/` is an empty directory; the implementation is a plain `metric_rollup`
+table (`relkind = 'r'`, confirmed) intended to be refreshed by the
+`refresh-rollups` job step.
+
+**No decision record explains the substitution**, so this notes the deviation
+without inventing a reason for it. The argument available in favour of the table
+is that Postgres has no built-in incremental refresh — `REFRESH MATERIALIZED
+VIEW` recomputes the whole relation — so a nightly full recompute over a
+twenty-year record (C2) gets slower every year, which is the opposite of what a
+rollup is for. Whether that was the reasoning at the time is not recorded, and
+this file should not pretend otherwise. The empty directory should either hold
+something or go.
+
+`refresh-rollups` is named in `JOB_STEPS` and not yet registered, so nothing
+currently writes `metric_rollup` either.
+
+## One deviation that has been closed
+
+**`sample` is now partitioned.** This file previously said it was not, and that
+it was "deferred until wearable ingestion (V3)". Wearable ingestion shipped, and
+migration `0015_sample_partitioning.sql` converted the table: `sample` is a
+partitioned parent (`relkind = 'p'`), maintained ahead of itself by the
+`maintain-partitions` job step and collapsed behind itself past ninety days by
+`downsample-samples`. Both are registered.
+
+The development database currently holds `sample_2026_09`, `sample_2026_10`,
+`sample_2027_03`, `sample_2027_04` and `sample_default` — four monthly children
+with a **five-month gap** between the second and third, which
+`maintain-partitions` does not create. It is almost certainly residue from tests
+calling `ensure_sample_partition` directly with far-future timestamps. Harmless
+locally, and worth not mistaking for the job having run.
+
+The claim that "converting an empty table is free" turned out to be right, which
+is the only reason the deferral cost nothing.
