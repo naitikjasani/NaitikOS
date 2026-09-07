@@ -127,6 +127,13 @@
       "when": 1788668597473,
       "tag": "0017_ask_threads",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1788764059367,
+      "tag": "0018_app_event_dimensions",
+      "breakpoints": true
     }
   ]
 }

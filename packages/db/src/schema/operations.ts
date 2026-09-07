@@ -117,10 +117,51 @@ export const appEvent = pgTable(
     /** Coarse device class, for the mobile-versus-desktop split. */
     deviceClass: text(),
     schemaVersion: text(),
+
+    /*
+     * The other three of `MetricDimensions`.
+     *
+     * `MetricDimensions` in `@naitikos/core` declares five — `route`,
+     * `deviceClass`, `eventType`, `stepName`, `outcome` — and this table held
+     * columns for the first two. `createPostgresMetrics` therefore accepted the
+     * other three and silently dropped them, which made two metrics
+     * meaningless rather than merely coarse:
+     *
+     * - `job.step.duration` and `job.step.failed` had no step name, so a
+     *   seventeen-step pipeline recorded one undifferentiated counter. "A step
+     *   failed" is not an operationally useful sentence.
+     * - `Metrics.time()` sets `outcome: 'success' | 'failure'` on purpose, and
+     *   its own comment says why: "measuring only the happy path hides the case
+     *   where failures are slow, which is the case worth knowing about." The
+     *   value was discarded, so the distinction it exists to draw could not be
+     *   drawn.
+     *
+     * `text()` rather than an enum, matching `deviceClass` above. §5.11 gives
+     * this table a ninety-day retention and calls telemetry the least important
+     * data in the system; an enum would make adding an outcome a migration, and
+     * a migration is a poor price for a column whose rows expire in a quarter.
+     */
+    /** `Workout.SetLogged` — which domain event this measurement concerns. */
+    eventType: text(),
+    /** Which nightly step (§5.2), e.g. `downsample-samples`. */
+    stepName: text(),
+    /** `success` or `failure`. See the note above on `Metrics.time()`. */
+    outcome: text(),
   },
   (t) => [
     index('app_event_name_idx').on(t.name, t.occurredAt.desc()),
     index('app_event_occurred_idx').on(t.occurredAt.desc()),
+    /*
+     * No index on the three columns above, deliberately.
+     *
+     * The migration runbook's checklist says to add indexes for the queries
+     * that will actually run, and the query that will run here is "the failed
+     * steps of the last few runs" — which filters `name` first, and
+     * `app_event_name_idx` already leads on it. At one operator's volume with a
+     * ninety-day retention, narrowing the remainder is a scan of a handful of
+     * rows. An index would be speculative, and every index is a write cost on
+     * the fire-and-forget path §1.4 protects.
+     */
   ],
 );
 
