@@ -229,6 +229,124 @@ Clearing site data gives the device a new id and no HLC. Neither is a data loss:
 ids already written are untouched, and the clock restarts from physical time,
 which is still ahead of everything that device wrote before.
 
+## Clearing local data
+
+> `/settings/privacy` → "On this device".
+> Code: `apps/web/features/settings/screens/LocalDataScreen.tsx`,
+> `apps/web/features/settings/services/localData.ts`.
+
+`outbox.ts` promised a "clear local data path in settings" in a comment for
+months and nothing called it. §8.10's draft autosave is what turned that from a
+loose end into a gap: journal prose and Daily Close answers are now persisted to
+`localStorage` in plain text, §4.7 makes journal content "the most sensitive data
+in the system", and the only two ways it left the device were the fourteen-day
+expiry and saving the entry it belonged to. Neither is something a person can
+reach for.
+
+### Three stores, three controls
+
+Conflating them would be the bug. They differ in the only respect that matters —
+what clearing one costs.
+
+| Store | Where | Cost of clearing | Recovery |
+|---|---|---|---|
+| Drafts | `localStorage`, `naitikos.draft.v1.*` | Unsaved writing, gone | Undo, for the life of a toast |
+| Cached reads | `localStorage` + the query client | One refetch per screen | Automatic |
+| Capture outbox | IndexedDB `naitikos-outbox` | **Writes the operator believes are saved** | None, ever |
+
+One button would have to price itself at the worst of those, so the cheap,
+frequently-wanted action would inherit a warning about permanent loss and stop
+being read. It would also couple the two real needs: "I am handing this laptop to
+someone" wants the prose and the cached rows gone, while "the sync looks stuck"
+wants the queue looked at and must not touch the drafts.
+
+The controls are ordered by ascending cost, and there is deliberately no
+combined "clear everything" — the handover sequence is stated as a sentence
+instead, because a combined button would have to inherit the outbox's refusal
+and would therefore fail on the one occasion it was most wanted.
+
+### The confirmation model
+
+§8.12 is explicit that "destructive actions never rely solely on a confirm
+dialog … confirmation dialogs train people to click through them; undo actually
+protects data". Applied per control rather than by reaching for a modal three
+times:
+
+| Control | Confirmation | Why |
+|---|---|---|
+| Cached reads | None | Nothing is lost. A dialog here is the click-through training, and it is what teaches the operator to dismiss the one that matters |
+| Drafts | None, plus a real undo | The removed records are held in memory and written back byte-identically, so `savedAt` survives and the restored draft expires when it always would have |
+| Unsent writes | `AlertDialog`, no undo | The one case where undo is unavailable rather than inconvenient: undo works because a soft delete leaves the row (§9.4), and an unsent write has no copy anywhere by definition |
+
+Every label carries its count — "Clear 3 drafts", not "Clear drafts". Neither
+store is browsable: there is no screen that lists drafts and the queue is visible
+only as a banner, so the number on the button is the whole of the operator's view
+into what they are about to destroy.
+
+### A pending outbox blocks rather than warns
+
+The rule is per entry, not per queue, and it is enforced in the store rather than
+in the screen. `discardBlockedEntries` deletes entries in `blocked` and can
+touch nothing else, so a stale count in a React state cannot cause a `sending`
+entry to be deleted.
+
+- **`pending` and `sending` are never discardable.** Not behind a dialog, not
+  behind a typed confirmation. §5.7's requirement is that "a failed drain must
+  never silently discard a write", and both of those are writes that have not
+  finished trying. The remedy is free — connect, drain, or wait out the backoff —
+  so refusing costs a wait, while agreeing costs a workout the operator believes
+  is logged. The asymmetry is total, which is what makes a warning the wrong
+  instrument.
+- **`blocked` is discardable.** It has spent every one of `MAX_ATTEMPTS`, §5.7
+  puts it in "a visible unsynced state with a manual retry", and it is waiting
+  for a person. Abandoning it is that person's decision and the only route to a
+  device with nothing unsent on it — a queue that could never be emptied would
+  mean the operator could never honestly hand the machine to anybody.
+- **The two coexist.** Three pending alongside two blocked offers a discard of
+  exactly two, and says so. Refusing on account of the three would be theatre.
+
+The screen also offers "try sending now", which is the cheaper answer to the
+refusal, and it names the unsendable entries by label — "Daily Close, 3 August"
+is what lets the operator decide; a bare count is a decision they cannot make.
+The label is a kind and a date, never captured content (§5.13).
+
+**One consequence, stated rather than papered over.** Discarding a blocked entry
+releases anything held behind it by `dependsOn`. Those dependants become
+sendable, are rejected for the row that no longer exists, and walk to `blocked`
+themselves over `MAX_ATTEMPTS`. That is noisy but never silent, which is the
+property §5.7 actually asks for, and the confirmation says so before the fact.
+
+### What is deliberately left behind
+
+- **The device id and the last HLC.** Neither says anything about the operator,
+  and both are what keeps this device's clock ahead of everything it has written.
+  The browser's own site-data dialog is what removes them, and the section above
+  explains why doing so is harmless.
+- **The service-worker shell cache, while offline.** It holds fingerprinted
+  assets and `/offline` and no part of the record, so dropping it buys no privacy
+  — and dropping it in the gym basement §5.7 is written for would delete the
+  fallback page and turn the next reload into the browser's error screen. It goes
+  only when `navigator.onLine` says there is a connection to fetch it back with.
+  This is the one place in `lib/offline/` that trusts that flag, and the
+  asymmetry is the reason: a false "online" costs one re-download.
+- **An empty `naitikos.query.cache` key.** `queryClient.clear()` empties the
+  in-memory cache and the persister then writes the now-empty dehydrated state
+  back a second later. The rows are gone; the key is recreated holding nothing.
+  The persisted copy is also removed synchronously, because a tab closed inside
+  that one-second debounce would otherwise leave the full payload untouched on
+  disk.
+
+### Nothing here touches the server
+
+Deleting a record is §9.4's soft delete with its audit entry, reached from the
+entity that owns it. A "clear data" button that could reach the database would be
+a different and far more dangerous feature. That is also why the surface is on
+`/settings/privacy` rather than `/settings/data`: §3.2 gives privacy the exposure
+boundary and data the record itself, and a button labelled "clear data" sitting
+under the export builder would invite exactly the reading this feature must never
+permit. `localData.test.ts` asserts the two sentences that carry the promise, so
+an edit that dropped them fails rather than ships.
+
 ## What is not built
 
 **Any server-side reading of this outbox** (§5.16). §5.16 asks for an alert on

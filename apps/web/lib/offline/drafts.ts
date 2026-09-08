@@ -576,6 +576,184 @@ export function pruneDrafts(store: DraftStore | null, nowMillis: number): number
 }
 
 /* -------------------------------------------------------------------------
+ * Clearing — the operator-facing path
+ * ---------------------------------------------------------------------- */
+
+/**
+ * What is on disk right now, for the surface that offers to remove it.
+ *
+ * §4.7 is why this exists rather than a bare count. Journal prose and Daily
+ * Close answers sit here in plaintext, and until `/settings/privacy` grew the
+ * control that reads this there was no way for the operator to remove them at
+ * all — {@link DRAFT_TTL_MS} and a durable save were the only two mechanisms,
+ * and neither is something a person can reach for. The browser's own site-data
+ * dialog is not an answer: it is outside the application and it takes the device
+ * id and the HLC in `device.ts` with it.
+ *
+ * `live` and `stale` are separate numbers because they answer different
+ * questions. `live` is what a button may honestly promise to destroy — work the
+ * operator could still recover. `stale` is prose {@link loadDraft} already
+ * refuses to return and {@link pruneDrafts} has not swept yet: unofferable,
+ * invisible, and still on the disk, which is precisely the §4.7 exposure the
+ * surface exists to end. One combined figure would either overstate what is
+ * being lost or conceal what is being held.
+ */
+export type DraftInventory = {
+  /** Drafts that would be offered for recovery today. */
+  readonly live: number;
+  /** Expired or unreadable records — never offerable, still occupying the disk. */
+  readonly stale: number;
+  /** The newest live draft's timestamp, so a surface can date it. `null` when there are none. */
+  readonly newestSavedAt: number | null;
+};
+
+/**
+ * Count what is stored, without deleting anything.
+ *
+ * Deliberately not a side effect of {@link pruneDrafts}: a screen that reported
+ * a number by destroying part of it could never show the same number twice, and
+ * the operator would be told about a clearance that had already happened.
+ */
+export function draftInventory(store: DraftStore | null, nowMillis: number): DraftInventory {
+  if (store === null) return { live: 0, stale: 0, newestSavedAt: null };
+
+  let live = 0;
+  let stale = 0;
+  let newestSavedAt: number | null = null;
+
+  for (const key of collectKeys(store)) {
+    if (parseDraftKey(key) === null) continue;
+
+    let raw: string | null;
+    try {
+      raw = store.getItem(key);
+    } catch {
+      // Present in the key list and unreadable. It occupies the disk, so it
+      // counts as held even though nothing can be said about its contents.
+      stale += 1;
+      continue;
+    }
+    // Gone between the snapshot and the read — another tab saved an entry. It
+    // is neither held nor lost, so it is not counted either way.
+    if (raw === null) continue;
+
+    const record = parseRecord(raw);
+    if (record === null || isExpired(record.savedAt, nowMillis)) {
+      stale += 1;
+      continue;
+    }
+
+    live += 1;
+    if (newestSavedAt === null || record.savedAt > newestSavedAt) newestSavedAt = record.savedAt;
+  }
+
+  return { live, stale, newestSavedAt };
+}
+
+/**
+ * One removed record, exactly as it was on disk.
+ *
+ * The raw string rather than a parsed {@link Draft}, so a restore is
+ * byte-identical: `savedAt` is preserved, which means an undone clearance
+ * expires when it always would have and dates itself honestly in the recovery
+ * offer. Re-serialising through {@link saveDraft} would silently stamp every
+ * restored draft with the moment of the undo and extend its §4.7 lifetime by up
+ * to a fortnight.
+ */
+export type DraftBackup = {
+  readonly key: string;
+  readonly raw: string;
+};
+
+/**
+ * Remove every draft this module owns, and hand back what was removed.
+ *
+ * ## Why it returns the records instead of a count
+ *
+ * §8.12: "Destructive actions never rely solely on a confirm dialog … undo
+ * actually protects data." A draft has no server-side copy to soft-delete
+ * against (§9.4 governs the record; a draft never becomes part of it until it is
+ * saved), so the only undo available is the one the caller can hold in memory
+ * for the life of a toast. Returning the records is what makes that possible;
+ * returning a number would have forced the surface into the confirm dialog §8.12
+ * says trains people to click through.
+ *
+ * ## Key by key, never `clear()`
+ *
+ * {@link DraftStore} does not expose `clear()` for exactly this reason. The same
+ * `localStorage` origin holds the device id and the last HLC (`device.ts`) and
+ * the persisted read cache (`lib/query/QueryProvider.tsx`); a `clear()` here
+ * would re-key the device and drop the outbox's causal clock as a side effect of
+ * tidying up some prose.
+ *
+ * Expired and unreadable records go too. They are §4.7 material on a disk with
+ * no way to display them, so "clear the drafts" that left them behind would be
+ * false.
+ */
+export function clearAllDrafts(store: DraftStore | null): readonly DraftBackup[] {
+  if (store === null) return [];
+
+  const removed: DraftBackup[] = [];
+
+  for (const key of collectKeys(store)) {
+    if (parseDraftKey(key) === null) continue;
+
+    let raw: string | null;
+    try {
+      raw = store.getItem(key);
+    } catch {
+      raw = null;
+    }
+
+    try {
+      store.removeItem(key);
+    } catch {
+      // A store that refuses the delete still holds the draft. Reporting it as
+      // removed would offer an undo for something that never went away.
+      continue;
+    }
+
+    if (raw !== null) removed.push({ key, raw });
+  }
+
+  return removed;
+}
+
+/**
+ * Put back what {@link clearAllDrafts} took. The undo, and nothing wider.
+ *
+ * Two refusals, both of them the point:
+ *
+ * - **A key this module does not own is skipped.** The backups come from the
+ *   caller's memory, and a function that wrote any key handed to it would be a
+ *   general-purpose `localStorage` writer sitting next to the device id.
+ * - **An occupied key is left alone.** The undo window is several seconds of
+ *   real time, during which an open editor may have autosaved again. The draft
+ *   on disk is then newer than the one being restored, and overwriting it would
+ *   make the undo itself the data loss.
+ *
+ * @returns how many records were written back.
+ */
+export function restoreDrafts(store: DraftStore | null, backups: readonly DraftBackup[]): number {
+  if (store === null) return 0;
+
+  let restored = 0;
+  for (const backup of backups) {
+    if (parseDraftKey(backup.key) === null) continue;
+
+    try {
+      if (store.getItem(backup.key) !== null) continue;
+      store.setItem(backup.key, backup.raw);
+      restored += 1;
+    } catch {
+      // Quota, or a store that has stopped accepting writes. The remaining
+      // backups are still attempted — a partial restore beats none.
+    }
+  }
+  return restored;
+}
+
+/* -------------------------------------------------------------------------
  * Presentation
  * ---------------------------------------------------------------------- */
 

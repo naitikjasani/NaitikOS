@@ -27,8 +27,10 @@ import {
   type DraftStore,
   MAX_DRAFTS,
   MAX_DRAFT_CHARACTERS,
+  clearAllDrafts,
   clearDraft,
   draftAgeLabel,
+  draftInventory,
   draftKey,
   draftText,
   fieldSignature,
@@ -37,6 +39,7 @@ import {
   loadDraft,
   parseDraftKey,
   pruneDrafts,
+  restoreDrafts,
   saveDraft,
 } from './drafts';
 
@@ -414,6 +417,119 @@ describe('when the draft will not fit', () => {
 
     store.refuseWrites(false);
     expect(saveDraft(store, COMPOSE, REFLECTION, later)).toBe('saved');
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * Clearing — the `/settings/privacy` path
+ *
+ * §4.7 makes this the most consequential arithmetic in the file. The count the
+ * surface prints is a promise about how much unsaved prose is about to be
+ * destroyed, and the undo is the only thing standing between a mis-tap and work
+ * that exists nowhere else. Both are asserted here rather than trusted.
+ * ---------------------------------------------------------------------- */
+
+describe('draftInventory', () => {
+  it('counts what could still be recovered separately from what could not', () => {
+    saveDraft(store, COMPOSE, REFLECTION, NOW);
+    saveDraft(store, CLOSE, { mood: 3 }, NOW - 60_000);
+    // Past the TTL: `loadDraft` already refuses it, and it is still on the disk.
+    saveDraft(store, { surface: 'journal.compose', target: 'abandoned' }, REFLECTION, NOW - DRAFT_TTL_MS - 1);
+    // Unreadable: written by a schema this build does not recognise.
+    store.raw.set(`${DRAFT_KEY_PREFIX}journal.edit.entry-9`, '{"v":99}');
+
+    expect(draftInventory(store, NOW)).toEqual({ live: 2, stale: 2, newestSavedAt: NOW });
+  });
+
+  it('ignores every key that is not a draft', () => {
+    store.raw.set('naitikos.device.id', 'device-1');
+    store.raw.set('naitikos.query.cache', '{"version":1}');
+    saveDraft(store, COMPOSE, REFLECTION, NOW);
+
+    expect(draftInventory(store, NOW).live).toBe(1);
+    expect(draftInventory(store, NOW).stale).toBe(0);
+  });
+
+  it('reports nothing held when there is no store at all', () => {
+    expect(draftInventory(null, NOW)).toEqual({ live: 0, stale: 0, newestSavedAt: null });
+  });
+
+  /** Counting must not be a disguised prune — the same read twice reads the same. */
+  it('does not delete what it counts', () => {
+    saveDraft(store, COMPOSE, REFLECTION, NOW - DRAFT_TTL_MS - 1);
+    expect(draftInventory(store, NOW).stale).toBe(1);
+    expect(draftInventory(store, NOW).stale).toBe(1);
+  });
+});
+
+describe('clearAllDrafts', () => {
+  it('removes every draft, expired ones included', () => {
+    saveDraft(store, COMPOSE, REFLECTION, NOW);
+    saveDraft(store, CLOSE, { mood: 3 }, NOW);
+    saveDraft(store, { surface: 'journal.compose', target: 'abandoned' }, REFLECTION, NOW - DRAFT_TTL_MS - 1);
+
+    expect(clearAllDrafts(store)).toHaveLength(3);
+    expect(draftInventory(store, NOW)).toEqual({ live: 0, stale: 0, newestSavedAt: null });
+  });
+
+  /**
+   * The reason {@link DraftStore} has no `clear()`. The device id and the last
+   * HLC share this origin, and re-keying the device as a side effect of tidying
+   * up some prose would drop the outbox's causal clock (§5.7).
+   */
+  it('leaves the device identity and the read cache alone', () => {
+    store.raw.set('naitikos.device.id', 'device-1');
+    store.raw.set('naitikos.device.hlc', 'hlc-1');
+    store.raw.set('naitikos.query.cache', '{"version":1}');
+    saveDraft(store, COMPOSE, REFLECTION, NOW);
+
+    clearAllDrafts(store);
+
+    expect(store.raw.get('naitikos.device.id')).toBe('device-1');
+    expect(store.raw.get('naitikos.device.hlc')).toBe('hlc-1');
+    expect(store.raw.get('naitikos.query.cache')).toBe('{"version":1}');
+  });
+
+  it('does nothing, and claims nothing, without a store', () => {
+    expect(clearAllDrafts(null)).toEqual([]);
+  });
+});
+
+describe('restoreDrafts', () => {
+  /**
+   * §8.12's undo, and the assertion that matters: a restored draft is the draft
+   * that was written, not a copy stamped with the moment of the undo. Re-dating
+   * it would extend its §4.7 lifetime by up to a fortnight and would lie in the
+   * recovery offer.
+   */
+  it('puts the drafts back exactly as they were', () => {
+    saveDraft(store, COMPOSE, REFLECTION, NOW - 3 * 60_000);
+    const before = loadDraft(store, COMPOSE, NOW);
+
+    const removed = clearAllDrafts(store);
+    expect(loadDraft(store, COMPOSE, NOW)).toBeNull();
+
+    expect(restoreDrafts(store, removed)).toBe(1);
+    expect(loadDraft(store, COMPOSE, NOW)).toEqual(before);
+    expect(draftAgeLabel(before?.savedAt ?? 0, NOW)).toBe('3 minutes ago');
+  });
+
+  /** The undo window is real time, and an open editor may have autosaved into it. */
+  it('refuses to overwrite a draft written since the clearance', () => {
+    saveDraft(store, COMPOSE, REFLECTION, NOW - 60_000);
+    const removed = clearAllDrafts(store);
+
+    saveDraft(store, COMPOSE, { title: 'A hard week', content: 'It started on Tuesday. And then' }, NOW);
+    expect(restoreDrafts(store, removed)).toBe(0);
+    expect(draftText(loadDraft(store, COMPOSE, NOW)?.fields ?? {}, 'content')).toBe(
+      'It started on Tuesday. And then',
+    );
+  });
+
+  /** Not a general-purpose writer sitting next to the device id. */
+  it('will not write a key that is not a draft', () => {
+    expect(restoreDrafts(store, [{ key: 'naitikos.device.id', raw: 'forged' }])).toBe(0);
+    expect(store.raw.has('naitikos.device.id')).toBe(false);
   });
 });
 

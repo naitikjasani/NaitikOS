@@ -389,7 +389,94 @@ export async function blockEntry(entry: OutboxEntry, reason: string): Promise<vo
   );
 }
 
-/** For tests and for the "clear local data" path in settings. */
+/**
+ * Discard entries that have given up, and only those.
+ *
+ * The clearing control on `/settings/privacy` calls this rather than
+ * {@link clearOutbox}, and the difference is the whole of §5.7's guarantee:
+ *
+ *   "A failed drain must never silently discard a write. Entries persist until
+ *    acknowledged."
+ *
+ * A `pending` entry has not finished trying and a `sending` entry is in flight,
+ * so both are writes the operator believes are saved and both have a remedy that
+ * costs nothing — wait, or drain. A `blocked` entry has spent every attempt and,
+ * per {@link MAX_ATTEMPTS}, is "surfaced in a visible unsynced state with a
+ * manual retry" waiting for a person. Abandoning it is a decision that person is
+ * entitled to make, and it is the only way a device ever reaches a clean state.
+ *
+ * **The filter is here rather than in the screen on purpose.** A surface that
+ * checked the counts and then called `clear()` would be one stale read away from
+ * deleting an in-flight write, and the guarantee would rest on a `useEffect`
+ * having refreshed. There is no argument this store should accept.
+ *
+ * One known consequence, stated rather than papered over: discarding a blocked
+ * entry releases anything held behind it by {@link OutboxEntry.dependsOn}. Those
+ * dependants become sendable, will be rejected by the server for the row that no
+ * longer exists, and will walk to `blocked` themselves over
+ * {@link MAX_ATTEMPTS}. That is noisy but not silent, which is the property §5.7
+ * actually demands — they end up visible in the unsynced state rather than
+ * deleted or stalled forever.
+ *
+ * @returns the entries that were removed, so the caller can report what it did.
+ */
+export async function discardBlockedEntries(): Promise<readonly OutboxEntry[]> {
+  /*
+   * One transaction, with the status read at the moment of deletion.
+   *
+   * The obvious shape — read every entry, filter to `blocked`, then delete each
+   * by id — is a check followed by a separate act, and between the two an entry
+   * can leave `blocked`. The screen offers "try sending now" beside this
+   * button, so the sequence that loses a write is a real one: retry moves an
+   * entry to `sending`, and a discard decided a moment earlier then deletes it
+   * mid-flight. That is precisely the silent discard §5.7 forbids —
+   *
+   *   "the outbox may replay any request any number of times… a failed drain
+   *    must never silently discard a write"
+   *
+   * — and it would take with it a Close the operator believes is saved.
+   *
+   * A cursor inside a single `readwrite` transaction closes the window: the
+   * value is read and deleted in the same atomic scope, so an entry that has
+   * become `sending` is seen as `sending` and left alone. The guard therefore
+   * lives in the store rather than in the caller, and no stale count from
+   * React can widen it.
+   */
+  const discarded: OutboxEntry[] = [];
+
+  await withStore<OutboxEntry[]>('readwrite', (store) => {
+    const cursorRequest = store.openCursor();
+
+    cursorRequest.onsuccess = () => {
+      const cursor = cursorRequest.result;
+      if (cursor === null) return;
+
+      const entry = cursor.value as OutboxEntry;
+      if (entry.status === 'blocked') {
+        cursor.delete();
+        discarded.push(entry);
+      }
+      cursor.continue();
+    };
+
+    /* Resolved by `oncomplete`, which fires only after every request above has
+     * settled — so the array is fully populated by the time it is read. */
+    return { result: discarded };
+  });
+
+  return discarded;
+}
+
+/**
+ * Empty the queue, unconditionally.
+ *
+ * **For tests.** No operator-facing path calls this and none should:
+ * {@link discardBlockedEntries} is the settings surface's route in, because it
+ * cannot delete a write that is still trying. This one deletes a `sending` entry
+ * mid-flight, which is precisely the silent discard §5.7 forbids — it exists
+ * because a test suite needs a known-empty store between cases, and a suite that
+ * built one out of the safe function could not test the unsafe states.
+ */
 export async function clearOutbox(): Promise<void> {
   await withStore('readwrite', (store) => store.clear());
 }

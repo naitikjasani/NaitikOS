@@ -23,6 +23,7 @@ import {
   backoffSeconds,
   blockEntry,
   clearOutbox,
+  discardBlockedEntries,
   enqueue,
   markSending,
   orphanedEntries,
@@ -177,6 +178,103 @@ describe('acknowledge', () => {
     const entry = await enqueue({ endpoint: '/api/close', body: CLOSE_BODY, label: 'Close' });
     await acknowledge(entry.id);
     expect(await allEntries()).toHaveLength(0);
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * The clearing path (`/settings/privacy`)
+ *
+ * The one place in the application permitted to delete an unacknowledged write,
+ * so the boundary is asserted from both sides: what it removes, and — the half
+ * that matters — what it refuses to touch. §5.7's "entries persist until
+ * acknowledged" has to hold against a settings button as firmly as it holds
+ * against a failed drain.
+ * ---------------------------------------------------------------------- */
+
+describe('discardBlockedEntries', () => {
+  /** Six failures is the definition of blocked. Spelled out once, reused below. */
+  async function blockOne(id: string, label: string): Promise<void> {
+    let entry = await enqueue({ id, endpoint: '/api/close', body: CLOSE_BODY, label });
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+      entry = await recordFailure(entry, 'rejected_400');
+    }
+    expect(entry.status).toBe('blocked');
+  }
+
+  it('removes the entries that have given up, and reports which', async () => {
+    await blockOne('close-a', 'Daily Close, 3 August');
+    await blockOne('close-b', 'Daily Close, 4 August');
+
+    const discarded = await discardBlockedEntries();
+    // A set, not an array: two entries enqueued inside one millisecond share an
+    // `enqueuedAt`, so the newest-first sort has nothing to separate them and an
+    // ordered assertion here would be asserting the sort's tie-breaking rather
+    // than the discard.
+    expect(new Set(discarded.map((entry) => entry.label))).toEqual(
+      new Set(['Daily Close, 3 August', 'Daily Close, 4 August']),
+    );
+    expect(await allEntries()).toHaveLength(0);
+  });
+
+  /**
+   * The guarantee, and the reason this function exists rather than a count
+   * check in the screen. A `pending` entry has not finished trying and a
+   * `sending` entry is in flight; deleting either is the silent discard §5.7
+   * forbids, and no settings surface may cause it.
+   */
+  it('will not touch a pending or an in-flight entry', async () => {
+    await blockOne('blocked', 'blocked');
+    await enqueue({ id: 'pending', endpoint: '/api/close', body: CLOSE_BODY, label: 'pending' });
+    const inFlight = await enqueue({ id: 'sending', endpoint: '/api/close', body: CLOSE_BODY, label: 'sending' });
+    await markSending(inFlight);
+
+    expect((await discardBlockedEntries()).map((entry) => entry.id)).toEqual(['blocked']);
+
+    const health = await outboxHealth();
+    expect(health.pending).toBe(1);
+    expect(health.sending).toBe(1);
+    expect(health.blocked).toBe(0);
+  });
+
+  it('is a no-op on an empty queue and on one where nothing has given up', async () => {
+    expect(await discardBlockedEntries()).toEqual([]);
+    await enqueue({ endpoint: '/api/close', body: CLOSE_BODY, label: 'Close' });
+    expect(await discardBlockedEntries()).toEqual([]);
+    expect(await allEntries()).toHaveLength(1);
+  });
+
+  /**
+   * The documented consequence, asserted so it stays true. Discarding a blocked
+   * entry releases its dependants — they become sendable, will be rejected for
+   * the row that no longer exists, and end up `blocked` themselves. Noisy, but
+   * never silent, which is the property §5.7 asks for.
+   */
+  it('releases the dependants of a discarded entry rather than stranding them', async () => {
+    let session = await enqueue({
+      id: 'session',
+      endpoint: '/api/gym/sessions',
+      body: { startedAt: '2026-08-17T12:00:00.000Z', zone: 'Asia/Kolkata' },
+      label: 'session',
+    });
+    await enqueue({
+      id: 'set-1',
+      endpoint: '/api/gym/sets',
+      body: { sessionId: 'session' },
+      label: 'set 1',
+      dependsOn: 'session',
+    });
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+      session = await recordFailure(session, 'rejected_400');
+    }
+
+    // Held back while the dependency is blocked.
+    expect(await readyEntries()).toEqual([]);
+
+    await discardBlockedEntries();
+
+    const remaining = await allEntries();
+    expect(remaining.map((entry) => entry.id)).toEqual(['set-1']);
+    expect((await readyEntries()).map((entry) => entry.id)).toEqual(['set-1']);
   });
 });
 

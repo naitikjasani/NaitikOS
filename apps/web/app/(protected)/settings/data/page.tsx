@@ -122,6 +122,41 @@ export default async function DataPage(): Promise<ReactNode> {
             </Stack>
           </CardBody>
         </Card>
+
+        <Card variant="outlined">
+          <CardBody>
+            <Stack gap="2">
+              <Text role="title-3" as="h2">
+                Local copies
+              </Text>
+              {/*
+                A pointer, not a control. An operator hunting for "delete my
+                data" arrives on the page whose subject is the record, and the
+                honest thing is to say which of the two things they might mean
+                lives where — while being unambiguous that clearing a device
+                removes nothing from the record. The buttons themselves are on
+                `/settings/privacy`, because that page's subject is the exposure
+                boundary rather than the record (§3.2).
+              */}
+              <Text role="body-sm" tone="secondary">
+                Unsaved drafts, cached answers and writes still queued to be sent all sit in this browser
+                rather than in the record. Clearing them changes nothing here — the export above, the audit log
+                and every stored entry are untouched by it.
+              </Text>
+              <Text role="caption" tone="tertiary">
+                Removing an entry from the record is a different act entirely: a soft delete with an audit
+                entry (§9.4), made from the entry itself rather than from a settings page.
+              </Text>
+              <Inline gap="2">
+                <Link className="nos-inline-link" href="/settings/privacy">
+                  <Text role="caption" as="span">
+                    Clear what this device is holding
+                  </Text>
+                </Link>
+              </Inline>
+            </Stack>
+          </CardBody>
+        </Card>
       </Stack>
     </PageContainer>
   );
