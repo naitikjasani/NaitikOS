@@ -644,10 +644,44 @@ POST /api/jobs/nightly
 GET  /api/jobs/nightly            # last run + healthy flag
 ```
 
-Cron authenticates through the same session path as a human. **There is no bypass
-token** — a second way in is a second thing to secure (§5.4). The `x-vercel-cron`
-header distinguishes the two for the `isManual` flag only; it is not a
-credential and grants nothing.
+### The cron cannot actually reach this route (found 8 September 2026)
+
+This section used to read:
+
+> Cron authenticates through the same session path as a human. **There is no
+> bypass token** — a second way in is a second thing to secure (§5.4).
+
+The second sentence is a sound decision. The first describes something a cron
+invocation cannot do, because **it carries no cookies**. There is no session for
+it to authenticate through, so the stated mechanism has never been capable of
+working. Four independent refusals, any one sufficient, all verified:
+
+1. **Vercel cron issues `GET`; the scheduled entry point is `POST`.** A
+   GET-triggered cron would report last-run status nightly and derive nothing —
+   while looking configured, which is the worst of the four.
+2. **`proxy.ts` refuses it before the handler is entered.**
+   `/api/jobs/nightly` appears in none of `UNGUARDED_PREFIXES`,
+   `PUBLIC_PREFIXES` or `PUBLIC_API_PREFIXES`, and `lib/auth/routes.ts` is
+   default-deny. No session cookie → 401 `unauthenticated_no_session`.
+3. **`csrfGuard` would refuse it next** — no `Origin` gives
+   `origin_missing`, and no `naitikos-csrf` cookie gives `token_missing`.
+4. **`requireServerPermission('settings:write')` would refuse it last.**
+
+`x-vercel-cron` is read in exactly one place — `isManual: ... === null` — and
+grants nothing, exactly as the old text said. Nothing anywhere reads a
+`CRON_SECRET`.
+
+**The consequence is that §5.16's only automated derivation signal is dead in
+production**: `healthy` stays permanently `false` because no completion record
+is ever written by a schedule. Nothing derives, no rollups refresh, no
+detectors run. Everything on this page works when a human triggers it and
+nothing runs on its own.
+
+`docs/runbooks/deployment.md` §9.3 tables the three ways out — an external
+scheduler that signs in with credentials, a route change adding a
+bearer-token path (which needs an ADR, because it is precisely the "second way
+in" the decision above refused), or accepting no schedule and triggering
+manually. That is a decision, not a defect to patch, and it is unresolved.
 
 The POST returns **200 even for a failed run**. The request succeeded — it ran the
 job and produced a report. A 500 would make cron retry a run that already wrote
