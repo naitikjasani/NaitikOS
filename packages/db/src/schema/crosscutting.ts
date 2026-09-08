@@ -366,7 +366,27 @@ export const mediaObject = pgTable(
 
     /** Perceptual hash, for duplicate detection in the pipeline (§5.5). */
     perceptualHash: text(),
-    /** SHA-256 of the ciphertext, for the nightly integrity check (§9.8). */
+    /**
+     * SHA-256 of the **plaintext**, after compression and before encryption.
+     *
+     * This comment previously said "of the ciphertext, for the nightly
+     * integrity check (§9.8)", and was wrong twice over — see
+     * `docs/adr/0006-media-key-derivation-and-content-hash.md`.
+     *
+     * Wrong about the value: `runPipeline` computes it at stage 5, before
+     * encryption at stage 6, and the decryption guide that ships in every
+     * export documents it as `checksum of the PLAINTEXT, for verification`.
+     * The code and the archive already agreed; only this line dissented.
+     *
+     * Wrong about the capability, which matters more. §5.5 leaves the server
+     * holding bytes it has no key for, so **no server-side sweep can verify a
+     * plaintext digest** — the integrity check this comment promised is
+     * impossible by construction. What a server can check is that the object
+     * exists, that its length is as recorded, and that rows and stored objects
+     * correspond. Verifying content needs either a second ciphertext-hash
+     * column or a client-side sweep with the passphrase in memory; ADR 0006
+     * takes neither.
+     */
     contentHash: text(),
 
     capturedAt: instant(),
