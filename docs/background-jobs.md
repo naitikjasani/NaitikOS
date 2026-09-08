@@ -185,6 +185,100 @@ these accumulate. `abandonedJobRuns(olderThan)` reports them. They are **not** t
 same as a failure — the work may have completed — and conflating them makes the
 failure count meaningless.
 
+**They are marked, never deleted.** The decision and its reasoning, because the
+obvious sweep is the wrong one:
+
+- §5.16's alert fires on the **absence** of a completion record. An unfinished
+  row *is* that absence in physical form — the only surviving trace that an
+  invocation started on a night nothing finished. A delete destroys the evidence
+  the alert exists to provide, and it does so in the silent direction: the table
+  would look tidiest on exactly the mornings something went wrong.
+- Nor would deleting buy much. `job_run` has **no retention policy at all** —
+  every successful night keeps a row too, so the table grows by roughly 365 rows
+  a year whether or not anything is killed, and abandoned rows are a small
+  subset of that. Deleting them trades the whole of a signal for a rounding
+  error of the growth. If `job_run` needs bounding, and one day it will, the
+  honest fix is a retention sweep over the *whole* table under §9.4's line
+  between domain data and operational exhaust — decided once, applied to
+  succeeded rows first. That is a policy decision, not a tidy-up, and it is not
+  made here.
+- What marking bounds is the set of rows a maintainer has to **think** about.
+  Every stranded row is judged once, and `/settings/developer` then says which
+  are explained and which are not.
+
+`markAbandonedJobRuns` does the judging, and it runs inside the recorder's
+`finish` — immediately after the completion write, never before it. That
+placement is the proof: **a run that has just recorded its ending is itself the
+evidence that an older run of the same job is not still in flight.** A nightly
+*step* could not supply that evidence, because a step executes during a run,
+when tonight's ending has not happened yet — it would always be judging last
+night's corpse a night late.
+
+Three conditions, and each on its own excludes a live run:
+
+| # | Condition | Why it holds |
+|---|---|---|
+| 1 | Started more than `ABANDONED_RUN_AFTER_MS` (30 min) before the judging run **started** | The runner's budget is 15 minutes and it aborts itself, recording `halted`. Nothing healthy is half an hour old and unfinished |
+| 2 | No ending recorded — `status = 'running'`, `finished_at IS NULL` | A run that ended, however badly, is out of scope by definition |
+| 3 | A later run of the same job has completed | Supplied by the caller: `finish` is that later run |
+
+Condition 1 is what makes the overlap case safe. A human pressing the button
+while cron is mid-run produces two live invocations, and the manual one
+finishing would otherwise judge the cron one — but the cron run is minutes old,
+nowhere near the cut-off. The reference instant is the judging run's *start*
+rather than its finish for the same reason: the earlier instant marks strictly
+fewer rows. And if all three were somehow satisfied by a run that is genuinely
+alive, the mark is self-correcting — that run's own `finish` overwrites
+`status`, `finished_at` and `error_message` with its account of itself. The mark
+is a label on a row, never a claim on it.
+
+Scoped to one job name, deliberately. A finished `nightly` says nothing about
+whether a single-step run started from `/settings/developer` is still going, so
+it must not judge one; the consequence is that a stranded single-step run stays
+unadjudicated until that step is next run alone, which is honest — nothing has
+proved it dead.
+
+**What the mark is, and what it should be.** `error_message` carries
+`abandoned:no_completion_record` — a code, in a column whose stated contents are
+"step names and error codes only". The state being expressed belongs in
+`status`, and `job_status` is a Postgres enum with no `abandoned` member, so
+putting it there is a migration; §13.2 keeps those out of feature commits. The
+cost of waiting is one column reading slightly off. When the enum catches up
+this moves, and `abandonedJobRuns` is the only reader to follow.
+
+Leaving `status` alone has a second benefit worth stating, because it would be
+the first casualty of a new enum member: `docs/runbooks/incident.md`'s
+"runs killed mid-step" query is `WHERE status = 'running' AND started_at <
+now() - interval '6 hours'`, and it still returns marked rows. A run moved to
+an `abandoned` status would vanish from the query an operator reaches for at
+2am, silently. The marker is also safe under that runbook's disclosure rule —
+`job_run.error_message` is "step names and error codes only", and this is a
+code.
+
+Three things the mark deliberately does **not** do:
+
+- It does not set `status = 'failed'`. The work may have completed, and folding
+  these into the failure count would make that count mean "failed, or possibly
+  fine".
+- It does not set `finished_at` or `duration_ms`. Nothing knows when the
+  invocation died, and a plausible-looking instant is a fabricated fact in a
+  record §9.4 keeps for ever.
+- It does not hide the row from `abandonedJobRuns`. The mark records that a row
+  has been *judged*, not dealt with. Hiding judged rows would quietly turn the
+  sweep into the delete it is not.
+
+An **un**marked row past the cut-off is the louder of the two states, and
+`/settings/developer` shows the difference: it means no later run of that job
+has recorded an ending since — so either the pipeline has been down since, or
+that row is the most recent thing that happened.
+
+The failure of the sweep itself is swallowed, and it is the only swallowed
+failure in the recorder. `finish` returns `void`, so there is nothing to hand a
+count to, and a housekeeping statement that threw would turn a run that has
+already recorded itself into an unhandled 500 — which makes cron retry, and a
+retry is a second run (§9). The cost is visible rather than silent: the rows
+stay unmarked and keep appearing on the dashboard as unadjudicated.
+
 ---
 
 ## 7. Deferred tasks
@@ -400,7 +494,31 @@ its completion record, which is a second run, not a retry.
   rather than erroring, so a typo runs nothing rather than everything.
 - **The stale threshold is six hours**, well beyond the fifteen-minute budget, so
   recovery never steals a task from a genuinely running invocation.
+- **A stranded `job_run` row is judged at thirty minutes, not six hours**, and
+  the asymmetry is not an oversight. Recovering a *task* releases a claim
+  another invocation may still hold, so acting too early puts two workers on one
+  subject — a correctness failure, priced with a six-hour margin. A `job_run`
+  row is written and owned by exactly one invocation and read by nobody else, so
+  acting too early mislabels a row instead. Twice the budget is enough, and
+  keeping it in minutes is what makes last night's corpse visible over breakfast
+  rather than the following evening.
 - **`backoffSeconds` takes the attempt count *before* the increment.** Off by one
   here means the first retry waits a day.
 - **A step's `note` is surfaced in `/settings/developer`.** Counts and codes only
-  — never user content (§5.11).
+  — never user content (§5.11). It reaches the page through
+  `JobRunSummary['steps']` and the `steps` jsonb, and for a milestone it did
+  *not*: every step returned one, this line promised it was shown, and
+  `runNightly` built each entry from name, status, duration, `rowsAffected` and
+  error code — dropping the note two packages below the page making the promise.
+  It is carried now. No migration was involved: `steps` is `jsonb` and the note
+  is one more key in an object it already stored.
+- **A note is clamped to 200 characters** (`JOB_STEP_NOTE_MAX_CHARS`) and an
+  empty one is stored as absent. `job_run` is never pruned, so a step that
+  interpolated something unbounded into its note would keep it for ever in a
+  record that holds names and numbers. Clipping is marked with an ellipsis
+  rather than silent, and a long note is clipped rather than dropped — the step
+  still speaks.
+- **A failed step has no note.** An `Err` carries a code, not an outcome, so
+  `note` is null for a failure, for a step that had nothing to say, and for a
+  row written before notes were stored. The page shows counts alone rather than
+  inventing a distinction between the three.

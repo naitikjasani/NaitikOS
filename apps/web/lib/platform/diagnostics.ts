@@ -40,7 +40,7 @@ import 'server-only';
 import type { Result } from '@naitikos/shared';
 import { ok } from '@naitikos/shared';
 import type { DomainError, JobStepName } from '@naitikos/core';
-import { DEFAULT_RUN_BUDGET_MS, JOB_STEPS, isoFromMillis, systemClock } from '@naitikos/core';
+import { ABANDONED_RUN_AFTER_MS, JOB_STEPS, isoFromMillis, systemClock } from '@naitikos/core';
 import type {
   Database,
   DatabaseIdentity,
@@ -81,18 +81,6 @@ export const REGISTERED_STEPS: readonly JobStepName[] = Object.freeze([
   'drain-task-queue',
 ]);
 
-/**
- * How long a run may sit in `running` before it is presumed dead.
- *
- * Twice the runner's own wall-clock budget. A healthy run cannot exceed the
- * budget — it aborts itself and records `halted` — so anything still `running`
- * after double it was killed mid-step by the platform with no chance to write
- * `finish`. Doubling rather than adding a minute keeps a genuinely live
- * invocation off this list; keeping it in minutes rather than hours means last
- * night's corpse is visible over breakfast rather than the following evening.
- */
-export const ABANDONED_AFTER_MS = 2 * DEFAULT_RUN_BUDGET_MS;
-
 /** How many past runs the page lists. */
 export const RUN_HISTORY_LIMIT = 8;
 
@@ -113,8 +101,21 @@ export type NightlyReport = {
    * problem is what makes the symptom disappear.
    */
   readonly healthy: boolean;
-  /** Runs that started and never recorded an ending. See {@link ABANDONED_AFTER_MS}. */
-  readonly abandoned: readonly { readonly id: string; readonly jobName: string; readonly startedAt: string }[];
+  /**
+   * Runs that started and never recorded an ending, older than
+   * `ABANDONED_RUN_AFTER_MS` (defined in `core`, beside the budget it is twice).
+   *
+   * `adjudicated` says whether the recorder has since *proved* the run dead — a
+   * later run of the same job recorded an ending — rather than merely observing
+   * that this one is late. An unadjudicated row is the louder signal: nothing
+   * has finished since it started.
+   */
+  readonly abandoned: readonly {
+    readonly id: string;
+    readonly jobName: string;
+    readonly startedAt: string;
+    readonly adjudicated: boolean;
+  }[];
   readonly steps: readonly StepRegistration[];
   readonly registeredCount: number;
   /**
@@ -211,7 +212,7 @@ export async function loadDeveloperDiagnostics(
      * the page and the alert cannot disagree about whether tonight happened.
      */
     hasCompletedRunSince(db, isoFromMillis(startedMillis - 24 * 60 * 60 * 1000)),
-    abandonedJobRuns(db, isoFromMillis(startedMillis - ABANDONED_AFTER_MS)),
+    abandonedJobRuns(db, isoFromMillis(startedMillis - ABANDONED_RUN_AFTER_MS)),
     reader.featureFlags(),
     reader.schemaLedger(),
     reader.database(),

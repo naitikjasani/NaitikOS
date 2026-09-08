@@ -189,7 +189,13 @@ export type JobStepContext = {
 
 export type JobStepOutcome = {
   readonly rowsAffected?: number;
-  /** Surfaced in `/settings/developer`. Never user content (§5.11). */
+  /**
+   * Surfaced in `/settings/developer`. Never user content (§5.11).
+   *
+   * Carried into the completion record by the runner and clamped to
+   * {@link JOB_STEP_NOTE_MAX_CHARS} on the way, so a step is free to compose
+   * one without knowing how wide the column it lands in is.
+   */
   readonly note?: string;
 };
 
@@ -275,6 +281,23 @@ export function backoffSeconds(attempt: number): number {
  * The runner
  * ====================================================================== */
 
+/**
+ * The longest `note` that reaches the recorder.
+ *
+ * A note is counts and codes — "3 recovered, 12 pending" — and every registered
+ * step's is comfortably inside two hundred characters, so this is a bound
+ * rather than a formatter. It exists because the note is the one part of a
+ * step's outcome that is free text: a step interpolating an unbounded value
+ * into it — every metric key it skipped, a driver's error string — would put
+ * that value in a record §5.11 says holds "event names and numeric
+ * measurements only", and `job_run` is never pruned, so the row would keep it.
+ *
+ * Truncation is marked rather than silent, and a long note is clipped rather
+ * than dropped: a clipped note still shows which step spoke and prompts a look
+ * at it, whereas dropping it loses the step's own account of what it did.
+ */
+export const JOB_STEP_NOTE_MAX_CHARS = 200;
+
 export type JobRunSummary = {
   readonly runId: string;
   readonly startedAt: string;
@@ -287,6 +310,20 @@ export type JobRunSummary = {
     readonly durationMs: number;
     readonly rowsAffected?: number;
     readonly errorCode?: string;
+    /**
+     * The step's own one-line account of what it did, clamped to
+     * {@link JOB_STEP_NOTE_MAX_CHARS}.
+     *
+     * Carried through to the completion record because a row count alone does
+     * not say what the run *found*: "0 pending, 0 failed" and "no reading
+     * taken" are the same `rowsAffected: 0`, and only one of them is healthy.
+     * Counts and codes only, never user content (§5.11) — the note travels into
+     * `job_run.steps`, which §9.4 keeps as long as the row.
+     *
+     * Absent for a `failed` step (an `Err` carries a code, not an outcome) and
+     * for a `skipped` one (it never ran, so it has nothing to say).
+     */
+    readonly note?: string;
   }[];
 };
 
@@ -312,6 +349,29 @@ export type RunnerDependencies = {
 };
 
 export const DEFAULT_RUN_BUDGET_MS = 15 * 60 * 1000;
+
+/**
+ * How long a run may sit unfinished before it is presumed dead.
+ *
+ * Twice {@link DEFAULT_RUN_BUDGET_MS}. A healthy run cannot exceed the budget —
+ * it aborts itself and records `halted` — so a run with no ending recorded
+ * after double it was killed mid-step by the platform with no chance to write
+ * `finish`.
+ *
+ * Deliberately far shorter than `drain-task-queue`'s six-hour task threshold,
+ * and the asymmetry is not an oversight. Recovering a *task* releases a claim
+ * another invocation may still be holding, so stealing one too early produces
+ * two workers on the same subject — a correctness failure, priced with a
+ * six-hour margin. A `job_run` row is written and owned by exactly one
+ * invocation and read by nobody else, so the cost of judging one too early is a
+ * mislabelled row rather than duplicated work. Keeping it in minutes is what
+ * makes last night's corpse visible over breakfast instead of the following
+ * evening.
+ *
+ * It is defined here, beside the budget it is derived from, so that the sweep
+ * that acts on it and the dashboard that reports it cannot drift apart.
+ */
+export const ABANDONED_RUN_AFTER_MS = 2 * DEFAULT_RUN_BUDGET_MS;
 
 /**
  * Run the registered steps in order.
@@ -378,11 +438,21 @@ export async function runNightly(
     const durationMs = deps.clock.nowMillis() - stepStart;
 
     if (outcome.ok) {
+      // The note is carried into the summary, not dropped here. It used to be:
+      // every step returned one, `docs/background-jobs.md` §10 promised
+      // `/settings/developer` showed it, and the runner built this entry
+      // without it — so the promise was unkeepable three layers below the page
+      // that made it. Spread conditionally rather than assigned, because
+      // `exactOptionalPropertyTypes` distinguishes an absent note from an
+      // explicit `undefined`, and the second would serialise into the jsonb.
+      const note = clampNote(outcome.value.note);
+
       results.push({
         name,
         status: 'succeeded',
         durationMs,
         ...(outcome.value.rowsAffected === undefined ? {} : { rowsAffected: outcome.value.rowsAffected }),
+        ...(note === undefined ? {} : { note }),
       });
     } else {
       anyFailed = true;
@@ -407,4 +477,21 @@ export async function runNightly(
   await deps.recorder.finish(summary);
 
   return summary;
+}
+
+/**
+ * Bound a step's note, or report that there is nothing to record.
+ *
+ * An empty string is treated as absent. A step that returns `note: ''` has said
+ * nothing, and persisting the empty string would put a blank line under that
+ * step on `/settings/developer` that reads as a missing value rather than as no
+ * value.
+ */
+function clampNote(note: string | undefined): string | undefined {
+  if (note === undefined || note === '') return undefined;
+  if (note.length <= JOB_STEP_NOTE_MAX_CHARS) return note;
+
+  // The ellipsis replaces a character rather than being appended, so the stored
+  // note never exceeds the bound this function exists to enforce.
+  return `${note.slice(0, JOB_STEP_NOTE_MAX_CHARS - 1)}…`;
 }

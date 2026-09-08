@@ -108,17 +108,39 @@ export function DiagnosticsScreen({
 
                 {nightly.abandoned.map((run) => (
                   <Inline key={run.id} gap="2" justify="between" align="baseline">
-                    <Text role="body-sm">{run.jobName}</Text>
+                    <Inline gap="2" align="center">
+                      <Text role="body-sm">{run.jobName}</Text>
+                      {/* Marked means proved, not merely late: a later run of the
+                          same job has since recorded an ending. Unmarked past the
+                          cut-off is the louder of the two, so it keeps the tone. */}
+                      <Badge tone={run.adjudicated ? 'neutral' : 'caution'}>
+                        {run.adjudicated ? 'marked abandoned' : 'nothing has finished since'}
+                      </Badge>
+                    </Inline>
                     <Text role="caption" tone="tertiary">
                       started {formatInstant(run.startedAt)}
                     </Text>
                   </Inline>
                 ))}
 
+                <Text role="body-sm" tone="secondary">
+                  These rows are <strong>marked, never deleted</strong>. §5.16&rsquo;s alert fires on the
+                  absence of a completion record, so a run that started and recorded no ending is the
+                  evidence that alert exists to provide — deleting it would tidy the table on exactly the
+                  mornings something went wrong. What the recorder does instead is adjudicate: when a run
+                  finishes, it marks any earlier run of the same job that started over thirty minutes
+                  before it and never ended, because a run that reached its end proves an older one is no
+                  longer in flight. A run still legitimately going cannot be marked — the runner aborts
+                  itself at fifteen minutes, so nothing healthy is ever half an hour old and unfinished.
+                </Text>
+
                 <Text role="caption" tone="tertiary">
-                  Nothing clears these. There is no sweep for stranded <code>job_run</code> rows — the
-                  runner recovers stranded <em>tasks</em>, which is a different table — so they will stay
-                  until someone deletes them by hand.
+                  A marked row keeps <code>status = running</code> and a null <code>finished_at</code>:
+                  nothing knows when the invocation died, and a plausible-looking instant would be a
+                  fabricated fact in a record §9.4 keeps for ever. Nor is it counted as a failure. The
+                  table itself is still unbounded — every successful night keeps a row too — and bounding
+                  it is a retention decision about the whole of <code>job_run</code> rather than an
+                  excuse to drop the one subset that carries a signal.
                 </Text>
               </Stack>
             </CardBody>
@@ -223,10 +245,11 @@ export function DiagnosticsScreen({
         </Text>
 
         <Text role="caption" tone="tertiary">
-          Each step also returns a short <code>note</code> — &ldquo;3 recovered, 0 pending&rdquo; — and
-          none of them is shown here, because none is stored. The runner builds its summary from the
-          name, status, duration, row count and error code only, so the note is discarded before the
-          recorder sees it. Fixing that means widening the summary in <code>core</code>, not this page.
+          Each step also returns a short <code>note</code> — &ldquo;3 recovered, 12 pending&rdquo; — and
+          it now reaches the record: the runner carries it into the summary, the recorder writes it into
+          the <code>steps</code> blob, and the run cards above print it under each step. Counts and codes
+          only (§5.11), clamped to two hundred characters, so a step cannot narrate. A step with no note
+          shows its counts alone, and a run from before the note was persisted shows none at all.
         </Text>
       </Stack>
 
@@ -461,21 +484,36 @@ function RunCard({ run, heading }: { readonly run: DeveloperDiagnostics['nightly
               No per-step detail was recorded. A run in progress has not written its steps yet; a
               finished run without them was recorded by a build that predates the column.
             </Text>
-          : <Stack gap="1">
+          : <Stack gap="2">
               {run.steps.map((step) => (
-                <Inline key={step.name} gap="2" justify="between" align="baseline">
-                  <Inline gap="2" align="center">
-                    <Badge tone={toneForStatus(step.status)}>{step.status}</Badge>
-                    <Text role="body-sm">{step.name}</Text>
+                <Stack key={step.name} gap="1">
+                  <Inline gap="2" justify="between" align="baseline">
+                    <Inline gap="2" align="center">
+                      <Badge tone={toneForStatus(step.status)}>{step.status}</Badge>
+                      <Text role="body-sm">{step.name}</Text>
+                    </Inline>
+                    <Text role="caption" tone="tertiary">
+                      {formatDuration(step.durationMs)}
+                      {/* Absent is not zero: a step that reported no row count did
+                          not report having touched nothing. */}
+                      {step.rowsAffected === null ? '' : ` · ${String(step.rowsAffected)} rows`}
+                      {step.errorCode === null ? '' : ` · ${step.errorCode}`}
+                    </Text>
                   </Inline>
-                  <Text role="caption" tone="tertiary">
-                    {formatDuration(step.durationMs)}
-                    {/* Absent is not zero: a step that reported no row count did
-                        not report having touched nothing. */}
-                    {step.rowsAffected === null ? '' : ` · ${String(step.rowsAffected)} rows`}
-                    {step.errorCode === null ? '' : ` · ${step.errorCode}`}
-                  </Text>
-                </Inline>
+                  {/*
+                    The step's own account of itself, on its own line rather than
+                    appended to the figures on the right. It is the only part of a
+                    step's outcome that says what the run *found* — "0 pending, 0
+                    failed" and "no reading taken" are the same row count, and only
+                    one of them is healthy — so it is not the thing to truncate into
+                    a metadata trail.
+                  */}
+                  {step.note !== null && (
+                    <Text role="caption" tone="secondary">
+                      {step.note}
+                    </Text>
+                  )}
+                </Stack>
               ))}
             </Stack>
           }

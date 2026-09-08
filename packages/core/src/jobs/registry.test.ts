@@ -20,8 +20,10 @@ import type { DomainError } from '../errors/domain-error';
 import { validationError } from '../errors/domain-error';
 import { manualClock } from '../temporal/clock';
 import {
+  ABANDONED_RUN_AFTER_MS,
   DEFAULT_RUN_BUDGET_MS,
   JOB_STEPS,
+  JOB_STEP_NOTE_MAX_CHARS,
   TASK_KINDS,
   TASK_MAX_ATTEMPTS,
   backoffSeconds,
@@ -62,6 +64,7 @@ function step(
     fail?: boolean;
     throws?: boolean;
     rowsAffected?: number;
+    note?: string;
     advanceMs?: number;
     clock?: { advance(ms: number): void };
   } = {},
@@ -70,13 +73,16 @@ function step(
     name,
     describes: `Test step ${name}.`,
     haltOnFailure: options.haltOnFailure ?? false,
-    run(): Promise<Result<{ rowsAffected?: number }, DomainError>> {
+    run(): Promise<Result<{ rowsAffected?: number; note?: string }, DomainError>> {
       order.push(name);
       if (options.advanceMs !== undefined) options.clock?.advance(options.advanceMs);
       if (options.throws === true) throw new Error('step exploded');
       if (options.fail === true) return Promise.resolve(err(validationError('step_failed', 'Nope.')));
       return Promise.resolve(
-        ok(options.rowsAffected === undefined ? {} : { rowsAffected: options.rowsAffected }),
+        ok({
+          ...(options.rowsAffected === undefined ? {} : { rowsAffected: options.rowsAffected }),
+          ...(options.note === undefined ? {} : { note: options.note }),
+        }),
       );
     },
   };
@@ -331,6 +337,85 @@ describe('runNightly — the completion record', () => {
 
     expect(summary.steps[0]).toEqual({ name: 'derive-observations', status: 'succeeded', durationMs: 0 });
   });
+
+  /*
+   * The note used to be dropped here, and the loss was invisible from both ends:
+   * every registered step returned one, `docs/background-jobs.md` §10 stated it
+   * was surfaced on `/settings/developer`, and the summary this runner hands the
+   * recorder had no field to put it in. So these assertions are about the seam
+   * rather than about the formatting — a row count alone cannot distinguish "0
+   * pending, 0 failed" from "no reading taken".
+   */
+  it('carries a step note through to the recorder', async () => {
+    const clock = manualClock(START);
+    const recorder = new FakeRecorder();
+
+    const summary = await runNightly(
+      [step('drain-task-queue', [], { rowsAffected: 3, note: '3 recovered, 12 pending' })],
+      deps(recorder, clock),
+    );
+
+    expect(summary.steps[0]?.note).toBe('3 recovered, 12 pending');
+    // The recorder is what writes `job_run`, so the summary being right is only
+    // half of it: the note has to be on the object `finish` is handed.
+    expect(recorder.finishes[0]?.steps[0]).toEqual({
+      name: 'drain-task-queue',
+      status: 'succeeded',
+      durationMs: 0,
+      rowsAffected: 3,
+      note: '3 recovered, 12 pending',
+    });
+  });
+
+  it('leaves the note absent rather than empty when a step says nothing', async () => {
+    const clock = manualClock(START);
+
+    const summary = await runNightly(
+      [step('prune-telemetry', [], { note: '' }), step('drain-task-queue', [])],
+      deps(new FakeRecorder(), clock),
+    );
+
+    // An empty string would render as a blank line under the step, which reads as
+    // a missing value rather than as no value. Absent, not present-and-empty —
+    // `exactOptionalPropertyTypes` makes the difference observable.
+    expect(summary.steps[0]).toEqual({ name: 'prune-telemetry', status: 'succeeded', durationMs: 0 });
+    expect(summary.steps[1]).toEqual({ name: 'drain-task-queue', status: 'succeeded', durationMs: 0 });
+  });
+
+  it('clamps a note rather than storing an unbounded one', async () => {
+    const clock = manualClock(START);
+
+    const summary = await runNightly(
+      [step('make-predictions', [], { note: 'metric.key.that.was.skipped, '.repeat(40) })],
+      deps(new FakeRecorder(), clock),
+    );
+
+    const note = summary.steps[0]?.note;
+    // `job_run` is never pruned, so a step that interpolated something unbounded
+    // into its note would keep it for ever in a record §5.11 says holds names and
+    // numbers. Clipped and visibly so, rather than dropped: the step still speaks.
+    expect(note).toHaveLength(JOB_STEP_NOTE_MAX_CHARS);
+    expect(note?.endsWith('…')).toBe(true);
+  });
+
+  it('records no note for a failed step', async () => {
+    const clock = manualClock(START);
+
+    const summary = await runNightly(
+      [step('run-detectors', [], { fail: true, note: 'never read' })],
+      deps(new FakeRecorder(), clock),
+    );
+
+    // An `Err` carries a code, not an outcome. A note on a failed step could only
+    // come from somewhere other than the failure, which is how a message from the
+    // underlying error would end up in the record §5.11 keeps clean.
+    expect(summary.steps[0]).toEqual({
+      name: 'run-detectors',
+      status: 'failed',
+      durationMs: 0,
+      errorCode: 'step_failed',
+    });
+  });
 });
 
 /* =========================================================================
@@ -340,6 +425,23 @@ describe('runNightly — the completion record', () => {
 describe('runNightly — the wall-clock budget', () => {
   it('defaults to fifteen minutes', () => {
     expect(DEFAULT_RUN_BUDGET_MS).toBe(15 * 60 * 1000);
+  });
+
+  it('presumes a run dead only well after it could still be alive', () => {
+    /*
+     * The abandonment threshold is derived from the budget rather than chosen
+     * beside it, because the argument is entirely about the budget: a healthy
+     * run aborts itself when the budget is spent and records `halted`, so a run
+     * with no ending recorded at twice the budget was killed. A sweep that
+     * marked at, say, sixteen minutes would be judging arithmetic rather than
+     * evidence.
+     */
+    expect(ABANDONED_RUN_AFTER_MS).toBe(2 * DEFAULT_RUN_BUDGET_MS);
+    expect(ABANDONED_RUN_AFTER_MS).toBeGreaterThan(DEFAULT_RUN_BUDGET_MS);
+    // And far under `drain-task-queue`'s six-hour task threshold, deliberately:
+    // recovering a task too early duplicates work, whereas judging a `job_run`
+    // row too early mislabels a row nothing else reads.
+    expect(ABANDONED_RUN_AFTER_MS).toBeLessThan(6 * 60 * 60 * 1000);
   });
 
   it('halts deliberately when the budget is exhausted', async () => {
