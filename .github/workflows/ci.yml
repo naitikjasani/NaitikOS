@@ -83,7 +83,7 @@ jobs:
       AUTH_ALLOWLIST: ci@ci.invalid
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install extensions
         # Compose mounts packages/db/docker/init into the container's
@@ -100,7 +100,7 @@ jobs:
 
       - uses: pnpm/action-setup@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           # Pinned, not read from `engines.node`. That field is the range
           # `>=24.0.0`, and setup-node resolves a range to the newest release
@@ -114,6 +114,26 @@ jobs:
 
       - name: Apply migrations
         run: pnpm db:migrate
+
+      - name: Seed reference data
+        # Not optional, and the first CI run proved it.
+        #
+        # `rls.test.ts`'s "denies a role that has been explicitly granted
+        # SELECT" asserts `count(*) > 0` on `metric` for the owning role,
+        # because the interesting half of that test is that a *granted*
+        # non-bypassing role still reads zero — and a zero-versus-zero
+        # comparison would pass while proving nothing. Its own comment says
+        # "the seed puts 18 metrics here".
+        #
+        # Without this step `metric` is empty and the assertion fails with
+        # `expected 0 to be greater than 0`. It passed on every developer
+        # machine because those databases were seeded by hand months ago,
+        # which is precisely the class of drift CI exists to catch.
+        #
+        # `packages/db/README.md` documents `db:migrate` then `db:seed` as the
+        # setup; a pipeline that ran only the first was not reproducing a
+        # working database. The seed is idempotent.
+        run: pnpm db:seed
 
       - name: Prove the integration suites can actually see the database
         # This step exists because of a real hole, measured on 7 September 2026.
