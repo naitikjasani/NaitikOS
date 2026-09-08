@@ -21,7 +21,7 @@
 
 import type { ReactNode } from 'react';
 import { Suspense } from 'react';
-import { LoadingState } from '@naitikos/design-system';
+import { ErrorState, LoadingState } from '@naitikos/design-system';
 import { dayKeyInZone, systemClock, isoFromMillis } from '@naitikos/core';
 import { createDailyCloseRepository, createMetricRepository } from '@naitikos/db';
 
@@ -58,7 +58,28 @@ async function TodaySummary(): Promise<ReactNode> {
   const dayKey = dayKeyInZone(isoFromMillis(systemClock.nowMillis()), zone);
 
   const registry = await createMetricRepository(db).registry();
-  if (!registry.ok) return null;
+  if (!registry.ok) {
+    /*
+     * Said out loud rather than returned as `null`.
+     *
+     * This was `return null`, and it is how a transient database failure became
+     * an unexplained blank screen in production: the shell painted, the
+     * Suspense boundary resolved to nothing, and the operator was left looking
+     * at an empty page with no way to tell a broken read from a day with
+     * nothing in it. §8.9's rule is that missing data is shown as missing, and
+     * the same instinct has to cover the case where the *read itself* failed —
+     * an empty render is the one outcome that says nothing at all.
+     *
+     * Nothing is lost when this happens: the registry is reference data and
+     * this is a read path. Retrying is safe and is what the operator will do.
+     */
+    return (
+      <ErrorState
+        title="Could not read the metric registry"
+        description="Nothing was changed, and nothing recorded is affected — this is a read that failed. Reloading usually resolves it."
+      />
+    );
+  }
 
   const closes = createDailyCloseRepository(db, registry.value);
   const [state, compounding, insights] = await Promise.all([

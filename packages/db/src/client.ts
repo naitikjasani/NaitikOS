@@ -61,6 +61,16 @@ type ClientOptions = {
   readonly maxConnections?: number;
   /** Log every statement. Development only; statements can contain journal text. */
   readonly debug?: boolean;
+  /**
+   * Seconds an unused connection is kept. `0` keeps it for ever.
+   *
+   * The default closes it before PgBouncer does — see the note in
+   * `createDatabase`. The test harness's lock connection passes `0`, because
+   * a session-level advisory lock is released the moment its connection dies.
+   */
+  readonly idleTimeoutSeconds?: number;
+  /** Client-side cap on a single statement. `0` disables it. */
+  readonly statementTimeoutMs?: number;
 };
 
 /**
@@ -118,6 +128,40 @@ export function createDatabase(url: string = databaseUrl(), options: ClientOptio
 
   const sql = postgres(url, {
     max: options.maxConnections ?? 1,
+
+    /*
+     * The three settings that make a module-scoped client survive a serverless
+     * lifecycle, added after production hung on all of them being absent.
+     *
+     * The symptom was ugly and hard to read backwards: `/today` returned 200,
+     * streamed its Suspense fallback, and then logged `responseStatusCode: 0`
+     * with `canceling statement due to statement timeout` (57014) and
+     * `Node.js process exited with exit status: 128`. The page was blank
+     * because the *process died mid-render*, not because the page was wrong.
+     *
+     * The cause is the interaction this file's header already worries about
+     * from the other direction. `max: 1` plus a module-scoped cache keeps the
+     * connection count down, and Vercel then **freezes the instance between
+     * invocations**. PgBouncer drops the idle server-side connection; the
+     * frozen client thaws holding a socket that is no longer attached to
+     * anything, issues a query into it, and waits — for the full
+     * `statement_timeout`, which on this Supabase project is **two minutes**.
+     *
+     * - `idle_timeout` closes the connection before the pooler does, so a
+     *   thawed instance opens a fresh one instead of inheriting a dead socket.
+     * - `connect_timeout` fails fast when the pooler is unreachable, rather
+     *   than holding a request open.
+     * - `connection.statement_timeout` bounds the wait at the client. Thirty
+     *   seconds is far above any query this application issues — the slowest
+     *   measured against production is 85 ms — and far below the two minutes
+     *   that turned one stale socket into a dead render.
+     *
+     * Verified against production, not assumed: `show statement_timeout`
+     * returns `2min`, and every table read completes in 75–85 ms.
+     */
+    idle_timeout: options.idleTimeoutSeconds ?? 20,
+    connect_timeout: 10,
+    connection: { statement_timeout: options.statementTimeoutMs ?? 30_000 },
 
     /* TLS unless the host is explicitly local. See {@link sslFor}. Spread
      * rather than passing `undefined`, because an explicit `sslmode` in the URL
