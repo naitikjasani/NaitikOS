@@ -7,7 +7,7 @@ import { ProjectsScreen } from '@/features/work';
 import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadProjects } from '@/lib/platform/work';
 
-export const metadata = { title: 'Projects · NaitikOS' };
+export const metadata = { title: 'Projects · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function ProjectsPage(): Promise<ReactNode> {

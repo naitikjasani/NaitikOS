@@ -16,7 +16,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadLifeTimeline } from '@/lib/platform/life-timeline';
 import { isTimelineScale, type TimelineScale } from '@naitikos/core';
 
-export const metadata = { title: 'Life timeline · NaitikOS' };
+export const metadata = { title: 'Life timeline · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function LifeTimelinePage({

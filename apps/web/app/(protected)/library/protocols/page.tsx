@@ -7,7 +7,7 @@ import { ProtocolLibraryScreen } from '@/features/library';
 import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadProtocolLibrary } from '@/lib/platform/library';
 
-export const metadata = { title: 'Protocols · NaitikOS' };
+export const metadata = { title: 'Protocols · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function ProtocolLibraryPage(): Promise<ReactNode> {

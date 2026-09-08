@@ -11,7 +11,7 @@ import { redirectPathSchema } from '@naitikos/api';
 import { SignInScreen } from '@/features/auth';
 import { DEFAULT_AUTHENTICATED_PATH } from '@/lib/auth/routes';
 
-export const metadata = { title: 'Sign in · NaitikOS' };
+export const metadata = { title: 'Sign in · Ekayu' };
 
 /** §5.6: never cached. A sign-in page is per-request by definition. */
 export const dynamic = 'force-dynamic';

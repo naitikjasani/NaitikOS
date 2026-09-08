@@ -7,7 +7,7 @@ import { FoodLibraryScreen } from '@/features/library';
 import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadFoodLibrary } from '@/lib/platform/library';
 
-export const metadata = { title: 'Food library · NaitikOS' };
+export const metadata = { title: 'Food library · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function FoodLibraryPage(): Promise<ReactNode> {

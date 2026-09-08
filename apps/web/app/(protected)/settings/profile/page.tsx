@@ -15,7 +15,7 @@ import { PageContainer } from '@/components/shell';
 import { CrisisPlanScreen } from '@/features/registers';
 import { getDb, requireServerPermission } from '@/lib/auth/session';
 
-export const metadata = { title: 'Profile · NaitikOS' };
+export const metadata = { title: 'Profile · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function ProfilePage(): Promise<ReactNode> {

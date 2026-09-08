@@ -8,7 +8,7 @@ import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadTeeth } from '@/lib/platform/teeth';
 import { ProceduresScreen } from '@/features/teeth';
 
-export const metadata = { title: 'Procedures · NaitikOS' };
+export const metadata = { title: 'Procedures · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function ProceduresPage(): Promise<ReactNode> {

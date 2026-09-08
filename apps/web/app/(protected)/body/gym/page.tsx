@@ -14,7 +14,7 @@ import { Button, Card, CardBody, Inline, Stack, Text } from '@naitikos/design-sy
 import { PageContainer } from '@/components/shell';
 import { ProgramCard } from '@/features/gym';
 
-export const metadata = { title: 'Gym · NaitikOS' };
+export const metadata = { title: 'Gym · Ekayu' };
 
 const VIEWS = [
   { href: '/body/gym/history', title: 'History', description: 'Past sessions and training days.' },

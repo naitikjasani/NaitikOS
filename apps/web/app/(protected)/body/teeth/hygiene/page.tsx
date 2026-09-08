@@ -8,7 +8,7 @@ import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadTeeth } from '@/lib/platform/teeth';
 import { HygieneScreen } from '@/features/teeth';
 
-export const metadata = { title: 'Dental hygiene · NaitikOS' };
+export const metadata = { title: 'Dental hygiene · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function HygienePage(): Promise<ReactNode> {

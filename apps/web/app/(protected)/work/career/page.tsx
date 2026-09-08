@@ -15,7 +15,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadCareer } from '@/lib/platform/work';
 
-export const metadata = { title: 'Career log · NaitikOS' };
+export const metadata = { title: 'Career log · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/u;

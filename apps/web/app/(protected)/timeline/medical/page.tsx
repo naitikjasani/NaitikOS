@@ -7,7 +7,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadMedicalTimeline } from '@/lib/platform/medical-timeline';
 import { MedicalTimelineScreen } from '@/features/timeline';
 
-export const metadata = { title: 'Medical timeline · NaitikOS' };
+export const metadata = { title: 'Medical timeline · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function MedicalTimelinePage({

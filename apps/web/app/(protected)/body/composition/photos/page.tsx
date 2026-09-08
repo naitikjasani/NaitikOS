@@ -21,7 +21,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadPhysiqueGallery } from '@/lib/platform/physique';
 
-export const metadata = { title: 'Physique photos · NaitikOS' };
+export const metadata = { title: 'Physique photos · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function PhysiquePhotosPage({

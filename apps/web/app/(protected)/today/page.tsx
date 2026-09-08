@@ -31,7 +31,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadInsights, topFinding } from '@/lib/platform/insights';
 
-export const metadata = { title: 'Today · NaitikOS' };
+export const metadata = { title: 'Today · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 /** §1.5's window. Ninety days, and the gate is 25 of 30 during validation. */

@@ -8,7 +8,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadGoals } from '@/lib/platform/goals';
 
-export const metadata = { title: 'Goals · NaitikOS' };
+export const metadata = { title: 'Goals · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function GoalsPage(): Promise<ReactNode> {

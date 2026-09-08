@@ -7,7 +7,7 @@ import { SubscriptionsScreen } from '@/features/money';
 import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadSubscriptions } from '@/lib/platform/money';
 
-export const metadata = { title: 'Subscriptions · NaitikOS' };
+export const metadata = { title: 'Subscriptions · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function SubscriptionsPage(): Promise<ReactNode> {

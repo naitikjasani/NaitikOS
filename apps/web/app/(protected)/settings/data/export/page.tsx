@@ -6,7 +6,7 @@ import { PageContainer } from '@/components/shell';
 import { ExportBuilderScreen } from '@/features/settings';
 import { requireServerPermission } from '@/lib/auth/session';
 
-export const metadata = { title: 'Export · NaitikOS' };
+export const metadata = { title: 'Export · Ekayu' };
 
 export default async function ExportPage(): Promise<ReactNode> {
   /* `export:execute`, not `settings:read`. Building an archive of the whole

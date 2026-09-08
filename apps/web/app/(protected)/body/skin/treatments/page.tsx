@@ -8,7 +8,7 @@ import { TreatmentsScreen } from '@/features/skin';
 import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadTreatments } from '@/lib/platform/treatments';
 
-export const metadata = { title: 'Treatments · NaitikOS' };
+export const metadata = { title: 'Treatments · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function TreatmentsPage(): Promise<ReactNode> {

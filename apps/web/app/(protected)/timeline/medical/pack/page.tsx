@@ -27,7 +27,7 @@ import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadConsultationPack } from '@/lib/platform/consultation-pack';
 import { ConsultationPackScreen } from '@/features/health';
 
-export const metadata = { title: 'Consultation pack · NaitikOS' };
+export const metadata = { title: 'Consultation pack · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function ConsultationPackPage({

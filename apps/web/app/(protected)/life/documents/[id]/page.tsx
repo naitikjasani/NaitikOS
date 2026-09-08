@@ -8,7 +8,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadDocument } from '@/lib/platform/documents';
 
-export const metadata = { title: 'Document · NaitikOS' };
+export const metadata = { title: 'Document · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function DocumentPage({

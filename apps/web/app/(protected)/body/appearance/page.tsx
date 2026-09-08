@@ -9,7 +9,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadAppearance } from '@/lib/platform/appearance';
 
-export const metadata = { title: 'Appearance · NaitikOS' };
+export const metadata = { title: 'Appearance · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function AppearancePage(): Promise<ReactNode> {

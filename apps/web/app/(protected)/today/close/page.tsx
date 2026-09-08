@@ -17,7 +17,7 @@ import { PageContainer } from '@/components/shell';
 import { DailyCloseScreen } from '@/features/daily-close';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 
-export const metadata = { title: 'Daily Close · NaitikOS' };
+export const metadata = { title: 'Daily Close · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function DailyClosePage({

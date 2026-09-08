@@ -14,7 +14,7 @@ import { PageContainer } from '@/components/shell';
 import { PhotoCaptureScreen } from '@/features/skin';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 
-export const metadata = { title: 'Photos · NaitikOS' };
+export const metadata = { title: 'Photos · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 /**

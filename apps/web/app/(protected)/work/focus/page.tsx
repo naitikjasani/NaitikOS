@@ -8,7 +8,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadFocus } from '@/lib/platform/learning';
 
-export const metadata = { title: 'Focus · NaitikOS' };
+export const metadata = { title: 'Focus · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function FocusPage(): Promise<ReactNode> {

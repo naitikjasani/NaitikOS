@@ -9,7 +9,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadPrograms } from '@/lib/platform/programs';
 
-export const metadata = { title: 'Programs · NaitikOS' };
+export const metadata = { title: 'Programs · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function ProgramsPage(): Promise<ReactNode> {

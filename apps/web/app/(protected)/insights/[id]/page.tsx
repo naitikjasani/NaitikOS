@@ -8,7 +8,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadInsightDetail } from '@/lib/platform/insights';
 import { InsightDetailScreen } from '@/features/insights';
 
-export const metadata = { title: 'Insight · NaitikOS' };
+export const metadata = { title: 'Insight · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function InsightDetailPage({

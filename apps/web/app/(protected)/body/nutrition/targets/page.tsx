@@ -8,7 +8,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadTargets } from '@/lib/platform/nutrition';
 import { TargetsScreen } from '@/features/nutrition';
 
-export const metadata = { title: 'Targets · NaitikOS' };
+export const metadata = { title: 'Targets · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function TargetsPage(): Promise<ReactNode> {

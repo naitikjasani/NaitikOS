@@ -8,7 +8,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadSleep } from '@/lib/platform/sleep';
 
-export const metadata = { title: 'Sleep · NaitikOS' };
+export const metadata = { title: 'Sleep · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function SleepPage(): Promise<ReactNode> {

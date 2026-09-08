@@ -7,7 +7,7 @@ import { LabsScreen } from '@/features/health';
 import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadHealthOverview } from '@/lib/platform/health';
 
-export const metadata = { title: 'Labs · NaitikOS' };
+export const metadata = { title: 'Labs · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function LabsPage(): Promise<ReactNode> {

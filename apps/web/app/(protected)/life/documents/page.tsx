@@ -7,7 +7,7 @@ import { VaultScreen } from '@/features/documents';
 import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { listDocuments } from '@/lib/platform/documents';
 
-export const metadata = { title: 'Documents · NaitikOS' };
+export const metadata = { title: 'Documents · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function DocumentsPage(): Promise<ReactNode> {

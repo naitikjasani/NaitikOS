@@ -8,7 +8,7 @@ import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadNutritionOverview } from '@/lib/platform/nutrition';
 import { NutritionOverviewScreen } from '@/features/nutrition';
 
-export const metadata = { title: 'Nutrition · NaitikOS' };
+export const metadata = { title: 'Nutrition · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function NutritionPage(): Promise<ReactNode> {

@@ -10,7 +10,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadTimelineDay } from '@/lib/platform/timeline-day';
 
-export const metadata = { title: 'Day · NaitikOS' };
+export const metadata = { title: 'Day · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function TimelineDayPage({

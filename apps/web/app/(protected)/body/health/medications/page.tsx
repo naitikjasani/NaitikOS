@@ -20,7 +20,7 @@ import { MedicationScreen } from '@/features/mind';
 import { requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 
-export const metadata = { title: 'Medications · NaitikOS' };
+export const metadata = { title: 'Medications · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function MedicationsPage(): Promise<ReactNode> {

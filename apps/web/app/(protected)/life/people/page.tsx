@@ -9,7 +9,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadPeople } from '@/lib/platform/social';
 
-export const metadata = { title: 'People · NaitikOS' };
+export const metadata = { title: 'People · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function PeoplePage(): Promise<ReactNode> {

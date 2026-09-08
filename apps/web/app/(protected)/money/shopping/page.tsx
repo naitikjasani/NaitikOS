@@ -8,7 +8,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadShopping } from '@/lib/platform/money';
 
-export const metadata = { title: 'Shopping · NaitikOS' };
+export const metadata = { title: 'Shopping · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function ShoppingPage(): Promise<ReactNode> {

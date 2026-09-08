@@ -8,7 +8,7 @@ import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { NUTRITION_TREND_DAYS, loadNutritionTrends } from '@/lib/platform/nutrition';
 import { TrendsScreen } from '@/features/nutrition';
 
-export const metadata = { title: 'Nutrition trends · NaitikOS' };
+export const metadata = { title: 'Nutrition trends · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function NutritionTrendsPage(): Promise<ReactNode> {

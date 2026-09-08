@@ -17,7 +17,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadNotificationPreferences } from '@/lib/platform/settings';
 import { NotificationsSettingsScreen } from '@/features/settings';
 
-export const metadata = { title: 'Notifications · NaitikOS' };
+export const metadata = { title: 'Notifications · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function NotificationsSettingsPage(): Promise<ReactNode> {

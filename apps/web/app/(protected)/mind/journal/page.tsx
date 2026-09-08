@@ -7,7 +7,7 @@ import { PageContainer } from '@/components/shell';
 import { JournalScreen } from '@/features/mind';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 
-export const metadata = { title: 'Journal · NaitikOS' };
+export const metadata = { title: 'Journal · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default function JournalPage(): ReactNode {

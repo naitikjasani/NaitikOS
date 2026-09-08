@@ -6,7 +6,7 @@ import { PageContainer } from '@/components/shell';
 import { requireServerPermission } from '@/lib/auth/session';
 import { AppearanceSettingsScreen } from '@/features/settings';
 
-export const metadata = { title: 'Appearance · NaitikOS' };
+export const metadata = { title: 'Appearance · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function AppearanceSettingsPage(): Promise<ReactNode> {

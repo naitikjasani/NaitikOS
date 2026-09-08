@@ -8,7 +8,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadBudgets } from '@/lib/platform/money';
 
-export const metadata = { title: 'Budgets · NaitikOS' };
+export const metadata = { title: 'Budgets · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function BudgetsPage(): Promise<ReactNode> {

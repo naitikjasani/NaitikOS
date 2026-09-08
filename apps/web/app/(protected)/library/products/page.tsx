@@ -7,7 +7,7 @@ import { ProductLibraryScreen } from '@/features/library';
 import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadProductLibrary } from '@/lib/platform/library';
 
-export const metadata = { title: 'Products · NaitikOS' };
+export const metadata = { title: 'Products · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function ProductLibraryPage(): Promise<ReactNode> {

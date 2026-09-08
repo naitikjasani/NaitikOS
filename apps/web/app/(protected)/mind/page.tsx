@@ -14,7 +14,7 @@ import { PageContainer } from '@/components/shell';
 import { MindOverviewScreen } from '@/features/mind';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 
-export const metadata = { title: 'Mind · NaitikOS' };
+export const metadata = { title: 'Mind · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default function MindPage(): ReactNode {

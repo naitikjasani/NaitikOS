@@ -14,7 +14,7 @@ import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadLogSurface } from '@/lib/platform/nutrition';
 import { MealLogScreen } from '@/features/nutrition';
 
-export const metadata = { title: 'Log a meal · NaitikOS' };
+export const metadata = { title: 'Log a meal · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function MealLogPage(): Promise<ReactNode> {

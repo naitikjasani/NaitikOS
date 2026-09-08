@@ -18,7 +18,7 @@ import { Card, CardBody, Inline, Stack, Text } from '@naitikos/design-system';
 import { PageContainer } from '@/components/shell';
 import { requireServerPermission } from '@/lib/auth/session';
 
-export const metadata = { title: 'Settings · NaitikOS' };
+export const metadata = { title: 'Settings · Ekayu' };
 
 const SECTIONS = [
   {

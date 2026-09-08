@@ -15,7 +15,7 @@ import { Card, CardBody, Inline, Stack, Text } from '@naitikos/design-system';
 import { PageContainer } from '@/components/shell';
 import { requireServerPermission } from '@/lib/auth/session';
 
-export const metadata = { title: 'Data · NaitikOS' };
+export const metadata = { title: 'Data · Ekayu' };
 
 export default async function DataPage(): Promise<ReactNode> {
   const authorized = await requireServerPermission('settings:read');

@@ -7,7 +7,7 @@ import { PageContainer } from '@/components/shell';
 import { VolumeScreen } from '@/features/gym';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 
-export const metadata = { title: 'Volume · NaitikOS' };
+export const metadata = { title: 'Volume · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default function VolumePage(): ReactNode {

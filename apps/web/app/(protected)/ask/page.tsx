@@ -7,7 +7,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadThreads } from '@/lib/platform/enquiry';
 import { AskScreen, ThreadListScreen } from '@/features/ask';
 
-export const metadata = { title: 'Ask · NaitikOS' };
+export const metadata = { title: 'Ask · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function AskPage(): Promise<ReactNode> {

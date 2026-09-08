@@ -17,12 +17,12 @@ import { NONCE_HEADER } from '@/proxy';
 import '../styles/globals.css';
 
 export const metadata: Metadata = {
-  title: 'NaitikOS',
+  title: 'Ekayu',
   description: 'A personal operating system. One substrate, many lenses.',
   // P7: never indexed. A crawler confirming the account exists is step one.
   robots: { index: false, follow: false, nocache: true },
-  applicationName: 'NaitikOS',
-  appleWebApp: { capable: true, title: 'NaitikOS', statusBarStyle: 'default' },
+  applicationName: 'Ekayu',
+  appleWebApp: { capable: true, title: 'Ekayu', statusBarStyle: 'default' },
 };
 
 export const viewport: Viewport = {

@@ -8,7 +8,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadReviews } from '@/lib/platform/reviews';
 
-export const metadata = { title: 'Reviews · NaitikOS' };
+export const metadata = { title: 'Reviews · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function ReviewsPage(): Promise<ReactNode> {

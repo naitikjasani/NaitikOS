@@ -7,7 +7,7 @@ import { PageContainer } from '@/components/shell';
 import { RoutineScreen } from '@/features/skin';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 
-export const metadata = { title: 'Routine · NaitikOS' };
+export const metadata = { title: 'Routine · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default function RoutinePage(): ReactNode {

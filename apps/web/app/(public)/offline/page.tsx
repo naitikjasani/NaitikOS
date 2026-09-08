@@ -16,7 +16,7 @@
 import type { ReactNode } from 'react';
 import { Card, CardBody, Stack, Text } from '@naitikos/design-system';
 
-export const metadata = { title: 'Offline · NaitikOS' };
+export const metadata = { title: 'Offline · Ekayu' };
 
 /*
  * Static, so the service worker can pre-cache it. Marked explicitly rather than

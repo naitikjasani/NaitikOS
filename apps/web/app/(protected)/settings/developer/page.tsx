@@ -38,7 +38,7 @@ import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadDeveloperDiagnostics } from '@/lib/platform/diagnostics';
 import { loadValidationReport } from '@/lib/platform/validation';
 
-export const metadata = { title: 'Developer · NaitikOS' };
+export const metadata = { title: 'Developer · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function DeveloperPage(): Promise<ReactNode> {

@@ -16,7 +16,7 @@ import { PageContainer } from '@/components/shell';
 import { SessionLoggerScreen } from '@/features/gym';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 
-export const metadata = { title: 'Session · NaitikOS' };
+export const metadata = { title: 'Session · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default function SessionLogPage(): ReactNode {

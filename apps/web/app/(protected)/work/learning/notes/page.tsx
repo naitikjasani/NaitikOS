@@ -7,7 +7,7 @@ import { LearningNotesScreen } from '@/features/work';
 import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadLearning } from '@/lib/platform/learning';
 
-export const metadata = { title: 'Notes & synthesis · NaitikOS' };
+export const metadata = { title: 'Notes & synthesis · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function LearningNotesPage(): Promise<ReactNode> {

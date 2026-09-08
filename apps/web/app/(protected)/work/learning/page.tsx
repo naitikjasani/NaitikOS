@@ -7,7 +7,7 @@ import { LearningScreen } from '@/features/work';
 import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadLearning } from '@/lib/platform/learning';
 
-export const metadata = { title: 'Learning · NaitikOS' };
+export const metadata = { title: 'Learning · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function LearningPage(): Promise<ReactNode> {

@@ -12,7 +12,7 @@ import { Button, Card, CardBody, Stack, Text } from '@naitikos/design-system';
 
 import { SIGN_IN_PATH } from '@/lib/auth/routes';
 
-export const metadata = { title: 'Sign-in problem · NaitikOS' };
+export const metadata = { title: 'Sign-in problem · Ekayu' };
 
 const MESSAGES: Readonly<Record<string, string>> = {
   invalid_code: 'That sign-in link has expired or was already used. Request a new one.',

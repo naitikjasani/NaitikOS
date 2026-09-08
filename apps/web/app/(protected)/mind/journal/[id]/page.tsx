@@ -17,7 +17,7 @@ import { PageContainer } from '@/components/shell';
 import { JournalEntryScreen } from '@/features/mind';
 import { requireServerPermission } from '@/lib/auth/session';
 
-export const metadata = { title: 'Entry · NaitikOS' };
+export const metadata = { title: 'Entry · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function JournalEntryPage({

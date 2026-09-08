@@ -6,7 +6,7 @@ import { PageContainer } from '@/components/shell';
 import { requireServerPermission } from '@/lib/auth/session';
 import { IntegrationsSettingsScreen } from '@/features/settings';
 
-export const metadata = { title: 'Integrations · NaitikOS' };
+export const metadata = { title: 'Integrations · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function IntegrationsSettingsPage(): Promise<ReactNode> {

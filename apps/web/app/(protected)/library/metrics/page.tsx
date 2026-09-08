@@ -7,7 +7,7 @@ import { MetricRegistryScreen } from '@/features/library';
 import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadMetricRegistry } from '@/lib/platform/library';
 
-export const metadata = { title: 'Metric registry · NaitikOS' };
+export const metadata = { title: 'Metric registry · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function MetricRegistryPage(): Promise<ReactNode> {

@@ -8,7 +8,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadNetWorth } from '@/lib/platform/money';
 
-export const metadata = { title: 'Net worth · NaitikOS' };
+export const metadata = { title: 'Net worth · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function NetWorthPage(): Promise<ReactNode> {

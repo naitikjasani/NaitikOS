@@ -14,7 +14,7 @@ import { CalibrationScreen } from '@/features/insights';
 import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadCalibration } from '@/lib/platform/predictions';
 
-export const metadata = { title: 'Calibration · NaitikOS' };
+export const metadata = { title: 'Calibration · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function CalibrationPage(): Promise<ReactNode> {

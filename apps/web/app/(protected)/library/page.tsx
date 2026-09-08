@@ -7,7 +7,7 @@ import { LibraryOverviewScreen } from '@/features/library';
 import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadLibraryOverview } from '@/lib/platform/library';
 
-export const metadata = { title: 'Library · NaitikOS' };
+export const metadata = { title: 'Library · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function LibraryPage(): Promise<ReactNode> {

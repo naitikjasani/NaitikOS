@@ -7,7 +7,7 @@ import { PageContainer } from '@/components/shell';
 import { ProductsScreen } from '@/features/skin';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 
-export const metadata = { title: 'Products · NaitikOS' };
+export const metadata = { title: 'Products · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default function ProductsPage(): ReactNode {

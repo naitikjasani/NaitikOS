@@ -14,7 +14,7 @@ import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadAiSettings } from '@/lib/platform/settings';
 import { AiSettingsScreen } from '@/features/settings';
 
-export const metadata = { title: 'AI · NaitikOS' };
+export const metadata = { title: 'AI · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function AiSettingsPage(): Promise<ReactNode> {

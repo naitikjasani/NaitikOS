@@ -6,7 +6,7 @@ import { PageContainer } from '@/components/shell';
 import { requireServerPermission } from '@/lib/auth/session';
 import { CaptureSettingsScreen } from '@/features/settings';
 
-export const metadata = { title: 'Capture · NaitikOS' };
+export const metadata = { title: 'Capture · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function CaptureSettingsPage(): Promise<ReactNode> {

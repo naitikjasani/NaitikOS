@@ -21,7 +21,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadPhotoComparison } from '@/lib/platform/skin';
 
-export const metadata = { title: 'Compare photos · NaitikOS' };
+export const metadata = { title: 'Compare photos · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function PhotoComparePage(): Promise<ReactNode> {

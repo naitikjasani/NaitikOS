@@ -36,7 +36,7 @@ export function Sidebar(): ReactNode {
       <div className="sidebar__brand">
         {!isCollapsed && (
           <Text role="title-3" as="p">
-            NaitikOS
+            Ekayu
           </Text>
         )}
         <IconButton

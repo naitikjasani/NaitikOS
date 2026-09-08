@@ -9,7 +9,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadTeeth } from '@/lib/platform/teeth';
 
-export const metadata = { title: 'Dental appointments · NaitikOS' };
+export const metadata = { title: 'Dental appointments · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function DentalAppointmentsPage(): Promise<ReactNode> {

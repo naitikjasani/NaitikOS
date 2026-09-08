@@ -14,7 +14,7 @@ import { PageContainer } from '@/components/shell';
 import { MedicationScreen } from '@/features/mind';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 
-export const metadata = { title: 'Medication · NaitikOS' };
+export const metadata = { title: 'Medication · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default function MedsPage(): ReactNode {

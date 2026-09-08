@@ -8,7 +8,7 @@ import { HealthOverviewScreen } from '@/features/health';
 import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadHealthOverview } from '@/lib/platform/health';
 
-export const metadata = { title: 'Health · NaitikOS' };
+export const metadata = { title: 'Health · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function HealthPage(): Promise<ReactNode> {

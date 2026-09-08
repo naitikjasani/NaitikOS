@@ -7,7 +7,7 @@ import { AnalyteScreen } from '@/features/health';
 import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadAnalyteHistory } from '@/lib/platform/health';
 
-export const metadata = { title: 'Analyte · NaitikOS' };
+export const metadata = { title: 'Analyte · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function AnalytePage({

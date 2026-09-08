@@ -21,7 +21,7 @@ import { LearningScreen } from '@/features/work';
 import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadLearning } from '@/lib/platform/learning';
 
-export const metadata = { title: 'Reading queue · NaitikOS' };
+export const metadata = { title: 'Reading queue · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function LearningQueuePage(): Promise<ReactNode> {

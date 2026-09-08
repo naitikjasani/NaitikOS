@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { PageContainer } from '@/components/shell';
 import { ExerciseDetailScreen } from '@/features/gym';
 
-export const metadata = { title: 'Exercise · NaitikOS' };
+export const metadata = { title: 'Exercise · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function ExerciseDetailPage({

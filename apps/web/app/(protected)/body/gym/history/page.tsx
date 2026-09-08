@@ -7,7 +7,7 @@ import { PageContainer } from '@/components/shell';
 import { SessionHistoryScreen } from '@/features/gym';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 
-export const metadata = { title: 'Session history · NaitikOS' };
+export const metadata = { title: 'Session history · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default function GymHistoryPage(): ReactNode {

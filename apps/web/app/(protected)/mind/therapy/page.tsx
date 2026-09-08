@@ -16,7 +16,7 @@ import { TherapyScreen } from '@/features/mind';
 import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadTherapyBoard } from '@/lib/platform/therapy';
 
-export const metadata = { title: 'Therapy · NaitikOS' };
+export const metadata = { title: 'Therapy · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function TherapyPage(): Promise<ReactNode> {

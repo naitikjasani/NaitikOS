@@ -8,7 +8,7 @@ import { PromptsScreen } from '@/features/mind';
 import { requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 
-export const metadata = { title: 'Prompts · NaitikOS' };
+export const metadata = { title: 'Prompts · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function PromptsPage(): Promise<ReactNode> {

@@ -8,7 +8,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadDevices } from '@/lib/platform/devices';
 import { DevicesScreen } from '@/features/devices';
 
-export const metadata = { title: 'Devices · NaitikOS' };
+export const metadata = { title: 'Devices · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function DevicesPage(): Promise<ReactNode> {

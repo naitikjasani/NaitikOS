@@ -8,7 +8,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadGoal } from '@/lib/platform/goals';
 
-export const metadata = { title: 'Goal · NaitikOS' };
+export const metadata = { title: 'Goal · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function GoalPage({

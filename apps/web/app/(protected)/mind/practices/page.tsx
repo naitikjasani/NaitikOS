@@ -7,7 +7,7 @@ import { PageContainer } from '@/components/shell';
 import { PracticesScreen } from '@/features/mind';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 
-export const metadata = { title: 'Practices · NaitikOS' };
+export const metadata = { title: 'Practices · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default function PracticesPage(): ReactNode {

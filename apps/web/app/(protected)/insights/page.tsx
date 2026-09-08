@@ -9,7 +9,7 @@ import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadInsightInbox, loadInsights } from '@/lib/platform/insights';
 import { InsightInboxScreen } from '@/features/insights';
 
-export const metadata = { title: 'Insights · NaitikOS' };
+export const metadata = { title: 'Insights · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function InsightInboxPage(): Promise<ReactNode> {

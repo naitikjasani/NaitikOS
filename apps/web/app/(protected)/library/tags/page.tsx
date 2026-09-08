@@ -7,7 +7,7 @@ import { TagVocabularyScreen } from '@/features/library';
 import { requireServerPermission } from '@/lib/auth/session';
 import { loadTagVocabulary } from '@/lib/platform/library';
 
-export const metadata = { title: 'Tags · NaitikOS' };
+export const metadata = { title: 'Tags · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function TagVocabularyPage(): Promise<ReactNode> {

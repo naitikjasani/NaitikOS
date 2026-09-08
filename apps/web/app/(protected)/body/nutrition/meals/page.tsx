@@ -7,7 +7,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadFoodLibrary, loadTemplates } from '@/lib/platform/nutrition';
 import { MealTemplatesScreen } from '@/features/nutrition';
 
-export const metadata = { title: 'Saved meals · NaitikOS' };
+export const metadata = { title: 'Saved meals · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function MealTemplatesPage(): Promise<ReactNode> {

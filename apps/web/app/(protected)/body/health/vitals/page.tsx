@@ -9,7 +9,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { HEALTH_WINDOW_DAYS, createHealthRepository } from '@/lib/platform/health';
 
-export const metadata = { title: 'Vitals · NaitikOS' };
+export const metadata = { title: 'Vitals · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function VitalsPage(): Promise<ReactNode> {

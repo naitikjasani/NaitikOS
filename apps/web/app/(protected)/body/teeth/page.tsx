@@ -8,7 +8,7 @@ import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadTeeth } from '@/lib/platform/teeth';
 import { TeethOverviewScreen } from '@/features/teeth';
 
-export const metadata = { title: 'Teeth · NaitikOS' };
+export const metadata = { title: 'Teeth · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function TeethPage(): Promise<ReactNode> {

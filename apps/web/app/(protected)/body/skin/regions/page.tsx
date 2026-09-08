@@ -10,7 +10,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadSkinRegions } from '@/lib/platform/skin';
 
-export const metadata = { title: 'Skin regions · NaitikOS' };
+export const metadata = { title: 'Skin regions · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function SkinRegionsPage(): Promise<ReactNode> {

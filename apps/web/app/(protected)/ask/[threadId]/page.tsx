@@ -9,7 +9,7 @@ import { ThreadScreen } from '@/features/ask';
 import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadThread } from '@/lib/platform/enquiry';
 
-export const metadata = { title: 'Enquiry · NaitikOS' };
+export const metadata = { title: 'Enquiry · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function ThreadPage({

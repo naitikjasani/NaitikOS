@@ -11,7 +11,7 @@ import type { ReactNode } from 'react';
 import { PageContainer } from '@/components/shell';
 import { TimelineList } from '@/features/timeline';
 
-export const metadata = { title: 'Timeline · NaitikOS' };
+export const metadata = { title: 'Timeline · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default function TimelinePage(): ReactNode {

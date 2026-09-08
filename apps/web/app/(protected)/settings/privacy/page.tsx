@@ -58,7 +58,7 @@ import { PageContainer } from '@/components/shell';
 import { LocalDataScreen } from '@/features/settings';
 import { requireServerPermission } from '@/lib/auth/session';
 
-export const metadata = { title: 'Privacy · NaitikOS' };
+export const metadata = { title: 'Privacy · Ekayu' };
 
 const TIERS = [
   {

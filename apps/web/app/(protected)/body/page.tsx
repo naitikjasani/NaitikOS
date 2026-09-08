@@ -17,7 +17,7 @@ import { Card, CardBody, Inline, Stack, Text } from '@naitikos/design-system';
 
 import { PageContainer } from '@/components/shell';
 
-export const metadata = { title: 'Body · NaitikOS' };
+export const metadata = { title: 'Body · Ekayu' };
 
 const MODULES = [
   {

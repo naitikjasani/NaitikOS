@@ -8,7 +8,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadWorkOverview } from '@/lib/platform/work';
 
-export const metadata = { title: 'Work · NaitikOS' };
+export const metadata = { title: 'Work · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function WorkPage(): Promise<ReactNode> {

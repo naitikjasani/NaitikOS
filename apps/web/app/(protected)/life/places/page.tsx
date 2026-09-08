@@ -9,7 +9,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadPlaces } from '@/lib/platform/social';
 
-export const metadata = { title: 'Places · NaitikOS' };
+export const metadata = { title: 'Places · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function PlacesPage(): Promise<ReactNode> {

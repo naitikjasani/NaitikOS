@@ -8,7 +8,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { createHealthRepository } from '@/lib/platform/health';
 
-export const metadata = { title: 'Conditions · NaitikOS' };
+export const metadata = { title: 'Conditions · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function ConditionsPage(): Promise<ReactNode> {

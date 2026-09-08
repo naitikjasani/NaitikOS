@@ -7,7 +7,7 @@ import { PageContainer } from '@/components/shell';
 import { SkinStateScreen } from '@/features/skin';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 
-export const metadata = { title: 'Skin log · NaitikOS' };
+export const metadata = { title: 'Skin log · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default function SkinStatePage(): ReactNode {

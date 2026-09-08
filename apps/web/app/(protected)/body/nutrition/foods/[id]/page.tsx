@@ -8,7 +8,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadFoodDetail } from '@/lib/platform/nutrition';
 import { FoodDetailScreen } from '@/features/nutrition';
 
-export const metadata = { title: 'Food · NaitikOS' };
+export const metadata = { title: 'Food · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function FoodDetailPage({

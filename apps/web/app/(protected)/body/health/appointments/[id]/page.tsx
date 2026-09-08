@@ -16,7 +16,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadAppointmentPreparation } from '@/lib/platform/health';
 
-export const metadata = { title: 'Preparing · NaitikOS' };
+export const metadata = { title: 'Preparing · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function AppointmentPrepPage({

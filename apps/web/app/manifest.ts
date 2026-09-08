@@ -19,8 +19,8 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'NaitikOS',
-    short_name: 'NaitikOS',
+    name: 'Ekayu',
+    short_name: 'Ekayu',
     description: 'A personal health and life operating system.',
     start_url: '/today',
     /*

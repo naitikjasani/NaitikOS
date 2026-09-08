@@ -8,7 +8,7 @@ import { AuditScreen } from '@/features/settings';
 import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadAudit } from '@/lib/platform/audit';
 
-export const metadata = { title: 'Audit log · NaitikOS' };
+export const metadata = { title: 'Audit log · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function AuditPage(): Promise<ReactNode> {

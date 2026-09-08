@@ -41,7 +41,7 @@ export function SignInScreen({ redirectTo }: SignInScreenProps): ReactNode {
                 heading, so it is an h1 regardless of how large it renders.
               */}
               <Text role="title-1" as="h1">
-                NaitikOS
+                Ekayu
               </Text>
               <Text role="body" tone="secondary">
                 Sign in to your record.

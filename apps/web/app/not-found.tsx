@@ -4,7 +4,7 @@ import { Button, EmptyState } from '@naitikos/design-system';
 
 import { DEFAULT_AUTHENTICATED_PATH } from '@/lib/auth/routes';
 
-export const metadata = { title: 'Not found · NaitikOS' };
+export const metadata = { title: 'Not found · Ekayu' };
 
 export default function NotFound(): ReactNode {
   return (

@@ -7,7 +7,7 @@ import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { loadInsightArchive } from '@/lib/platform/insights';
 import { InsightArchiveScreen } from '@/features/insights';
 
-export const metadata = { title: 'Insight history · NaitikOS' };
+export const metadata = { title: 'Insight history · Ekayu' };
 export const dynamic = 'force-dynamic';
 
 export default async function InsightArchivePage(): Promise<ReactNode> {
