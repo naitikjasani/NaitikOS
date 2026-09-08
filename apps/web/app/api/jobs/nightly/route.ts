@@ -28,10 +28,19 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { runJobSchema } from '@naitikos/api';
 import type { JobStep, JobStepName } from '@naitikos/core';
-import { JOB_STEPS, dayKeyInZone, isoFromMillis, runNightly, systemClock } from '@naitikos/core';
+import {
+  JOB_STEPS,
+  dayKeyInZone,
+  isoFromMillis,
+  runNightly,
+  shiftDayKey,
+  systemClock,
+} from '@naitikos/core';
 import {
   createIdempotencyRepository,
   createJobRunRecorder,
+  createMetricRepository,
+  createRollupRepository,
   createTelemetryRepository,
   hasCompletedRunSince,
   lastJobRun,
@@ -47,9 +56,21 @@ import {
   unhandledErrorResponse,
 } from '../../../../lib/platform/context';
 import type { PlatformContext } from '../../../../lib/platform/context';
+import { DEFAULT_PROFILE_ZONE } from '../../../../lib/platform/context';
 import { loadInsights, recordInsightNight } from '../../../../lib/platform/insights';
 import { generatePredictions, resolveDuePredictions } from '../../../../lib/platform/predictions';
 import { collapseOldSamples, maintainSamplePartitions } from '../../../../lib/platform/samples';
+
+/**
+ * How far back `refresh-rollups` recomputes each night.
+ *
+ * Thirty-five days: five whole ISO weeks, so the repository's widening to week
+ * boundaries adds nothing, and comfortably more than §5.7's seven-day
+ * idempotency TTL — the figure that bounds how late an offline capture can
+ * arrive. See the step for why a trailing window is the right shape and what it
+ * deliberately does not catch.
+ */
+const ROLLUP_WINDOW_DAYS = 35;
 
 /**
  * The registered steps.
@@ -149,6 +170,70 @@ function stepsFor(platform: PlatformContext): readonly JobStep[] {
         return ok({
           rowsAffected: stale.ok ? stale.value : 0,
           note: `${String(health.pending)} pending, ${String(health.failed)} failed (media uploads)`,
+        });
+      },
+    },
+    {
+      name: 'refresh-rollups',
+      describes: 'Recomputes metric_rollup over a trailing window from the observation log (§5.6, §9.7).',
+      /*
+       * The first domain step whose output another surface reads, and the
+       * reason it can fail the run.
+       *
+       * `haltOnFailure` is true here where the operational steps above are
+       * false, and the distinction is what the flag is for. A failed prune
+       * leaves rows to sweep tomorrow. A failed refresh leaves `metric_rollup`
+       * holding *yesterday's* buckets for a window today's charts will read as
+       * current — a stale number that looks live, which §8.9 treats as worse
+       * than a missing one. Better to stop and be seen to have stopped.
+       *
+       * ## Why a trailing window rather than everything
+       *
+       * The window has to cover the longest plausible gap between when an
+       * observation happened and when it arrives. §5.7 sizes that: the
+       * idempotency TTL is seven days because "a week covers a holiday with no
+       * signal", so a Close captured offline on day one and drained on day
+       * seven must still land in a bucket that gets recomputed.
+       *
+       * Thirty-five days is five ISO weeks, so the repository's widening to
+       * whole weeks adds nothing, and it leaves four weeks of margin beyond the
+       * outbox gap for a correction arriving late.
+       *
+       * **It does not catch a correction to an older reading**, and that is
+       * stated rather than hidden. §9.1 makes a correction a new superseding
+       * row, and one filed against a reading from last spring will not be
+       * picked up by any trailing window. Rebuilding the whole history belongs
+       * behind an explicit trigger — `refresh(...)` takes any window, so the
+       * capability exists; nothing calls it nightly because a decade-wide
+       * recompute every night to catch a rare edit is the wrong trade.
+       */
+      haltOnFailure: true,
+      async run() {
+        const registry = await createMetricRepository(platform.db).registry();
+        if (!registry.ok) return registry;
+
+        const nowIso = isoFromMillis(systemClock.nowMillis());
+        const toDayKey = dayKeyInZone(nowIso, DEFAULT_PROFILE_ZONE);
+        const fromDayKey =
+          shiftDayKey(toDayKey, -(ROLLUP_WINDOW_DAYS - 1)) ?? toDayKey;
+
+        const outcome = await createRollupRepository(platform.db).refresh(
+          { fromDayKey, toDayKey },
+          registry.value.all(),
+          DEFAULT_PROFILE_ZONE,
+        );
+        if (!outcome.ok) return outcome;
+
+        /*
+         * `skipped` is reported rather than swallowed. A metric whose stored
+         * number is not a measurement has no aggregate, which is a fact about
+         * the registry and not a fault — but a silent count would leave a
+         * reader wondering why `written` is lower than the metric count.
+         */
+        const { written, removed, skipped } = outcome.value;
+        return ok({
+          rowsAffected: written,
+          note: `${String(written)} written, ${String(removed)} replaced, ${String(skipped.length)} metrics not rollable`,
         });
       },
     },
