@@ -40,10 +40,11 @@
  */
 
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
-import { uuidV7 } from '@naitikos/shared';
+import { isOk, uuidV7 } from '@naitikos/shared';
 
 import { createDatabase } from '../client';
 import type { IntegrityAssertion, IntegrityReport } from './integrity.repository';
+import { createObservationRepository } from './observation.repository';
 import {
   INTEGRITY_ASSERTIONS,
   INTEGRITY_ROW_ID_CAP,
@@ -57,7 +58,6 @@ const db = DATABASE_URL === undefined ? undefined : createDatabase(DATABASE_URL)
 const suite = db === undefined ? describe.skip : describe;
 
 /** The seeded provenance row. §9.3(2) makes `source_id` non-null, so every fixture needs one. */
-const MANUAL_SOURCE = 'manual';
 
 const ZONE = 'Asia/Kolkata';
 
@@ -97,13 +97,33 @@ suite('data-integrity assertions (§5.16)', () => {
   const plantedMeals: string[] = [];
   const plantedOutbox: string[] = [];
 
+  /**
+   * The manual observation source, created if this database has never had one.
+   *
+   * This used to select the row and throw "the seeded manual observation source
+   * is missing" if it was absent — which passed on every developer machine and
+   * failed on a fresh CI database, because **the seed does not create it**.
+   * Nothing does, up front: `observations.manualSourceId()` resolves it on
+   * demand with an `ON CONFLICT DO NOTHING` insert, so the first write of an
+   * observation brings it into existence.
+   *
+   * A local database has therefore had one since the first test that wrote an
+   * observation, months ago, and `resetDomainTables` deliberately never clears
+   * `observation_source` — so the row is invisible, permanent, and easy to
+   * mistake for seed data. It is not: the application is correct on a fresh
+   * install and only this helper assumed otherwise.
+   *
+   * Delegating to the repository rather than repeating the upsert keeps the
+   * "what identifies the manual source" question in one place.
+   */
   async function sourceId(): Promise<string> {
-    const rows = await client<{ id: string }[]>`
-      select id from observation_source where identifier = ${MANUAL_SOURCE} limit 1
-    `;
-    const row = rows[0];
-    if (row === undefined) throw new Error('the seeded manual observation source is missing');
-    return row.id;
+    const resolved = await createObservationRepository(database).manualSourceId();
+    /* A `Result`, like every repository method. Unwrapped loudly rather than
+     * with a fallback: if the manual source cannot be resolved, every test
+     * below is planting rows against nothing and their passes would mean
+     * nothing. */
+    if (!isOk(resolved)) throw new Error(`could not resolve the manual observation source: ${resolved.error.code}`);
+    return resolved.value;
   }
 
   /**
