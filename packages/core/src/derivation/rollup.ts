@@ -72,10 +72,20 @@ export function aggregate(values: readonly number[], how: MetricAggregation): nu
  * An unparseable value is dropped rather than coerced to zero — a `NaN` in a
  * mean poisons the whole day, and a zero is a measurement nobody took.
  */
-function numericValue(observation: Observation): number | null {
+function numericValue(observation: RollupObservation): number | null {
   const parsed = Number(observation.value);
   return Number.isFinite(parsed) ? parsed : null;
 }
+
+/**
+ * The four fields a rollup actually reads.
+ *
+ * `Observation` is assignable to this, so every existing caller is unaffected.
+ * It is stated separately because the nightly rollup (§5.6) reads years of the
+ * log at a time, and a repository forced to materialise fifteen columns per row
+ * in order to satisfy a type would be paying for eleven it discards.
+ */
+export type RollupObservation = Pick<Observation, 'metricKey' | 'value' | 'observedAt' | 'observedZone'>;
 
 export type RollupOptions = {
   /**
@@ -98,10 +108,56 @@ export type RollupOptions = {
  * asking for the historical view.
  */
 export function dailyRollup(
-  observations: readonly Observation[],
+  observations: readonly RollupObservation[],
   metric: Pick<MetricDefinition, 'key' | 'aggregation'>,
   options: RollupOptions = {},
 ): readonly DailyValue[] {
+  return dailyBuckets(observations, metric, options).map((bucket) => ({
+    dayKey: bucket.dayKey,
+    value: bucket.value,
+  }));
+}
+
+/**
+ * One day's value, plus the three columns `metric_rollup` stores beside it.
+ *
+ * §5.6's rollup row is not only the aggregate: it carries `sample_count`,
+ * `min_value` and `max_value`, and none of those can be recovered from a
+ * {@link DailyValue} after the fact. They are returned from here rather than
+ * recomputed by the writer because the *grouping* — which observation belongs
+ * to which day, in which zone (§5.3) — must have exactly one implementation.
+ * Two functions that each obviously bucketed by day would agree until the first
+ * traveller crossed a date line.
+ *
+ * The spread is descriptive, not a second aggregation rule: `minValue` and
+ * `maxValue` are the extremes of the values that went into `value`, whatever
+ * `metric.aggregation` did with them. A `mean` metric still has a range, and a
+ * day's range is what makes a single mean interpretable.
+ */
+export type DailyBucket = {
+  readonly dayKey: string;
+  /** The aggregate named by `metric.aggregation` — the same number {@link dailyRollup} returns. */
+  readonly value: number;
+  /** How many observations were combined. Never zero: an empty day has no bucket. */
+  readonly sampleCount: number;
+  readonly minValue: number;
+  readonly maxValue: number;
+};
+
+/**
+ * {@link dailyRollup}, with the day's spread retained.
+ *
+ * Everything {@link dailyRollup} documents applies unchanged — the aggregation
+ * comes from the metric and not from the caller, the day is a day in the
+ * observation's own zone, an unparseable value is dropped rather than coerced,
+ * and superseded observations are the caller's problem because the repository's
+ * `currentOnly` filter has already removed them.
+ */
+export function dailyBuckets(
+  observations: readonly RollupObservation[],
+  metric: Pick<MetricDefinition, 'key' | 'aggregation'>,
+  options: RollupOptions = {},
+): readonly DailyBucket[] {
   const byDay = new Map<string, number[]>();
 
   // Chronological, so `last` means last.
@@ -122,7 +178,16 @@ export function dailyRollup(
   return [...byDay.entries()]
     .flatMap(([dayKey, values]) => {
       const combined = aggregate(values, metric.aggregation);
-      return combined === null ? [] : [{ dayKey, value: combined }];
+      if (combined === null) return [];
+      return [
+        {
+          dayKey,
+          value: combined,
+          sampleCount: values.length,
+          minValue: Math.min(...values),
+          maxValue: Math.max(...values),
+        },
+      ];
     })
     .sort((a, b) => (a.dayKey < b.dayKey ? -1 : a.dayKey > b.dayKey ? 1 : 0));
 }

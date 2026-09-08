@@ -289,3 +289,13 @@ export type { TherapyActionItem, TherapySessionSummary } from './mind.repository
 /* --- Protocol-governed photography, read back (§9.8) -------------------- */
 export { createMediaRepository } from './upload-outbox.repository';
 export type { MediaRepository, ProtocolPhotoRow } from './upload-outbox.repository';
+
+/* --- Metric rollups (§5.6, §9.7) — the nightly projection trend charts read -- */
+export { createRollupRepository, ROLLUP_GRAINS } from './rollup.repository';
+export type {
+  MetricRollupRow,
+  RollupGrain,
+  RollupRefreshOutcome,
+  RollupRepository,
+  RollupWindow,
+} from './rollup.repository';

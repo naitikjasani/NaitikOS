@@ -209,8 +209,8 @@ export {
 /* -------------------------------------------------------------------------
  * Derivation (§6.2) — observations in, derived facts out.
  * ---------------------------------------------------------------------- */
-export type { RollupOptions } from './derivation/rollup';
-export { aggregate, dailyRollup } from './derivation/rollup';
+export type { RollupOptions, RollupObservation, DailyBucket } from './derivation/rollup';
+export { aggregate, dailyRollup, dailyBuckets } from './derivation/rollup';
 
 /* -------------------------------------------------------------------------
  * Gym (§4.1) — the first full domain.
@@ -1134,6 +1134,8 @@ export {
   TASK_KINDS,
   TASK_MAX_ATTEMPTS,
   DEFAULT_RUN_BUDGET_MS,
+  ABANDONED_RUN_AFTER_MS,
+  JOB_STEP_NOTE_MAX_CHARS,
   backoffSeconds,
   runNightly,
 } from './jobs/registry';
