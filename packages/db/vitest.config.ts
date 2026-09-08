@@ -19,6 +19,22 @@ export default mergeConfig(
       // Migrations take locks and the tests share one connection; parallel
       // files would deadlock against each other.
       fileParallelism: false,
+
+      /**
+       * `fileParallelism: false` orders the files *within* one run. It says
+       * nothing about a second run, and `resetDomainTables` truncating shared
+       * tables underneath one is catastrophic rather than flaky — two
+       * concurrent runs measured 100 and 107 failures out of 389, a different
+       * set each time.
+       *
+       * So one run at a time per database, enforced by a session-level Postgres
+       * advisory lock held for the life of this process. See the header of
+       * `src/testing/global-setup.ts` for why that mechanism and not a schema
+       * or database per process, and for why it cannot deadlock against the
+       * advisory lock inside `rollup.repository.ts`.
+       */
+      globalSetup: ['./src/testing/global-setup.ts'],
+
       coverage: { thresholds: undefined },
     },
   }),

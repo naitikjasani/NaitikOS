@@ -85,6 +85,7 @@ The practical shape of the rule:
 | Migration runner | `packages/db/src/migrate.ts` | Standalone script, `max: 1` connection, exits non-zero on failure. |
 | Applied-migration ledger | `drizzle.__drizzle_migrations` | **In the `drizzle` schema, not `public`.** Columns `id`, `hash`, `created_at` (epoch ms). |
 | Test reset order | `packages/db/src/testing/reset.ts` | `RESET_ORDER`. See §5. |
+| One-run-at-a-time lock | `packages/db/src/testing/global-setup.ts` | Session-level advisory lock on `hashtext('naitikos:db:integration-suite')`. Makes `RESET_ORDER` safe against a second concurrent run. |
 | The RLS guarantee | `packages/db/src/schema/rls.test.ts` | See §5. |
 | The invariant guarantee | `packages/db/src/schema/invariants.test.ts` | 16 tests, each inside a rolled-back transaction. |
 | Extensions | `packages/db/docker/init/001-extensions.sql` | Runs once, as superuser, on an empty data directory. Deliberately *not* a migration. |
@@ -539,6 +540,7 @@ the effort than making the discipline reliable.
 | **`type "vector" does not exist` / `operator class "gin_trgm_ops" does not exist`** | Extension missing. Locally, the init script only runs on an **empty** data directory, so a volume created before the extension was added will not have it. On Supabase, extensions are provisioned through the dashboard. | Locally: `pnpm db:reset` recreates the volume and re-runs `001-extensions.sql`. On Supabase: enable it in the project, then re-run the migration. Check with `select extname from pg_extension;`. |
 | **`rls.test.ts` reports table names** | A new table shipped without the RLS block. | Add the block from `0017_ask_threads.sql` as a new migration. Do not `ALTER TABLE` by hand and move on — the next fresh database will not have it. |
 | **Integration tests fail in an unrelated suite after adding a table** | `RESET_ORDER` gap (§5.1) or wrong order. | Add the table, children before parents. |
+| **Integration tests fail in a *random, different* set of suites each run** | Not a `RESET_ORDER` gap — do not go looking for one. Two `packages/db` runs against the same database, with the second's `resetDomainTables` truncating shared tables mid-test. Two concurrent runs measured 100 and 107 failures out of 389 on 8 September 2026, including FK violations raised inside `resetDomainTables` itself. | Fixed as of 8 September 2026: `src/testing/global-setup.ts` takes a session-level advisory lock, so the second run waits and prints the pid it is waiting for. If you see this symptom again, the lock is not being taken — check that `globalSetup` is still in `packages/db/vitest.config.ts` and that `DATABASE_URL` is reaching Vitest. Find holders with `select pid, state, query_start from pg_stat_activity where application_name = 'naitikos-db-integration-lock';`. |
 | **A sample import lands in `sample_default`** | No partition exists for that month. **Verified:** partitions today are 2026-09, 2026-10, 2027-03, 2027-04 — the months between have none. | Call `select ensure_sample_partition('YYYY-MM-01'::date);`. The nightly `maintain-partitions` step covers the month ahead only, not gaps behind it. |
 | **CI catches nothing** | **Verified:** `.github/workflows/` is empty. There is no CI. | See §10. Until it exists, "applied locally but not in CI" is not a failure mode this repository can have — and that is worse, not better. |
 
@@ -633,10 +635,18 @@ Two smaller observations, offered without a recommendation:
   schema `public`. The ledger actually lives in schema `drizzle`, so the
   predicate has never matched anything. Harmless, but it encodes a wrong belief
   about where the ledger is, and someone will one day search `public` for it.
-- Several domain tables are absent from `RESET_ORDER` — `body_measurement`,
+- ~~Several domain tables are absent from `RESET_ORDER`~~ — **closed, 7
+  September 2026.** This runbook found nine (`body_measurement`,
   `therapy_session`, `note`, `entity_tag`, `media_object`, `media_attachment`,
-  `embedding`, `memory_fact`, `crisis_plan`. None currently leaks, because no
-  suite writes to them (`therapy_session`, for instance, has no write method at
-  all, by design). `review` is excluded deliberately and cleared by its own
-  suite, with a comment saying so. The others are one test away from §5.1's
-  incident recurring.
+  `embedding`, `memory_fact`, `crisis_plan`); listing every table in the
+  database and subtracting the array found **fourteen**, the extra five being
+  `media_thumbnail`, `media_access_log`, `upload_outbox`, `tag` and `review`.
+  All fourteen were added. None had leaked, because no suite wrote to them
+  yet — each was one test away from §5.1's incident recurring, which is the
+  same shape as `program`/`program_block`, added after a count returned 9
+  instead of 1.
+
+  `reset.ts` now also names what remains absent, in four categories with a
+  reason each, so the question is not re-asked: seeded reference data,
+  `observation`/`observation_source`, derived projections, and operational
+  tables. `audit_log` is the judgement call and the reasoning is written down.

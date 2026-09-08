@@ -30,8 +30,53 @@ version of this table was wrong in four places at once.
 | `src/client.ts` | Connection factory | **Implemented** |
 | `src/repositories/` | Query implementations behind `core`-defined interfaces | **Implemented — 43 repositories** |
 | `src/views/` | Materialised rollup definitions | **Empty, and see below** |
+| `src/testing/` | The integration-test harness: reset order, and the one-run-at-a-time lock | **Implemented** |
 
 The complete §9 model ships now, including domains with no UI for a year. §2.1: *"The schema is the expensive thing to change later; the UI is not."*
+
+## Running the integration tests
+
+```
+pnpm --filter @naitikos/db test
+```
+
+Everything in `src/repositories/` and `src/schema/` is an integration test
+against the real Postgres, for the reason `vitest.config.ts` gives: the
+invariants are enforced by the database, so a mock would test nothing.
+
+**One run at a time, per database.** `src/testing/reset.ts` clears every domain
+table between tests, and its `RESET_ORDER` is only correct for a serial run — it
+has no defence against another process inserting or deleting between two of its
+statements. Two concurrent runs do not merely flake; measured on 8 September
+2026 they produced **100 and 107 failures out of 389**, a different set each
+time, including foreign-key violations raised *inside* `resetDomainTables`
+itself.
+
+So `src/testing/global-setup.ts` takes a session-level Postgres advisory lock
+for the life of the Vitest process. A second run prints who it is waiting for
+and then waits:
+
+```
+[db] Another integration run holds this database (backend pid 8998). Waiting —
+     the suite truncates shared tables, so the two cannot interleave.
+[db] lock acquired after 30s.
+```
+
+There is nothing to run first and nothing to clean up. The lock is *session*
+scoped, so Postgres drops it when the connection ends — a `SIGKILL`, a dead
+container or a pulled network cable all release it, with no stale-lock recovery
+path to remember. A single run pays one connection and one `SELECT`: 26.6s
+against 28.5s without the lock, which is inside the noise.
+
+It fails rather than degrades. An unreachable database aborts the run before any
+test loads; waiting more than five minutes throws with the query that finds the
+wedged backend; and teardown checks `pg_advisory_unlock`'s return value, so a
+connection that dropped and silently reconnected mid-run turns a green result
+into a red one rather than reporting an isolation it did not have.
+
+The file's header carries the rest: why not a schema or a database per run, and
+why this lock cannot deadlock against the `pg_advisory_xact_lock` inside
+`rollup.repository.ts`.
 
 ## The two kinds of data
 
