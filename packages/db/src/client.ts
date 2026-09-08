@@ -68,9 +68,62 @@ type ClientOptions = {
  *
  * @param url - connection string; defaults to `DATABASE_URL`.
  */
+/**
+ * Whether this connection must be encrypted, and why the default is "yes".
+ *
+ * postgres.js defaults to **no TLS**, and this file passed no `ssl` option at
+ * all — which was invisible for a month because the only database anyone
+ * connected to was the local container, where there is no TLS to negotiate.
+ * The first hosted deployment failed on it: Supabase's pooler requires TLS, so
+ * every query from the deployed runtime threw, `/today` streamed its Suspense
+ * fallback for ever, and a DB-backed route returned an empty 500.
+ *
+ * The predicate is deliberately the same shape as the CSRF cookie's `Secure`
+ * decision in `apps/web/lib/auth/cookies.ts`: **only an explicitly local host
+ * may go unencrypted, and everything else — including anything unparseable —
+ * is encrypted.** The asymmetry is the point. A misconfiguration that turns
+ * TLS off silently would carry §4.7's medication history and lab results
+ * across a network in cleartext, and nothing would look wrong; a
+ * misconfiguration that turns it on where it is not supported fails loudly on
+ * the first query.
+ *
+ * An explicit `sslmode` in the connection string wins. postgres.js parses that
+ * parameter itself, so returning `undefined` here leaves the operator's stated
+ * intent in charge rather than overriding it from two places.
+ */
+function sslFor(url: string): 'require' | false | undefined {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return 'require';
+  }
+
+  if (parsed.searchParams.has('sslmode')) return undefined;
+
+  const host = parsed.hostname.toLowerCase();
+  const isLoopback =
+    host === 'localhost' ||
+    host.endsWith('.localhost') ||
+    host === '[::1]' ||
+    host === '::1' ||
+    /^127(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/.test(host) ||
+    host === 'host.docker.internal';
+
+  return isLoopback ? false : 'require';
+}
+
 export function createDatabase(url: string = databaseUrl(), options: ClientOptions = {}) {
+  const ssl = sslFor(url);
+
   const sql = postgres(url, {
     max: options.maxConnections ?? 1,
+
+    /* TLS unless the host is explicitly local. See {@link sslFor}. Spread
+     * rather than passing `undefined`, because an explicit `sslmode` in the URL
+     * must stay in charge and `exactOptionalPropertyTypes` distinguishes an
+     * absent key from an undefined one. */
+    ...(ssl === undefined ? {} : { ssl }),
 
     /**
      * Return `numeric` as a string, not a JavaScript number.
