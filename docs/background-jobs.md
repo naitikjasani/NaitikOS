@@ -51,7 +51,7 @@ module happened to import first.
 | 7 | `generate-embeddings` | no | V2, local-only (P7) |
 | 8 | `generate-thumbnails` | no | For objects that arrived without them |
 | 9 | `verify-media-integrity` | **yes** | §9.8 + the **media upload** outbox's health, not the capture outbox's — see §8 |
-| 10 | `assert-data-integrity` | no | §5.16's assertions |
+| 10 | `assert-data-integrity` | **yes** | §5.16's assertions. Registered 8 September 2026; see §6a |
 | 11 | `schedule-notifications` | no | §5.9. No separate scheduler |
 | 12 | `rebuild-timeline` | no | When a projector change makes entries stale |
 | 13 | `maintain-partitions` | **yes** | §9.7. **Before** the collapse; see below |
@@ -60,9 +60,16 @@ module happened to import first.
 | 16 | `prune-telemetry` | **yes** | §5.11's ninety-day retention |
 | 17 | `drain-task-queue` | **yes** | **Last**, so work enqueued earlier tonight runs tonight |
 
-Nine are registered. The eight that are not do **domain** work and arrive with
-their domains — a rollup step is meaningless before there is anything to roll
-up.
+Ten are registered. The seven that are not each wait on something that is not
+wired: `generate-embeddings` and `generate-thumbnails` need the local model and
+the image pipeline, `schedule-notifications` needs a delivery channel,
+`verify-media-integrity`'s §9.8 half needs the storage driver, and the rest do
+**domain** work that arrives with its domain — a rollup step is meaningless
+before there is anything to roll up.
+
+`assert-data-integrity` was the one remaining step with no external dependency
+at all: it needs a connection and nothing else, which is why it is registered
+ahead of the six that do.
 
 `prune-idempotency` was the exception, and not a deliberate one. Its domain
 existed and `IdempotencyRepository.prune` was implemented; the step was simply
@@ -128,7 +135,9 @@ data.
 
 **`haltOnFailure: false`** for independent steps. A thumbnail failure must not
 prevent the integrity check — and the integrity check is the one that matters
-more.
+more. Note the corollary, which §6a takes up: the integrity check's own flag is
+also `false`, because the flag governs a *failed query* rather than a broken
+record, and the two are not the same event.
 
 A halted run marks the remaining steps `skipped` and **records them**. §5.16
 alerts on absence, and a skipped step that produced no row is indistinguishable
@@ -136,7 +145,9 @@ from one that was never registered.
 
 A step that *throws* rather than returning `Err` is a bug (§5.12), and it is
 captured as `step_threw` rather than being allowed to lose the completion record
-for the eleven steps that worked.
+for the steps that worked. (The figure used to be given as a count here, which
+drifted the moment a tenth step was registered — the point is that the record
+survives, not how many rows are in it.)
 
 ---
 
@@ -278,6 +289,162 @@ count to, and a housekeeping statement that threw would turn a run that has
 already recorded itself into an unhandled 500 — which makes cron retry, and a
 retry is a second run (§9). The cost is visible rather than silent: the rows
 stay unmarked and keep appearing on the dashboard as unadjudicated.
+
+---
+
+## 6a. The integrity assertions (§5.16)
+
+§5.16 asks for standing assertions over the record:
+
+> "**Data-integrity assertions**, run nightly: no observation dated in the
+> future; no medication with an end date before its start; no orphaned media
+> rows; no observation referencing an unregistered metric key. These catch the
+> class of bug that silently corrupts a longitudinal record and is otherwise
+> discovered years later."
+
+`packages/db/src/repositories/integrity.repository.ts` implements them as
+read-only queries. **The step writes nothing, and must never be made to.** §9.1
+makes the observation log append-only; a nightly job that *repaired* what it
+found would rewrite the record at 03:00, unattended, on the strength of a
+heuristic, and the evidence of what it changed would be the thing it destroyed.
+A violation is a fact for a human, not a task to dispatch.
+
+### An assertion earns its place only if the schema cannot express it
+
+A CHECK or a foreign key is enforced at write time, on every path, by the
+component that cannot be bypassed. A nightly query finds the same corruption up
+to twenty-four hours later and only if the job ran. So re-checking a constraint
+nightly is theatre — it can only pass — and a suite of assertions that always
+passes teaches the operator to stop reading it.
+
+Two of §5.16's four named assertions are already write-time guarantees and are
+**not** re-checked here: an observation referencing an unregistered metric key
+is impossible under `observation_metric_key_metric_key_fk` (§9.3(1)), and
+`upload_outbox.media_object_id` cannot dangle because `events.ts` does carry
+`.references()` — verified against `pg_constraint`, not assumed.
+
+### What is asserted
+
+Eleven assertions, run as 33 queries — the polymorphic-subject check runs once
+per subject type and the two clinical checks once per subtype table, so the
+report can name the table rather than the family.
+
+| Assertion | What no constraint can catch |
+|---|---|
+| `observation.future_dated` | `now()` is STABLE, so Postgres refuses it in a CHECK — the same reason §9.6's date-truncated index is not implementable. §5.16 names this one |
+| `observation.orphaned_subject` | §9.3(3)'s `subject_type`/`subject_id` are "deliberately **not** a foreign key". A subject that was never written, or has since gone |
+| `observation.unknown_subject_type` | A subject vocabulary this reader has never heard of — a gap in the *reader*, reported so the assertion cannot pass by not looking |
+| `observation.supersession_dangling` | There is no self-referential FK on `superseded_by_id`; migration 0001's trigger permits the UPDATE and checks no target |
+| `observation.supersession_cross_metric` | A bodyweight cannot be corrected by a mood score. The old metric silently loses a reading, the new one silently gains one |
+| `observation.supersession_fan_in` | A chain is a list, not a tree. One successor for two readings means one was retracted with no replacement |
+| `observation.supersession_cycle` | `observation_no_self_supersede` rules out a one-row cycle. A two-row one satisfies every constraint *and* fan-in, and both readings vanish from every current-only read |
+| `medication.stopped_before_started` | §5.16 names it. See the outstanding migration below |
+| `clinical.orphaned_by_tombstone` | Each §9.3 subtype filters *its own* `deleted_at`; none checks the supertype's. A condition across two rows, which CHECK cannot see |
+| `clinical.believed_interval_overlap` | §9.5's transaction axis, on the eight subtypes with no equivalent of `medication_schedule_no_overlap` |
+| `upload_outbox.uploaded_without_object` | The FK says the target exists; nothing says the column is *populated*. A row claiming success with nothing in it has left §5.16's sync-health alert's field of view |
+
+`sample` is deliberately untouched. Device data under a ninety-day retention has
+no correction chain, no polymorphic subject and no tombstone — there is nothing
+here for the one table that reaches tens of millions of rows to violate.
+
+### What was considered and dropped
+
+- **Overlapping believed schedules for one medication** —
+  `medication_schedule_no_overlap`, a GiST exclusion constraint from migration
+  0002. The same *shape* is checked on the eight clinical subtypes, which have
+  no equivalent.
+- **`observation.unit` against `metric.canonical_unit`** — not corruption. The
+  column is denormalised on purpose so a registry whose canonical unit changed
+  in year eight does not relabel year three. A mismatch is history working.
+- **§5.16's "no orphaned media rows"**, in the one direction a foreign key
+  cannot cover: `media_attachment.entity_type`/`entity_id`. Nothing in shipped
+  code inserts `media_attachment`, so the vocabulary does not exist. An
+  assertion over an empty table with an invented vocabulary would report zero
+  every night for years and read as assurance. It arrives with the first writer.
+- **The §9.8 storage check** — owned by `verify-media-integrity`, which needs
+  the storage driver where this step needs only a connection.
+- **A Daily Close against the observations it wrote** — there is no
+  `daily_close` row to disagree with. The Close *is* observations plus a
+  completion marker, so there is no denormalised count for the log to
+  contradict.
+- **`metric_rollup.sample_count` against its bucket** — `refresh-rollups`
+  recomputed the same window from the same log twenty minutes earlier in the
+  same run, so a disagreement would be a bug in code that just ran; and
+  expressing the comparison means restating the day-bucketing in SQL, which
+  `rollup.repository.ts` argues must exist exactly once.
+
+### `haltOnFailure: false`, and the flag is not the interesting decision
+
+`haltOnFailure` governs exactly one thing: what happens when `run` returns
+`Err`. And a violation does **not** return `Err` — it returns `ok`, with the
+finding in the note and the log. So the flag is being set for the case where the
+queries *would not execute*, not for the case where the record is broken.
+
+That settles it. A read that failed has taught us nothing, and the seven steps
+after this one depend on none of its output. Halting would skip all of them to
+punish a failed SELECT — and skipping `maintain-partitions` on the 31st because
+an integrity query timed out is how the 1st fails on a constraint error at
+midnight.
+
+The one argument the other way is `downsample-samples`, the only later step that
+destroys anything. Preserving evidence would be a reason to stop, and it does
+not apply: every assertion reads `observation`, `medication`, the clinical
+subtypes or `upload_outbox`, and `sample` is outside all of them.
+
+### A violation is a *successful* run of this step
+
+The temptation is to return `Err` so the step goes red. It is wrong for a
+mechanical reason: the runner records `note` for a succeeded step and **drops it
+for a failed one** — "absent for a `failed` step (an `Err` carries a code, not
+an outcome)". Failing would discard the one thing the step exists to produce.
+The step did its job: it looked, and it found something.
+
+### How a violation is surfaced
+
+```
+job_run.steps[].rowsAffected  →  rows flagged (a read-only step's only number)
+job_run.steps[].note          →  "3 rows across 2 assertions: upload_outbox.uploaded_without_object ×2, clinical.orphaned_by_tombstone ×1"
+logger.error                  →  one line per violation: assertion code, table, up to 20 row ids
+```
+
+The note is clamped to 200 characters, so it is a headline. `summariseIntegrity`
+keeps it inside the bound by construction — it lists the three assertions with
+the most rows and counts the remainder — rather than letting `clampNote`
+truncate mid-identifier, because half an assertion name is a name nobody can
+grep for.
+
+The row ids go to the logger, `identifiers` only, never a value (§5.13 and the
+`@naitikos/no-sensitive-log` rule). Ids are space-separated so the line pastes
+into `where id in (...)`. §9.4 keeps application logs out of Postgres, so this
+step creates no permanent record of the ids — which is the right split: the note
+says *that* something is wrong tonight, the log says *which rows* while the
+operator is reading it, and the database holds the truth, since the offending
+rows are still there when someone goes to look.
+
+**No metric is emitted.** `METRIC_NAMES` is a closed union restated as a wire
+contract in `packages/api`, with an equality test in each package, so an
+`integrity.violations` name is a coordinated change across three packages rather
+than a line in a step — the same reasoning recorded for the media outbox gauges
+in §8. Until then the log line is the signal.
+
+### Two real gaps found and not fixed
+
+Both are schema work, and §13.2 keeps migrations out of feature commits.
+
+1. **The eight clinical subtypes have no interval-ordering CHECKs.**
+   `condition`, `medication`, `medication_schedule`, `lab_panel`, `appointment`,
+   `procedure`, `treatment_course`, `side_effect` and `symptom` all share §9.5's
+   `bitemporal` block, and only `medical_event` received
+   `medical_event_valid_ordered` and `medical_event_recorded_ordered`. So
+   `valid_to < valid_from` and `recorded_to < recorded_from` are both insertable
+   on every subtype. Deliberately **not** asserted nightly, because they are
+   exactly expressible: the honest fix is a migration adding sixteen CHECK
+   constraints, not a query that finds the damage a day late.
+2. **`medication` has no `started_at <= stopped_at` CHECK**, where six other
+   tables in the schema got their `*_ordered` one — `workout_session`,
+   `sleep_night`, `trip`, `visit`, `life_span`, `financial_account`. This one
+   *is* asserted nightly, for the single reason that §5.16 names it, and the
+   assertion should be retired when the constraint lands.
 
 ---
 
@@ -522,3 +689,13 @@ its completion record, which is a second run, not a retry.
   `note` is null for a failure, for a step that had nothing to say, and for a
   row written before notes were stored. The page shows counts alone rather than
   inventing a distinction between the three.
+- **`assert-data-integrity` reports a violation as a *success*.** Not an
+  oversight and not leniency: the line above is the reason. A failed step's note
+  is dropped, so returning `Err` on a violation would discard the list of
+  offending assertions and leave `job_run` holding a bare error code. The step
+  reports `Err` only when a query would not run — the case where it learned
+  nothing. See §6a.
+- **`assert-data-integrity` never writes.** There is no repair path and there
+  must not be one. §9.1's log is append-only, and a nightly job that corrected
+  the record unattended at 03:00 would destroy the evidence of what it changed.
+  Its repository is a reader; the module has no INSERT, UPDATE or DELETE.

@@ -11,7 +11,7 @@
  * contents TypeScript believes on trust and Postgres does not check.
  */
 
-import { eq } from 'drizzle-orm';
+import { count, eq } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { isOk, uuidV7 } from '@naitikos/shared';
 
@@ -96,9 +96,28 @@ suite('recentJobRuns', () => {
       },
     ]);
 
-    const result = await recentJobRuns(db, { limit: 5 });
+    /*
+     * The limit is derived from the table, not a constant.
+     *
+     * It was `limit: 5`. `recentJobRuns` returns newest first, these two
+     * fixtures are dated in the past, and `job_run` has no retention policy —
+     * so the moment the development database held five runs newer than 6
+     * September, both fell outside the window and `ours` was empty. Triggering
+     * the nightly job three times on 8 September did exactly that.
+     *
+     * A bigger constant only moves the threshold. Counting first makes the
+     * window provably wide enough whatever history the database has
+     * accumulated, which is the property this assertion actually needs: it is
+     * about *ordering across job names*, not about the page size.
+     */
+    const [existing] = await db.select({ total: count() }).from(jobRun);
+    const result = await recentJobRuns(db, { limit: (existing?.total ?? 0) + 2 });
     expect(isOk(result)).toBe(true);
     if (!isOk(result)) return;
+
+    /* Both fixtures must actually be in the window, or the ordering assertion
+     * below would pass vacuously on an empty array. */
+    expect(result.value.filter((run) => run.id === older || run.id === newer)).toHaveLength(2);
 
     const ours = result.value.filter((run) => run.id === older || run.id === newer);
     expect(ours.map((run) => run.id)).toEqual([newer, older]);

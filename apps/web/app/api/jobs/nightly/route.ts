@@ -38,6 +38,7 @@ import {
 } from '@naitikos/core';
 import {
   createIdempotencyRepository,
+  createIntegrityReader,
   createJobRunRecorder,
   createMetricRepository,
   createRollupRepository,
@@ -45,6 +46,7 @@ import {
   hasCompletedRunSince,
   lastJobRun,
   retentionCutoff,
+  summariseIntegrity,
 } from '@naitikos/db';
 import { ok } from '@naitikos/shared';
 
@@ -384,6 +386,110 @@ function stepsFor(platform: PlatformContext): readonly JobStep[] {
             preserved.length === 0
               ? `${String(dropped)} rows into ${String(written)} hourly averages, before ${cutoff.slice(0, 13)}h`
               : `${String(dropped)} rows into ${String(written)} hourly averages; kept at full resolution: ${preserved.join(', ')}`,
+        });
+      },
+    },
+    {
+      name: 'assert-data-integrity',
+      describes: "Asserts §5.16's standing invariants over the record. Reads only; repairs nothing.",
+      /*
+       * ## Why this cannot halt the run, and why the flag is not the
+       * interesting decision here
+       *
+       * `haltOnFailure` governs one thing: what happens when `run` returns
+       * `Err`. And `run` does **not** return `Err` for a violation — it returns
+       * `ok` with the violation in the note and in the log. So the flag is
+       * being set for the case where the *queries would not execute*, not for
+       * the case where the record is broken.
+       *
+       * That framing settles it. A read that failed has taught us nothing, and
+       * the seven steps after this one — notifications, the timeline
+       * reprojection, partition maintenance, the collapse, two prunes and the
+       * task drain — depend on none of its output. Halting would skip all of
+       * them to punish a failed SELECT, and §5.2's list is walked once a night:
+       * skipping the partition maintenance on the 31st because an integrity
+       * query timed out is how the 1st fails on a constraint error at midnight.
+       *
+       * The one argument the other way is `downsample-samples`, which is the
+       * only later step that destroys anything (§9.7 collapses raw device rows
+       * past ninety days). Preserving evidence would be a reason to stop. It
+       * does not apply: every assertion here reads `observation`, `medication`,
+       * the clinical subtypes and `upload_outbox`, and `sample` is deliberately
+       * outside all of them — device data under a retention policy has no
+       * correction chain, no polymorphic subject and no tombstone. Nothing this
+       * step could have found is held in the table that step deletes from.
+       *
+       * ## A violation is a successful run of this step, and that is deliberate
+       *
+       * The temptation is to return `Err` on a violation so the step goes red.
+       * It is the wrong call, for a mechanical reason worth stating: the runner
+       * records `note` for a succeeded step and **drops it for a failed one**
+       * ("Absent for a `failed` step — an `Err` carries a code, not an
+       * outcome", `core/jobs/registry.ts`). Failing would therefore discard the
+       * one thing the step exists to produce and leave `job_run` holding a bare
+       * error code. The step did its job: it looked, and it found something.
+       *
+       * ## Where the detail actually goes
+       *
+       * `note` is clamped to two hundred characters, which is a headline and
+       * not a list of rows. The offending ids go to `platform.observability.
+       * logger.error` — one line per violation, `identifiers` only, never a
+       * value (§5.13, and the `@naitikos/no-sensitive-log` rule). §9.4 keeps
+       * application logs out of Postgres, so a permanent record of the ids is
+       * not created by this step; the record is the rows themselves, which are
+       * still there when someone goes to look. That is the right split: the
+       * note says *that* something is wrong tonight, the log says *which rows*
+       * while the operator is still reading it, and the database is the thing
+       * that holds the truth.
+       *
+       * No metric is emitted. `METRIC_NAMES` in `core/observability/ports.ts`
+       * is a closed union, restated as a wire contract in
+       * `packages/api/src/contracts/telemetry.ts` with an equality test in each
+       * package, so adding `integrity.violations` is a coordinated change
+       * across three packages rather than a line here — the same reasoning
+       * `verify-media-integrity` records above. Until then the log line is the
+       * signal, and `rowsAffected` on this step in `job_run` is the number to
+       * watch on `/settings/developer`.
+       */
+      haltOnFailure: false,
+      async run() {
+        const nowIso = isoFromMillis(systemClock.nowMillis());
+        const outcome = await createIntegrityReader(platform.db).assert(nowIso);
+        if (!outcome.ok) return outcome;
+
+        const report = outcome.value;
+
+        for (const violation of report.violations) {
+          platform.observability.logger.error('data-integrity assertion failed', {
+            component: 'jobs.assert-data-integrity',
+            /* The stable assertion name, so an operator greps for the same
+             * string tonight and in year nine. */
+            code: violation.assertion,
+            measurements: { rowsListed: violation.rowIds.length },
+            identifiers: {
+              /*
+               * `rows` as one space-separated string rather than a key per id:
+               * `identifiers` is `Record<string, string>`, and twenty synthetic
+               * keys would be twenty fields nothing can query on. Space-
+               * separated is what pastes into `where id in (...)`.
+               */
+              relation: violation.table,
+              rows: violation.rowIds.join(' '),
+              truncated: violation.truncated ? 'yes' : 'no',
+              ...(violation.detail === undefined ? {} : { subjects: violation.detail }),
+            },
+          });
+        }
+
+        return ok({
+          /*
+           * Rows *flagged*, on a step that changes nothing. `rowsAffected` is
+           * the runner's only numeric field and this is the number that belongs
+           * in it — a read-only step reporting 0 for a night that found
+           * fourteen broken rows would be the field lying by being literal.
+           */
+          rowsAffected: report.rowsFlagged,
+          note: summariseIntegrity(report),
         });
       },
     },

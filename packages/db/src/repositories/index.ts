@@ -299,3 +299,20 @@ export type {
   RollupRepository,
   RollupWindow,
 } from './rollup.repository';
+
+/* --- §5.16's standing integrity assertions — read-only, nightly ---------
+ * Placed last because it is the only reader here that queries *across* the
+ * domains above rather than owning one, and because it must never be reached
+ * for as a write path: there is none, deliberately (§9.1). */
+export { createIntegrityReader, summariseIntegrity } from './integrity.repository';
+export {
+  INTEGRITY_ASSERTIONS,
+  INTEGRITY_ROW_ID_CAP,
+  OBSERVATION_FUTURE_GRACE_SECONDS,
+} from './integrity.repository';
+export type {
+  IntegrityAssertion,
+  IntegrityReader,
+  IntegrityReport,
+  IntegrityViolation,
+} from './integrity.repository';
