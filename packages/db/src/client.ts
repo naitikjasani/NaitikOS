@@ -127,7 +127,33 @@ export function createDatabase(url: string = databaseUrl(), options: ClientOptio
   const ssl = sslFor(url);
 
   const sql = postgres(url, {
-    max: options.maxConnections ?? 1,
+    /*
+     * Five, not one — and the one was a deadlock.
+     *
+     * `max: 1` was chosen to keep the connection count down on serverless
+     * (see the header). It also made any *transaction* running concurrently
+     * with other queries hang for ever: the transaction reserves the single
+     * connection, every other query queues behind it inside postgres.js, and
+     * because those queries are never sent to Postgres, **`statement_timeout`
+     * cannot fire**. Nothing in the database is stuck, so nothing in the
+     * database times out.
+     *
+     * That is exactly the shape of `/today`: `requireServerPermission` links
+     * the identity in a transaction, and the page then issues five reads in a
+     * `Promise.all`. In production the request sat until Vercel's own limit —
+     * `Task timed out after 300 seconds` — and returned the Suspense shell
+     * with no content. Reproduced here against the hosted database: `max: 1`
+     * never completes, and the identical work at a higher `max` returns in
+     * milliseconds.
+     *
+     * Raising it is safe precisely because §5.15 puts a **transaction pooler**
+     * in front of Postgres. PgBouncer exists to multiplex many short client
+     * connections onto few server ones — a handful per instance is what it is
+     * designed for, and the free tier permits 200 client connections against a
+     * far smaller server pool. The header's connection-count worry is real for
+     * a *direct* connection and is answered by the pooler for this one.
+     */
+    max: options.maxConnections ?? 5,
 
     /*
      * The three settings that make a module-scoped client survive a serverless
