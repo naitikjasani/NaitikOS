@@ -128,7 +128,7 @@ export function createDatabase(url: string = databaseUrl(), options: ClientOptio
 
   const sql = postgres(url, {
     /*
-     * Five, not one — and the one was a deadlock.
+     * Ten, not one — and the one was a deadlock that never resolved.
      *
      * `max: 1` was chosen to keep the connection count down on serverless
      * (see the header). It also made any *transaction* running concurrently
@@ -144,7 +144,23 @@ export function createDatabase(url: string = databaseUrl(), options: ClientOptio
      * `Task timed out after 300 seconds` — and returned the Suspense shell
      * with no content. Reproduced here against the hosted database: `max: 1`
      * never completes, and the identical work at a higher `max` returns in
-     * milliseconds.
+     * milliseconds. Left running to be sure, `max: 1` sat for **10,710,199 ms
+     * — nearly three hours** — before dying of ECONNRESET. It is not slow; it
+     * is stuck.
+     *
+     * ## Why ten and not five
+     *
+     * Five was the first fix and it only raised the threshold. The pool has to
+     * exceed the page's *peak* concurrency, or a transaction arriving while
+     * every connection is held waits for one that will not be freed until it
+     * finishes. `/today` is the worst case in the application: three reads in
+     * parallel, one of which fans out to five more and then two — seven
+     * simultaneous — while `requireServerPermission` holds a transaction for
+     * the identity link. Five could not serve eight.
+     *
+     * Measured after the change to five: four requests in five returned, the
+     * fifth still hung. Ten sits above the peak with room, and the pooler in
+     * front of Postgres is what makes that free.
      *
      * Raising it is safe precisely because §5.15 puts a **transaction pooler**
      * in front of Postgres. PgBouncer exists to multiplex many short client
@@ -153,7 +169,7 @@ export function createDatabase(url: string = databaseUrl(), options: ClientOptio
      * far smaller server pool. The header's connection-count worry is real for
      * a *direct* connection and is answered by the pooler for this one.
      */
-    max: options.maxConnections ?? 5,
+    max: options.maxConnections ?? 10,
 
     /*
      * The three settings that make a module-scoped client survive a serverless
