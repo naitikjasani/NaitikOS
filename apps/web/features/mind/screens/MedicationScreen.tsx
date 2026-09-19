@@ -53,6 +53,22 @@ import { fetchMedications, logDose } from '../services/mindClient';
  * neutral button, not a confession — a skipped dose is information, and an
  * interface that makes recording one feel like an admission is an interface
  * that stops being told about them.
+ *
+ * ## Today's record is a sentence, not a button colour
+ *
+ * The "Taken today" button switches from `secondary` to `primary` once a dose
+ * is recorded, and for a while that was the only indication that the tap had
+ * landed. §8.13 is unconditional about this: "no information conveyed by colour
+ * alone". A filled button is not a state a screen reader can read, it is not a
+ * state that survives a high-contrast mode, and — worst here — it is not a state
+ * anybody can distinguish from the *default* filled button they have seen on
+ * every other screen in the application. Somebody unsure whether this morning's
+ * dose went in taps again, and while the repository dedupes on `scheduledFor`
+ * so the count stays right, the uncertainty is the failure.
+ *
+ * So `aria-pressed` carries it to assistive technology, and a plain line
+ * underneath carries it to everyone else. It states counts and never a verdict:
+ * a day with nothing recorded says so, and does not say "missed".
  */
 
 export function MedicationScreen({
@@ -167,6 +183,8 @@ export function MedicationScreen({
       {data.medications.map((medication) => {
         const adherence = data.adherence.find((item) => item.medicationId === medication.id);
         const today = adherence?.days.at(-1);
+        const takenToday = today?.taken ?? 0;
+        const skippedToday = today?.skipped ?? 0;
 
         return (
           <Card key={medication.id} variant="raised">
@@ -197,7 +215,8 @@ export function MedicationScreen({
                   <>
                     <Inline gap="2">
                       <Button
-                        variant={today?.taken !== undefined && today.taken > 0 ? 'primary' : 'secondary'}
+                        variant={takenToday > 0 ? 'primary' : 'secondary'}
+                        aria-pressed={takenToday > 0}
                         onClick={() => {
                           dose.mutate({ medicationId: medication.id, kind: 'taken' });
                         }}
@@ -208,6 +227,7 @@ export function MedicationScreen({
                       {/* Neutral, never a warning tone. See the header. */}
                       <Button
                         variant="secondary"
+                        aria-pressed={skippedToday > 0}
                         onClick={() => {
                           dose.mutate({ medicationId: medication.id, kind: 'skipped' });
                         }}
@@ -216,6 +236,14 @@ export function MedicationScreen({
                         Skipped
                       </Button>
                     </Inline>
+
+                    {/*
+                      Today, in words. See the header for why the button colour
+                      is not allowed to be the only carrier of this.
+                    */}
+                    <Text role="caption" tone="tertiary" aria-live="polite">
+                      {todaySentence(takenToday, skippedToday)}
+                    </Text>
 
                     {adherence !== undefined && (
                       <Stack gap="2">
@@ -245,4 +273,22 @@ export function MedicationScreen({
       </Text>
     </Stack>
   );
+}
+
+/**
+ * What is on record for today, for one medication.
+ *
+ * Counts and nothing else. There is no "missed" branch and there deliberately
+ * cannot be one: §4.7's no-negative-framing rule, and the same argument the
+ * footnote at the bottom of the screen makes — a day with no record is a day
+ * with no record, and calling it a missed dose is the system inventing a
+ * clinical fact in the direction that changes prescribing.
+ */
+function todaySentence(taken: number, skipped: number): string {
+  if (taken === 0 && skipped === 0) return 'Nothing recorded for today yet.';
+
+  const parts: string[] = [];
+  if (taken > 0) parts.push(`${String(taken)} recorded as taken`);
+  if (skipped > 0) parts.push(`${String(skipped)} recorded as skipped`);
+  return `Today: ${parts.join(', ')}.`;
 }

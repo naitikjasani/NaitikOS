@@ -21,6 +21,9 @@ export default async function PromptsPage(): Promise<ReactNode> {
     <PageContainer
       title="Prompts"
       description="Ways in, when the page is blank. Nothing tracks which you have answered — an unanswered prompt is not owed."
+      /* Long-form measure (§8.3): the prompts are set in the serif and read as
+         sentences, not as rows. */
+      width="reading"
     >
       <PromptsScreen
         zone={DEFAULT_PROFILE_ZONE}

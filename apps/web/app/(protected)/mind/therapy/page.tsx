@@ -11,6 +11,8 @@
 import type { ReactNode } from 'react';
 import { isoFromMillis, systemClock } from '@naitikos/core';
 
+import { ErrorState } from '@naitikos/design-system';
+
 import { PageContainer } from '@/components/shell';
 import { TherapyScreen } from '@/features/mind';
 import { getDb, requireServerPermission } from '@/lib/auth/session';
@@ -31,11 +33,24 @@ export default async function TherapyPage(): Promise<ReactNode> {
     <PageContainer
       title="Therapy"
       description="Your sessions, and what was agreed between them. Nothing here is ever written or read by a model."
+      width="reading"
     >
       {board.ok ? (
         <TherapyScreen board={board.value} />
       ) : (
-        <p>Could not load the sessions: {board.error.message}</p>
+        /*
+          `ErrorState`, not a bare paragraph carrying the exception's message.
+          Two reasons, and the second is the important one. A raw `<p>` inherits
+          none of the type scale, so a failure on the most sensitive read-only
+          screen in Mind rendered as unstyled text — which reads as *broken*
+          rather than as *unavailable*. And a repository error message is
+          internal detail: on a screen whose subject is therapy notes, the one
+          thing worth saying is that nothing was lost and nothing was shown.
+        */
+        <ErrorState
+          title="Could not load the sessions"
+          description="The record is intact and nothing was changed. This view failed to read it."
+        />
       )}
     </PageContainer>
   );

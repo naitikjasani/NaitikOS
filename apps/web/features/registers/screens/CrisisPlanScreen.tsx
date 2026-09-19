@@ -122,8 +122,19 @@ export function CrisisPlanScreen({ initial }: { readonly initial: CrisisPlan | n
               <Text role="caption" tone="tertiary">
                 People to contact
               </Text>
+              {/*
+                One field per line, not two across.
+
+                An `Inline` pair put a labelled name and a labelled phone into
+                roughly 166px each at 360px, and at 200% browser zoom — which
+                §8.13 requires the layout to survive without horizontal scroll —
+                into half that. This is the form that has to be completable on a
+                settled evening on a phone; a cramped pair is how it gets
+                abandoned half-filled, and a half-filled crisis plan is the
+                failure mode the whole surface exists to avoid.
+              */}
               {contacts.map((contact, index) => (
-                <Inline gap="2" key={`contact-${String(index)}`}>
+                <Stack gap="2" key={`contact-${String(index)}`}>
                   <TextField
                     label="Name"
                     value={contact.name}
@@ -149,7 +160,7 @@ export function CrisisPlanScreen({ initial }: { readonly initial: CrisisPlan | n
                       );
                     }}
                   />
-                </Inline>
+                </Stack>
               ))}
               <Button
                 variant="secondary"

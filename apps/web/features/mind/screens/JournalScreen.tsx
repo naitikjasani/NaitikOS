@@ -80,6 +80,21 @@ export function JournalScreen({
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [entryId, setEntryId] = useState(() => uuidV7(systemClock.nowMillis()));
+  /*
+   * Whether the last thing that happened on this screen was a successful save.
+   *
+   * §8.10 makes losing a written reflection "unforgivable", and the durability
+   * this screen actually provides is real — but it was entirely invisible at the
+   * one moment it is being relied on. Tapping Save cleared the box and said
+   * nothing, which is indistinguishable, from the operator's side, from the
+   * writing having been dropped. A guarantee nobody can see is a guarantee
+   * nobody can lean on, and this is the surface where leaning on it matters.
+   *
+   * Cleared on the next keystroke rather than on a timer: a stale "Saved."
+   * hanging over a half-written second entry is a false statement about the
+   * text currently on screen, which is worse than no statement at all.
+   */
+  const [savedNotice, setSavedNotice] = useState(false);
 
   const index = useQuery({ queryKey: ['mind', 'journal'], queryFn: fetchJournalIndex });
 
@@ -123,6 +138,7 @@ export function JournalScreen({
      */
     onSuccess: async () => {
       draft.clear();
+      setSavedNotice(true);
       setTitle('');
       setContent('');
       // A fresh identity for the next entry. See the file header.
@@ -133,7 +149,44 @@ export function JournalScreen({
 
   const words = wordCount(content);
 
+  /*
+   * One line, four states, in the order the operator needs to hear them.
+   *
+   * A failed save comes first and says where the words are, because the failure
+   * mode being defended against is somebody assuming the text is gone and
+   * closing the tab. §5.12's "failure never loses user input" is only true if
+   * the person believes it at the moment it matters, and the outbox write and
+   * the on-device draft are both still intact here — so the sentence says so.
+   *
+   * Then the confirmation, then the two ways autosave can be *unavailable*, then
+   * the ordinary case. Saying autosave is off when it is off is not a
+   * degradation to hide (§10.6): the alternative is somebody relying on a
+   * promise that is not in force on this device.
+   */
+  const status: { readonly message: string; readonly tone: 'tertiary' | 'secondary' } =
+    write.error !== null
+      ? {
+          message: 'That did not save. Your words are still here and still on this device — try again.',
+          tone: 'secondary',
+        }
+      : savedNotice
+        ? { message: 'Saved to the record.', tone: 'secondary' }
+        : draft.problem === 'unavailable'
+          ? {
+              message: 'Autosave is unavailable on this device — save before you navigate.',
+              tone: 'secondary',
+            }
+          : draft.problem === 'too-large'
+            ? {
+                message: 'This entry is too long to autosave — save it before you navigate.',
+                tone: 'secondary',
+              }
+            : draft.savedAt !== null
+              ? { message: 'Kept on this device as you write. Never sent to any model.', tone: 'tertiary' }
+              : { message: 'Stays on this device until it syncs. Never sent to any model.', tone: 'tertiary' };
+
   const restore = (recovered: Draft): void => {
+    setSavedNotice(false);
     setTitle(draftText(recovered.fields, 'title'));
     setContent(draftText(recovered.fields, 'content'));
     /*
@@ -217,16 +270,51 @@ export function JournalScreen({
       <Card variant="raised">
         <CardBody>
           <Stack gap="3">
-            {prompt !== null && (
-              <Text role="body-sm" tone="secondary">
-                {prompt.prompt}
-              </Text>
-            )}
+            {/*
+              The prompt, labelled as a prompt.
+
+              An unlabelled sentence sitting above a textarea is ambiguous in the
+              worst possible way: it reads as instruction, or as something the
+              system has decided about the evening. Naming it, and saying it is
+              optional in the same breath, is what keeps it an offer — §4.7's
+              journal is meant to be written in, and a question you are allowed
+              to ignore is easier to ignore than an unattributed one.
+
+              Set in the serif with the textarea below it (§8.3), so the card
+              reads as one writing surface rather than a notice above a form.
+            */}
+            <Stack gap="1">
+              {prompt !== null && (
+                <>
+                  <Text role="caption" tone="tertiary">
+                    Tonight&rsquo;s prompt, if you want one
+                  </Text>
+                  <Text role="body" serif tone="secondary">
+                    {prompt.prompt}
+                  </Text>
+                </>
+              )}
+              {/*
+                The library was previously reachable only from the sidebar, which
+                is the wrong place for it: the moment somebody wants a different
+                question is the moment they are already looking at the blank box.
+
+                A ghost button rather than a caption link, so it clears §8.13's
+                44px minimum. `asChild` keeps the anchor, so it is still a link
+                that can be opened in a new tab.
+              */}
+              <div>
+                <Button variant="ghost" asChild>
+                  <Link href="/mind/journal/prompts">All prompts</Link>
+                </Button>
+              </div>
+            </Stack>
 
             <TextField
               label="Title (optional)"
               value={title}
               onChange={(event) => {
+                setSavedNotice(false);
                 setTitle(event.target.value);
               }}
             />
@@ -235,6 +323,7 @@ export function JournalScreen({
               label="Entry"
               value={content}
               onChange={(event) => {
+                setSavedNotice(false);
                 setContent(event.target.value);
               }}
               rows={10}
@@ -256,14 +345,19 @@ export function JournalScreen({
                 is the only honest option, because the alternative is somebody
                 trusting a promise that is not in force.
               */}
-              <Text role="caption" tone={draft.problem === null ? 'tertiary' : 'secondary'}>
-                {draft.problem === 'unavailable'
-                  ? 'Autosave is unavailable on this device — save before you navigate.'
-                  : draft.problem === 'too-large'
-                    ? 'This entry is too long to autosave — save it before you navigate.'
-                    : draft.savedAt !== null
-                      ? 'Kept on this device as you write. Never sent to any model.'
-                      : 'Stays on this device until it syncs. Never sent to any model.'}
+              <Text
+                role="caption"
+                tone={status.tone}
+                /*
+                  Polite, not assertive. The string changes at most a handful of
+                  times per entry — autosave engaging, a save landing, a save
+                  failing — so this announces the state changes that matter
+                  without narrating the typing. §8.13's live regions, on the one
+                  screen where "did that save?" must never be a question.
+                */
+                aria-live="polite"
+              >
+                {status.message}
               </Text>
               <Button
                 variant="primary"

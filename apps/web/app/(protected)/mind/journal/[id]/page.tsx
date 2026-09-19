@@ -30,7 +30,10 @@ export default async function JournalEntryPage({
 
   const { id } = await params;
   return (
-    <PageContainer title="Entry">
+    /* `reading` caps the measure at ~65ch (§8.3). Prose set in the serif and run
+       to the full page width is the layout that makes a journal read like a
+       changelog. */
+    <PageContainer title="Entry" width="reading">
       <JournalEntryScreen entryId={id} />
     </PageContainer>
   );

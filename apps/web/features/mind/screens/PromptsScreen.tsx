@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardBody, EmptyState, LoadingState, Stack, Text } from '@naitikos/design-system';
+import { Button, Card, CardBody, EmptyState, LoadingState, Stack, Text } from '@naitikos/design-system';
 
 import { fetchMindOverview } from '../services/mindClient';
 
@@ -34,6 +34,14 @@ import { fetchMindOverview } from '../services/mindClient';
  * no-negative-framing rule reaches here: an unanswered prompt is not a debt,
  * and a list that tracked which had been used would turn a set of questions
  * into a checklist with a guilt gradient.
+ *
+ * ## The prompts are set in the long-form serif
+ *
+ * §8.3's mode-switch cue, applied to the questions as well as the answers. A
+ * prompt is the first line of a piece of writing rather than a label on a
+ * control, and setting it in the interface font puts it in the same voice as
+ * the medication register. The reader should be able to tell, before reading a
+ * word, which part of the application they are in.
  */
 export function PromptsScreen({
   zone,
@@ -78,7 +86,9 @@ export function PromptsScreen({
                   <Text role="caption" tone="tertiary">
                     Tonight&rsquo;s prompt
                   </Text>
-                  <Text role="body">{prompt.prompt}</Text>
+                  <Text role="body" serif>
+                    {prompt.prompt}
+                  </Text>
                   {prompt.category !== null && (
                     <Text role="caption" tone="tertiary">
                       {prompt.category}
@@ -96,8 +106,10 @@ export function PromptsScreen({
                   The rest
                 </Text>
                 {rest.map((entry) => (
-                  <Stack key={entry.id} gap="0">
-                    <Text role="body-sm">{entry.prompt}</Text>
+                  <Stack key={entry.id} gap="1">
+                    <Text role="body" serif>
+                      {entry.prompt}
+                    </Text>
                     {entry.category !== null && (
                       <Text role="caption" tone="tertiary">
                         {entry.category}
@@ -118,11 +130,18 @@ export function PromptsScreen({
               A prompt is a way in, not a form. Nothing tracks which you have answered, and an unanswered one is
               not owed.
             </Text>
-            <Link className="nos-inline-link" href="/mind/journal">
-              <Text role="caption" as="span">
-                Write an entry
-              </Text>
-            </Link>
+            {/*
+              A button, not a caption link. This is the only action on the page
+              and the whole reason for reading it, and a 12px link is under
+              §8.13's 44px minimum — which matters most on the evenings the page
+              gets opened. `asChild` keeps the anchor semantics, so
+              open-in-new-tab and middle-click still behave.
+            */}
+            <div>
+              <Button variant="secondary" asChild>
+                <Link href="/mind/journal">Write an entry</Link>
+              </Button>
+            </div>
           </Stack>
         </CardBody>
       </Card>

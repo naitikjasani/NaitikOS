@@ -2,7 +2,7 @@
 
 import { type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { scaleLabel } from '@naitikos/core';
+import { MIND_SCALES } from '@naitikos/core';
 import { Card, CardBody, ErrorState, Inline, LoadingState, Stack, Text } from '@naitikos/design-system';
 
 import { fetchJournalEntry } from '../services/mindClient';
@@ -20,6 +20,27 @@ import { fetchJournalEntry } from '../services/mindClient';
  * the screen unmounts. Combined with the route's `Cache-Control: no-store` and
  * the service worker's path exclusion, that is three layers keeping the most
  * sensitive data in the system out of every store that is not Postgres.
+ *
+ * ## The prose is set in the serif, and that is the point of the screen
+ *
+ * §8.3 is explicit that the long-form family is not decoration: "a visual
+ * mode-switch between *recording data* and *writing reflectively* is a genuine
+ * cognitive cue, and journaling is a core Mind interaction." The composer has
+ * had the serif since it shipped; this screen did not, which meant an entry was
+ * written in one voice and read back in the interface font — the same face the
+ * medication register and the adherence percentages are set in. Reading your own
+ * reflection rendered as application chrome is a small thing that makes the
+ * journal feel like a database row, and §13.3's severe risk is exactly that this
+ * surface stops feeling like somewhere to write.
+ *
+ * ## The mood is a number, not a word
+ *
+ * `core` offers `scaleLabel`, and its vocabulary is defensible — "Low" describes
+ * rather than judges. It is still the wrong call *here*. §8.2's rule that health
+ * data is never coloured by valence has a copy half: a line reading "mood at
+ * writing: low" above somebody's own words is the system's adjective sitting on
+ * top of their paragraph. "2 of 5" is the reading they gave, said back to them
+ * with nothing added, and the denominator is what makes it legible without one.
  */
 export function JournalEntryScreen({ entryId }: { readonly entryId: string }): ReactNode {
   const entry = useQuery({
@@ -37,7 +58,7 @@ export function JournalEntryScreen({ entryId }: { readonly entryId: string }): R
   const data = entry.data;
   if (data === undefined) return null;
 
-  const mood = data.moodAtWriting === null ? null : scaleLabel('mood', data.moodAtWriting);
+  const mood = data.moodAtWriting;
 
   return (
     <Stack gap="4">
@@ -51,7 +72,7 @@ export function JournalEntryScreen({ entryId }: { readonly entryId: string }): R
           </Text>
           {mood !== null && (
             <Text role="caption" tone="tertiary" as="span">
-              · mood at writing: {mood.toLowerCase()}
+              · mood at writing {String(mood)} of {String(MIND_SCALES.mood.max)}
             </Text>
           )}
         </Inline>
@@ -59,12 +80,26 @@ export function JournalEntryScreen({ entryId }: { readonly entryId: string }): R
 
       <Card variant="flat">
         <CardBody>
-          {/* Their line breaks, kept. `nos-prewrap` is the whole of the styling. */}
-          <Text role="body" className="nos-prewrap">
+          {/* Their line breaks, kept, in the family they were written in.
+              `nos-prewrap` and the serif are the whole of the styling. */}
+          <Text role="body" serif className="nos-prewrap">
             {data.content}
           </Text>
         </CardBody>
       </Card>
+
+      {/*
+        The missing half, said rather than left to be discovered.
+
+        §3.3 R6 objects to screens that pretend to be finished, not to
+        half-finished screens. Somebody who opens an entry to add a sentence and
+        finds no cursor should learn why from the page, not from tapping at the
+        paragraph — and the repository upserts, so this is a surface that has not
+        been built rather than a capability that does not exist.
+      */}
+      <Text role="caption" tone="tertiary">
+        Read-only for now. Entries can be added to, but that surface is not built yet.
+      </Text>
     </Stack>
   );
 }

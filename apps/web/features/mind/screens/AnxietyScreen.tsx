@@ -18,6 +18,7 @@ import {
   TextField,
 } from '@naitikos/design-system';
 
+import { CrisisCard } from '../components/CrisisCard';
 import { fetchMindOverview, logEpisode } from '../services/mindClient';
 
 /**
@@ -47,6 +48,21 @@ import { fetchMindOverview, logEpisode } from '../services/mindClient';
  * The tally below *does* group what they have typed, because that is their own
  * vocabulary counted back to them. It is labelled "what you named", never
  * "your triggers".
+ *
+ * ## The crisis plan is shown here too, on exactly the same condition as `/mind`
+ *
+ * §10.10: "Detected crisis indicators route to exactly one behaviour: display
+ * the user's own stored crisis plan." The service decides — `overview.crisis` is
+ * non-null only when `core` has found the sustained run §4.7 describes — and
+ * until now only the pillar overview rendered it. That is the wrong place for it
+ * to be the *only* place. Somebody mid-episode is on this route, because this
+ * route is where the "it's happening" button lives; requiring them to navigate
+ * back up to `/mind` to reach what they wrote for themselves is a navigation
+ * asked of the person least able to make it.
+ *
+ * It sits above the form rather than below the episode list, and there is no
+ * disclosure around it. Nothing about the condition is explained: §4.7's card
+ * shows the plan back and says nothing about which reading crossed which line.
  */
 
 const WINDOW_DAYS = 90;
@@ -67,6 +83,16 @@ export function AnxietyScreen({
   const [trigger, setTrigger] = useState('');
   const [coping, setCoping] = useState('');
   const [note, setNote] = useState('');
+  /*
+   * Whether the last thing that happened here was a successful record.
+   *
+   * `log.isSuccess` stays true for the lifetime of the mutation, which would
+   * leave "Recorded." on screen an hour later above an empty form — a true
+   * statement about the past presented as a statement about now. Cleared on the
+   * first keystroke of the next entry, for the same reason the journal clears
+   * its own notice.
+   */
+  const [justRecorded, setJustRecorded] = useState(false);
 
   const overview = useQuery({
     queryKey: ['mind', 'overview', fromDayKey, dayKey, zone],
@@ -86,6 +112,7 @@ export function AnxietyScreen({
       });
     },
     onSuccess: async () => {
+      setJustRecorded(true);
       setIntensity(null);
       setTrigger('');
       setCoping('');
@@ -97,8 +124,13 @@ export function AnxietyScreen({
   const episodes = overview.data?.episodes ?? [];
   const summary = summariseEpisodes(episodes);
 
+  const crisis = overview.data?.crisis ?? null;
+
   return (
     <Stack gap="5">
+      {/* First on the page when it is on the page at all. See the file header. */}
+      {crisis !== null && <CrisisCard plan={crisis.plan} />}
+
       <Card variant="raised">
         <CardBody>
           <Stack gap="4">
@@ -118,14 +150,34 @@ export function AnxietyScreen({
               It’s happening — record it
             </Button>
 
-            <Text role="caption" tone="tertiary">
-              Recorded straight away. Everything below is optional, now or later.
+            {/*
+              What just happened, said out loud.
+
+              The button clears the form and the list below re-fetches, which on
+              a slow connection is several seconds of nothing. §4.0's argument
+              for the one-tap record only holds if the tap is visibly a record —
+              a person mid-episode who is not sure whether it went in will tap
+              again, and two rows for one episode is a quietly corrupted count in
+              the table a psychiatrist might one day read.
+
+              `polite`, and the string is stable across renders, so it announces
+              the transition rather than the typing (§8.13).
+            */}
+            <Text role="caption" tone="tertiary" aria-live="polite">
+              {log.error !== null
+                ? 'That did not record. Nothing was lost — the details below are still here.'
+                : justRecorded
+                  ? 'Recorded. Add the details below whenever you want to, or not at all.'
+                  : 'Recorded straight away. Everything below is optional, now or later.'}
             </Text>
 
             <ScaleField
               label="Intensity"
               value={intensity}
-              onValueChange={setIntensity}
+              onValueChange={(next) => {
+                setJustRecorded(false);
+                setIntensity(next);
+              }}
               minLabel="Mild"
               maxLabel="Severe"
             />
@@ -134,6 +186,7 @@ export function AnxietyScreen({
               label="What set it off, if you know"
               value={trigger}
               onChange={(event) => {
+                setJustRecorded(false);
                 setTrigger(event.target.value);
               }}
               hint="Your words. Nothing is suggested here on purpose."
@@ -143,6 +196,7 @@ export function AnxietyScreen({
               label="What you did"
               value={coping}
               onChange={(event) => {
+                setJustRecorded(false);
                 setCoping(event.target.value);
               }}
             />
@@ -151,6 +205,7 @@ export function AnxietyScreen({
               label="Anything else"
               value={note}
               onChange={(event) => {
+                setJustRecorded(false);
                 setNote(event.target.value);
               }}
               rows={3}
@@ -193,6 +248,20 @@ export function AnxietyScreen({
               </Stack>
             </CardBody>
           </Card>
+
+          {/*
+            A heading, because a bare run of cards after a summary card reads as
+            more summary. The count is deliberately not repeated here — it is in
+            the card above, and a second one invites the arithmetic §4.7 rules
+            out. "Recorded", not "logged" and not "attacks": these are the rows
+            the operator chose to write down, and nothing about the list is a
+            claim that it is complete.
+          */}
+          {episodes.length > 0 && (
+            <Text role="title-3" as="h2">
+              Recorded episodes
+            </Text>
+          )}
 
           {episodes.map((episode) => {
             const minutes = episodeDurationMinutes(episode);
