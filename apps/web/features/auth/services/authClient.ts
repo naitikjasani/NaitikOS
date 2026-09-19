@@ -44,7 +44,19 @@ async function authFetch(path: string, init: RequestInit = {}): Promise<Response
   const headers = new Headers(init.headers);
   headers.set('Content-Type', 'application/json');
 
-  const token = readCsrfToken();
+  let token = readCsrfToken();
+
+  // The proxy seeds the double-submit cookie on a page GET. A stale preview
+  // tab can still submit before that seed exists, so bootstrap it immediately
+  // instead of sending a guaranteed 403 mutation.
+  if (token === null && typeof window !== 'undefined') {
+    await fetch(window.location.pathname, {
+      credentials: 'same-origin',
+      cache: 'no-store',
+    });
+    token = readCsrfToken();
+  }
+
   if (token !== null) headers.set(CSRF_HEADER_NAME, token);
 
   return fetch(path, {
