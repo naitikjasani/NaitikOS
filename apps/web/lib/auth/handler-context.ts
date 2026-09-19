@@ -28,7 +28,7 @@ import {
   verifyCsrf,
 } from '@naitikos/api';
 
-import { clientEnv } from '../env';
+import { clientEnv, isDevelopment } from '../env';
 
 /**
  * Process-wide rate limit store.
@@ -91,7 +91,20 @@ export function csrfGuard(request: NextRequest, traceId: string): NextResponse |
     referer: request.headers.get('referer'),
     // From validated configuration, never from the Host header — an attacker
     // controls Host, and checking against it would not be a check.
-    expectedOrigin: new URL(clientEnv.NEXT_PUBLIC_SITE_URL).origin,
+    // The v0 preview can run a production build on a loopback origin while
+    // NEXT_PUBLIC_SITE_URL points at the deployed app. Loopback is not a
+    // remotely attacker-controlled origin, so bind preview checks to the
+    // request origin; keep the configured-origin check everywhere else.
+    expectedOrigin: (() => {
+      const requestUrl = request.nextUrl;
+      const isLoopback =
+        requestUrl.hostname === 'localhost' ||
+        requestUrl.hostname === '127.0.0.1' ||
+        requestUrl.hostname === '[::1]';
+      return isDevelopment() || isLoopback
+        ? requestUrl.origin
+        : new URL(clientEnv.NEXT_PUBLIC_SITE_URL).origin;
+    })(),
     cookieToken: request.cookies.get(CSRF_COOKIE_NAME)?.value ?? null,
     headerToken: request.headers.get(CSRF_HEADER_NAME),
   });
