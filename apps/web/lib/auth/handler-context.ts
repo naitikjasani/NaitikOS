@@ -102,9 +102,23 @@ export function csrfGuard(request: NextRequest, traceId: string): NextResponse |
         requestUrl.hostname === 'localhost' ||
         requestUrl.hostname === '127.0.0.1' ||
         requestUrl.hostname === '[::1]';
-      return isDevelopment() || isLoopback
-        ? request.headers.get('origin') ?? requestUrl.origin
-        : new URL(clientEnv.NEXT_PUBLIC_SITE_URL).origin;
+      if (isDevelopment() || isLoopback) {
+        const origin = request.headers.get('origin');
+        if (origin) return origin;
+
+        const referer = request.headers.get('referer');
+        if (referer) {
+          try {
+            return new URL(referer).origin;
+          } catch {
+            // Fall through to the request origin for malformed referers.
+          }
+        }
+
+        return requestUrl.origin;
+      }
+
+      return new URL(clientEnv.NEXT_PUBLIC_SITE_URL).origin;
     })(),
     cookieToken: request.cookies.get(CSRF_COOKIE_NAME)?.value ?? null,
     headerToken: request.headers.get(CSRF_HEADER_NAME),

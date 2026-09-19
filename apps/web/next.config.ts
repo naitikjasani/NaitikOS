@@ -5,7 +5,7 @@ import type { NextConfig } from 'next';
 // Next runs from apps/web in this workspace, while v0 injects project
 // variables at the repository root. Load that environment before the config
 // and middleware bundles are evaluated.
-loadEnvConfig(path.resolve(process.cwd(), '../..'));
+loadEnvConfig(path.resolve(process.cwd(), '../..'), process.env.NODE_ENV !== 'production');
 
 /**
  * Next configuration.
