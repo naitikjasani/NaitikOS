@@ -2,13 +2,13 @@
 
 import { Command } from 'cmdk';
 import { useRouter } from 'next/navigation';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Icon, Text } from '@naitikos/design-system';
 
 import { QUICK_CAPTURE_CHORDS } from '@/lib/capture/rail';
-import { PRIMARY_NAV, showsUnbuiltRoutes } from '@/lib/navigation/config';
 import { useAppearanceStore } from '@/lib/stores/appearance.store';
 import { useNavigationStore } from '@/lib/stores/navigation.store';
+import { DESTINATION_GROUPS, destinationFor, type Destination } from './navigation-tree';
 
 /**
  * The command palette — ⌘K.
@@ -22,41 +22,35 @@ import { useNavigationStore } from '@/lib/stores/navigation.store';
  * search arrives it will be Postgres full-text plus trigram (§9.6), surfaced
  * through this same palette as an additional group.
  *
+ * ## Why it indexes all of §3.2 rather than a curated shortlist
+ *
+ * It previously listed the eight surfaces plus two hand-written groups. At
+ * ninety routes, a curated shortlist is a promise the palette cannot keep: the
+ * one time it matters is when the operator is looking for the route they use
+ * twice a year — `/body/health/labs`, `/settings/data/export` — and a shortlist
+ * is by construction the set of routes they did not need help finding. The
+ * index is now `navigation-tree`, whole, and the curation happens in the
+ * ranking rather than in the contents.
+ *
  * ## Why cmdk
  *
  * It supplies the filtering, the roving focus model, and the aria wiring for a
  * combobox-with-listbox — which is one of the harder ARIA patterns to get right
  * and one where a mistake makes the whole thing unusable with a screen reader.
  * The registry and the styling are ours.
- *
- * The commands live here rather than in a feature because the palette is
- * platform infrastructure. Features will register into it; none exist yet.
  */
-/** Destinations one level below the pillar list. */
-const GYM_TARGETS: readonly { readonly href: string; readonly label: string }[] = [
-  { href: '/body/gym/log', label: 'Log a session' },
-  { href: '/body/gym/history', label: 'Session history' },
-  { href: '/body/gym/exercises', label: 'Exercise library' },
-  { href: '/body/gym/volume', label: 'Volume by muscle group' },
-  { href: '/body/composition', label: 'Bodyweight trend' },
-];
 
 /**
- * Nutrition destinations.
+ * The searchable text for a destination.
  *
- * `Log a meal` is first and is the reason this group exists. §2.2 gates the
- * module on ten seconds, and on a keyboard the palette is the shortest path
- * there — shorter than the quick-capture rail could be, because the log route
- * arrives server-rendered with the suggestion ranking already in the response.
+ * The href is included on purpose: it makes `gym/log` and `settings/data` work
+ * as queries, which is how anyone who has seen the URL bar will search. The
+ * ancestor trail is included because half the leaf labels in §3.2 collide —
+ * "Photos" alone matches three routes, and only "skin photos" separates them.
  */
-const NUTRITION_TARGETS: readonly { readonly href: string; readonly label: string }[] = [
-  { href: '/body/nutrition/log', label: 'Log a meal' },
-  { href: '/body/nutrition', label: 'Today against target' },
-  { href: '/body/nutrition/foods', label: 'Food library' },
-  { href: '/body/nutrition/meals', label: 'Saved meals' },
-  { href: '/body/nutrition/targets', label: 'Nutrition targets' },
-  { href: '/body/nutrition/trends', label: 'Macro trends' },
-];
+function searchValue(destination: Destination): string {
+  return [...destination.trail, destination.label, destination.href].join(' ');
+}
 
 export function CommandPalette(): ReactNode {
   const router = useRouter();
@@ -64,22 +58,49 @@ export function CommandPalette(): ReactNode {
   const setOpen = useNavigationStore((state) => state.setCommandPaletteOpen);
   const setSettingsOpen = useNavigationStore((state) => state.setSettingsOpen);
   const openCapture = useNavigationStore((state) => state.openCapture);
+  const beginNavigation = useNavigationStore((state) => state.beginNavigation);
+  const recentHrefs = useNavigationStore((state) => state.recentHrefs);
   const theme = useAppearanceStore((state) => state.theme);
   const setTheme = useAppearanceStore((state) => state.setTheme);
 
-  const navTargets = PRIMARY_NAV.filter((item) => item.available || showsUnbuiltRoutes());
+  /**
+   * The query is controlled for one reason: the recents group is shown only
+   * while it is empty. Ranking recents against a typed query would put a route
+   * you happened to open this morning above the one you actually asked for,
+   * which is the failure mode that makes people stop trusting a palette.
+   */
+  const [query, setQuery] = useState('');
 
   const run = (action: () => void): void => {
     // Close first, then act. Acting first can unmount the palette mid-handler
     // and leave focus nowhere, which strands a keyboard user.
     setOpen(false);
+    setQuery('');
     action();
   };
+
+  const go = (href: string): void => {
+    run(() => {
+      // The shell's pending state is set here as well as in `NavLink`, because
+      // a `router.push` fires no click and would otherwise navigate with no
+      // feedback at all — the palette closes and nothing appears to happen.
+      beginNavigation(href);
+      router.push(href);
+    });
+  };
+
+  const recents = recentHrefs
+    .map((href) => destinationFor(href))
+    .filter((destination): destination is Destination => destination !== undefined)
+    .slice(0, 5);
 
   return (
     <Command.Dialog
       open={isOpen}
-      onOpenChange={setOpen}
+      onOpenChange={(open) => {
+        setOpen(open);
+        if (!open) setQuery('');
+      }}
       label="Search and commands"
       className="palette"
       // cmdk renders a Radix Dialog underneath, so focus trapping, escape, and
@@ -90,118 +111,43 @@ export function CommandPalette(): ReactNode {
     >
       <div className="palette__input-row">
         <Icon name="action.search" label={null} size="md" />
-        <Command.Input placeholder="Search or jump to…" className="palette__input" />
+        <Command.Input
+          value={query}
+          onValueChange={setQuery}
+          placeholder="Search or jump to…"
+          className="palette__input"
+        />
       </div>
 
       <Command.List className="palette__list">
         <Command.Empty className="palette__empty">
+          <Text role="title-3" as="p">
+            No destination matches “{query}”
+          </Text>
+          {/*
+            An empty state that says what would appear here (§8.8). The second
+            line is the honest boundary of this surface: it indexes routes and
+            actions, not rows, and telling someone that is kinder than letting
+            them conclude their data is missing.
+          */}
           <Text role="body-sm" tone="secondary">
-            Nothing matches. Data search arrives with the first domain.
+            This searches every screen in the system. Searching your data —
+            foods, exercises, journal entries — arrives with the first domain.
           </Text>
         </Command.Empty>
 
-        <Command.Group heading="Go to" className="palette__group">
-          {navTargets.map((item) => (
-            <Command.Item
-              key={item.id}
-              value={`go ${item.label}`}
-              disabled={!item.available}
-              onSelect={() => {
-                run(() => {
-                  router.push(item.href);
-                });
-              }}
-              className="palette__item"
-            >
-              <Icon name={item.icon} label={null} size="sm" />
-              <span>{item.label}</span>
-              {!item.available && (
-                <span className="palette__hint" aria-hidden="true">
-                  not built
-                </span>
-              )}
-            </Command.Item>
-          ))}
-        </Command.Group>
-
-        {/*
-          Deep destinations, separate from the pillar list above.
-
-          §3.3(4) forbids capture requiring navigation, and a *set* is the one
-          thing on §3.2's capture list that genuinely cannot be captured without
-          one — a set belongs to a session, and a session is a place. So it is
-          here, as a destination, rather than in the quick-capture rail
-          pretending to be a three-tap log.
-        */}
-        <Command.Group heading="Gym" className="palette__group">
-          {GYM_TARGETS.map((target) => (
-            <Command.Item
-              key={target.href}
-              value={`gym ${target.label}`}
-              onSelect={() => {
-                run(() => {
-                  router.push(target.href);
-                });
-              }}
-              className="palette__item"
-            >
-              <Icon name="nav.body" label={null} size="sm" />
-              <span>{target.label}</span>
-            </Command.Item>
-          ))}
-        </Command.Group>
-
-        {/*
-          Ask lives in the palette and nowhere in the primary navigation.
-          §2.5 makes it "deliberately not the primary interface", and a tab for
-          it would be the shell arguing the opposite. The palette is where a
-          person goes *looking* for a capability, which is exactly the posture
-          this surface should be reached in.
-        */}
-        <Command.Group heading="Ask" className="palette__group">
-          <Command.Item
-            value="ask a question"
-            onSelect={() => {
-              run(() => {
-                router.push('/ask');
-              });
-            }}
-            className="palette__item"
-          >
-            <Icon name="action.search" label={null} size="sm" />
-            <span>Ask a question</span>
-          </Command.Item>
-          <Command.Item
-            value="insights inbox"
-            onSelect={() => {
-              run(() => {
-                router.push('/insights');
-              });
-            }}
-            className="palette__item"
-          >
-            <Icon name="domain.streak" label={null} size="sm" />
-            <span>Insight inbox</span>
-          </Command.Item>
-        </Command.Group>
-
-        <Command.Group heading="Nutrition" className="palette__group">
-          {NUTRITION_TARGETS.map((target) => (
-            <Command.Item
-              key={target.href}
-              value={`nutrition ${target.label}`}
-              onSelect={() => {
-                run(() => {
-                  router.push(target.href);
-                });
-              }}
-              className="palette__item"
-            >
-              <Icon name="nav.body" label={null} size="sm" />
-              <span>{target.label}</span>
-            </Command.Item>
-          ))}
-        </Command.Group>
+        {query === '' && recents.length > 0 && (
+          <Command.Group heading="Recent" className="palette__group">
+            {recents.map((destination) => (
+              <DestinationItem
+                key={`recent-${destination.href}`}
+                destination={destination}
+                prefix="recent"
+                onSelect={go}
+              />
+            ))}
+          </Command.Group>
+        )}
 
         {/*
           §3.3(4): quick capture is "keyboard-shortcut driven on desktop (`c`
@@ -209,25 +155,42 @@ export function CommandPalette(): ReactNode {
           uses, so the palette lists them — it is the only surface in the app
           that a person opens *looking* for what is possible.
 
-          Selecting one opens the same sheet the chord does, because both go
-          through the shell store rather than through component state.
+          Placed above the destinations because §1's whole premise is that
+          capture is the product; a palette that ranks browsing above recording
+          has the priorities backwards.
         */}
-        <Command.Group heading="Quick capture" className="palette__group">
+        <Command.Group heading="Capture" className="palette__group">
           {QUICK_CAPTURE_CHORDS.map((chord) => (
             <Command.Item
               key={chord.chord}
-              value={`capture ${chord.label}`}
+              value={`capture log ${chord.label}`}
               onSelect={() => {
+                setQuery('');
                 openCapture(chord.metricKey);
               }}
               className="palette__item"
             >
               <Icon name="action.add" label={null} size="sm" />
-              <span>{chord.label}</span>
+              <span className="palette__label">{chord.label}</span>
               <kbd className="palette__hint">{chord.chord}</kbd>
             </Command.Item>
           ))}
         </Command.Group>
+
+        {/*
+          Every destination in §3.2, grouped by surface. Ask has no entry in the
+          primary navigation and is reachable only from here — §2.5 makes it
+          "deliberately not the primary interface", and a tab for it would be
+          the shell arguing the opposite. The palette is where a person goes
+          *looking* for a capability, which is the right posture to arrive in.
+        */}
+        {DESTINATION_GROUPS.map((group) => (
+          <Command.Group key={group.label} heading={group.label} className="palette__group">
+            {group.items.map((destination) => (
+              <DestinationItem key={destination.href} destination={destination} onSelect={go} />
+            ))}
+          </Command.Group>
+        ))}
 
         <Command.Group heading="Appearance" className="palette__group">
           {/*
@@ -236,7 +199,7 @@ export function CommandPalette(): ReactNode {
             an awkward moment — §8.7's "opened last thing at night" case.
           */}
           <Command.Item
-            value="theme dark"
+            value="theme dark appearance"
             onSelect={() => {
               run(() => {
                 setTheme('dark');
@@ -245,11 +208,11 @@ export function CommandPalette(): ReactNode {
             className="palette__item"
           >
             <Icon name="theme.dark" label={null} size="sm" />
-            <span>Dark theme</span>
-            {theme === 'dark' && <Icon name="action.confirm" label={null} size="sm" />}
+            <span className="palette__label">Dark theme</span>
+            {theme === 'dark' && <Icon name="action.confirm" label="Selected" size="sm" />}
           </Command.Item>
           <Command.Item
-            value="theme light"
+            value="theme light appearance"
             onSelect={() => {
               run(() => {
                 setTheme('light');
@@ -258,11 +221,11 @@ export function CommandPalette(): ReactNode {
             className="palette__item"
           >
             <Icon name="theme.light" label={null} size="sm" />
-            <span>Light theme</span>
-            {theme === 'light' && <Icon name="action.confirm" label={null} size="sm" />}
+            <span className="palette__label">Light theme</span>
+            {theme === 'light' && <Icon name="action.confirm" label="Selected" size="sm" />}
           </Command.Item>
           <Command.Item
-            value="theme system"
+            value="theme system appearance"
             onSelect={() => {
               run(() => {
                 setTheme('system');
@@ -271,26 +234,11 @@ export function CommandPalette(): ReactNode {
             className="palette__item"
           >
             <Icon name="theme.system" label={null} size="sm" />
-            <span>Follow system</span>
-            {theme === 'system' && <Icon name="action.confirm" label={null} size="sm" />}
-          </Command.Item>
-        </Command.Group>
-
-        <Command.Group heading="Settings" className="palette__group">
-          <Command.Item
-            value="ai consent settings"
-            onSelect={() => {
-              run(() => {
-                router.push('/settings/ai');
-              });
-            }}
-            className="palette__item"
-          >
-            <Icon name="nav.settings" label={null} size="sm" />
-            <span>AI &amp; consent</span>
+            <span className="palette__label">Follow system</span>
+            {theme === 'system' && <Icon name="action.confirm" label="Selected" size="sm" />}
           </Command.Item>
           <Command.Item
-            value="open settings"
+            value="open settings drawer"
             onSelect={() => {
               run(() => {
                 setSettingsOpen(true);
@@ -299,10 +247,57 @@ export function CommandPalette(): ReactNode {
             className="palette__item"
           >
             <Icon name="nav.settings" label={null} size="sm" />
-            <span>Open settings</span>
+            <span className="palette__label">Quick settings</span>
           </Command.Item>
         </Command.Group>
       </Command.List>
+
+      {/*
+        The keyboard legend is not decoration. This surface is keyboard-only by
+        design on desktop, and §8.13's "full keyboard operability" is worth
+        little if the operator has to guess that ↵ opens and ⎋ closes.
+      */}
+      <div className="palette__footer">
+        <Text role="caption" tone="tertiary" as="span">
+          <kbd className="palette__key">↑</kbd>
+          <kbd className="palette__key">↓</kbd> move · <kbd className="palette__key">↵</kbd> open ·{' '}
+          <kbd className="palette__key">esc</kbd> close
+        </Text>
+      </div>
     </Command.Dialog>
+  );
+}
+
+/**
+ * One destination row.
+ *
+ * The trail is rendered as well as searched. Without it "Photos" under the
+ * heading "Body" is still three different pages, and choosing between them by
+ * guessing is exactly what the palette is meant to remove.
+ */
+function DestinationItem({
+  destination,
+  prefix,
+  onSelect,
+}: {
+  readonly destination: Destination;
+  /** Disambiguates the same href appearing under Recent and under its surface. */
+  readonly prefix?: string;
+  readonly onSelect: (href: string) => void;
+}): ReactNode {
+  const context = destination.trail.slice(1).join(' › ');
+
+  return (
+    <Command.Item
+      value={`${prefix ?? ''} ${searchValue(destination)}`}
+      onSelect={() => {
+        onSelect(destination.href);
+      }}
+      className="palette__item"
+    >
+      <Icon name={destination.icon} label={null} size="sm" />
+      <span className="palette__label">{destination.label}</span>
+      {context !== '' && <span className="palette__context">{context}</span>}
+    </Command.Item>
   );
 }

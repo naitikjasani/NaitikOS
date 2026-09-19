@@ -6,7 +6,35 @@
  * `max-width` media query in this file — every query widens.
  *
  * Breakpoints, per §8.4: sm 640 · md 768 · lg 1024 · xl 1280.
+ *
+ * Motion is expressed through `--motion-duration-*` and `--motion-travel`,
+ * which `base.css` remaps once for reduced motion (§8.6). Nothing here queries
+ * `prefers-reduced-motion` itself; a per-component query is how one animation
+ * eventually escapes the global switch.
  */
+
+:root {
+  /**
+   * Shell geometry, as tier-3 contracts.
+   *
+   * Declared here rather than inline so the two consumers that need to reason
+   * about the shell's edges — the content padding and the toast viewport — read
+   * the same number the shell draws with, instead of a duplicate that drifts.
+   */
+  --sidebar-width: 16rem;
+  --sidebar-width-collapsed: calc(var(--size-touch-target) + var(--space-4));
+  --topbar-height: calc(var(--size-touch-target) + var(--space-3));
+  --hairline: var(--space-px);
+  --rule-emphasis: calc(var(--space-px) * 2);
+  --app-bottom-nav-height: calc(var(--size-touch-target) + var(--space-2));
+}
+
+@media (min-width: 1024px) {
+  :root {
+    /* The tab bar is gone at `lg`; anything reserving space for it must stop. */
+    --app-bottom-nav-height: 0px;
+  }
+}
 
 .app-shell {
   display: flex;
@@ -54,23 +82,26 @@
   .sidebar {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    gap: var(--space-2);
     flex-shrink: 0;
-    width: 15rem;
+    width: var(--sidebar-width);
     padding: var(--space-4) var(--space-3);
-    border-inline-end: 1px solid var(--nav-border);
+    border-inline-end: var(--hairline) solid var(--nav-border);
     background: var(--nav-bg);
     /* Sticky rather than fixed, so it participates in the flex row and the
        content does not need a matching margin. */
     position: sticky;
     top: 0;
     height: 100dvh;
-    overflow-y: auto;
+    /* The rail itself never scrolls; `__scroll` does. Without this the brand
+       and its collapse control disappear as soon as a pillar is expanded. */
+    overflow: hidden;
   }
 
   .sidebar.is-collapsed {
-    width: calc(var(--space-16) + var(--space-1));
+    width: var(--sidebar-width-collapsed);
     align-items: center;
+    padding-inline: var(--space-2);
   }
 }
 
@@ -80,16 +111,94 @@
   justify-content: space-between;
   gap: var(--space-2);
   min-height: var(--size-touch-target);
+  flex-shrink: 0;
 }
 
 .sidebar.is-collapsed .sidebar__brand {
   justify-content: center;
 }
 
-.sidebar__list {
+.sidebar__scroll {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  flex: 1;
+  /* Without `min-height: 0` a flex child refuses to shrink below its content,
+     so the list overflows the viewport instead of scrolling inside the rail. */
+  min-height: 0;
+  width: 100%;
+  overflow-y: auto;
+  /* A flick at the end of an expanded pillar must not start scrolling the page
+     behind it — chained scroll in a nav rail reads as the navigation throwing
+     you out of the place you were reading. */
+  overscroll-behavior: contain;
+  padding-block-end: var(--space-4);
+}
+
+.sidebar__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.sidebar__section-heading {
+  padding-inline: var(--space-3);
+  text-transform: uppercase;
+}
+
+.sidebar__list,
+.sidebar__sublist {
   list-style: none;
   margin: 0;
   padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/**
+ * The spine.
+ *
+ * A subtree is related to its parent by a continuous rule, not only by indent —
+ * §8.13 forbids state carried by colour alone, and at three levels deep indent
+ * alone is ambiguous once a list scrolls past its own heading.
+ */
+.sidebar__sublist {
+  margin-inline-start: var(--space-5);
+  padding-inline-start: var(--space-2);
+  border-inline-start: var(--hairline) solid var(--nav-border);
+}
+
+.sidebar__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/**
+ * The disclosure control.
+ *
+ * Narrower than the 44px §8.13 requires, and deliberately: this control exists
+ * only at `lg`, where the input is a pointer. Every touch path to the same
+ * routes — the tab bar and the "More" sheet — holds the full 44px, and widening
+ * this to match would spend a sixth of the rail on eleven chevrons.
+ */
+.sidebar__disclosure {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--space-8);
+  min-height: var(--size-touch-target);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--nav-item-text);
+  cursor: pointer;
+  transition: color var(--motion-duration-fast) var(--motion-ease-out);
+}
+
+.sidebar__disclosure:hover {
+  color: var(--nav-item-text-active);
 }
 
 /* ==========================================================================
@@ -100,7 +209,8 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   min-height: var(--size-touch-target);
   padding-inline: var(--space-3);
   border: 0;
@@ -110,6 +220,28 @@
   text-decoration: none;
   cursor: pointer;
   transition: background-color var(--motion-duration-fast) var(--motion-ease-out);
+}
+
+/* A label longer than the rail truncates rather than wrapping to two lines —
+   a nav row that changes height on hover is a nav row that moves under the
+   cursor. `min-width: 0` above is what makes the ellipsis possible at all. */
+.nav-link > .nos-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/**
+ * Sub-rows.
+ *
+ * Shorter than a surface row, and pointer-only for the same reason the
+ * disclosure control is: this density exists at `lg`. Sized in `rem` so it
+ * grows with the type at 200% zoom (§8.13) rather than clipping.
+ */
+.nav-link--sub {
+  min-height: calc(var(--size-touch-target) - var(--space-2));
+  gap: var(--space-2);
+  padding-inline: var(--space-2);
 }
 
 .nav-link:hover:not(.is-unavailable) {
@@ -122,7 +254,33 @@
   color: var(--nav-item-text-active);
   /* The active indicator is a shape as well as a colour — §8.13 forbids colour
      as the sole carrier of state. */
-  box-shadow: inset 2px 0 0 var(--nav-item-indicator);
+  box-shadow: inset var(--rule-emphasis) 0 0 var(--nav-item-indicator);
+}
+
+/**
+ * An ancestor of the current page.
+ *
+ * Weight as well as colour, so the distinction between "you are here" and "you
+ * are inside here" survives a monochrome rendering. The third channel is
+ * structural: a branch always has its subtree expanded beneath it.
+ */
+.nav-link.is-branch {
+  color: var(--nav-item-text-active);
+  font-weight: var(--font-weight-medium);
+}
+
+/**
+ * Optimistic active state.
+ *
+ * The tapped row takes the active treatment the instant the click lands,
+ * before the server has sent anything. This is the answer to a streamed route
+ * looking identical for 800ms after a tap — §8.6's "state feedback", and the
+ * cheapest possible version of it: no spinner, no layout change, no animation.
+ */
+.nav-link[data-pending='true'],
+.tab-link[data-pending='true'] {
+  background: var(--nav-item-bg-active);
+  color: var(--nav-item-text-active);
 }
 
 .nav-link.is-unavailable,
@@ -150,10 +308,12 @@
   inset-inline: 0;
   bottom: 0;
   z-index: var(--z-index-sticky);
-  border-top: 1px solid var(--nav-border);
+  border-top: var(--hairline) solid var(--nav-border);
   /* Opaque, not translucent: content scrolling behind a blurred bar reduces
      the contrast of the labels below the §8.13 threshold. */
   background: var(--nav-bg);
+  /* The home indicator. Without this the bottom row of targets sits under it on
+     every notched iPhone, which is the single most common PWA defect. */
   padding-bottom: env(safe-area-inset-bottom);
 }
 
@@ -163,26 +323,25 @@
   }
 }
 
-/* Consumed by the content padding and the toast viewport. Declared on :root so
-   both can read it; zeroed at `lg` where the bar is gone. */
-:root {
-  --app-bottom-nav-height: calc(var(--space-12) + var(--space-2));
-}
-@media (min-width: 1024px) {
-  :root {
-    --app-bottom-nav-height: 0px;
-  }
-}
-
 .mobile-nav__list {
   display: flex;
+  /**
+   * §8.13: "Touch targets ≥ 44×44px, with ≥ 8px separation. Non-negotiable for
+   * gym use." The separation is the part that used to be missing — the targets
+   * were flush, so a thumb landing on a boundary was a coin flip between two
+   * destinations. `--space-2` is exactly the 8px the rule asks for.
+   */
+  gap: var(--space-2);
+  padding-inline: var(--space-2);
+  padding-block: var(--space-1);
   margin: 0;
-  padding: 0;
   list-style: none;
 }
 
 .mobile-nav__item {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
+  position: relative;
 }
 
 .tab-link {
@@ -194,31 +353,75 @@
   width: 100%;
   /* 44px minimum (§8.13), pressed with a thumb, often one-handed. */
   min-height: var(--size-touch-target);
-  padding-block: var(--space-2);
+  padding-block: var(--space-1);
+  padding-inline: var(--space-1);
   border: 0;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--nav-item-text);
   text-decoration: none;
   cursor: pointer;
 }
 
+.tab-link > .nos-text {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .tab-link.is-active {
   color: var(--nav-item-text-active);
 }
 
-/* The active tab carries a bar as well as a colour change (§8.13). */
+/* "More" while the current route is outside the four tabs. Without it the whole
+   bar sits unlit on `/library` and `/settings`, which reads as being nowhere. */
+.tab-link.is-branch {
+  color: var(--nav-item-text-active);
+}
+
+/* The active tab carries a bar as well as a colour change (§8.13). Centred
+   explicitly: a statically-positioned pseudo-element resolves to the start
+   edge, which put the marker over the wrong side of the icon. */
 .tab-link.is-active::before {
   content: '';
   position: absolute;
   top: 0;
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
   width: var(--space-6);
-  height: 2px;
+  height: var(--rule-emphasis);
   border-radius: var(--radius-full);
   background: var(--nav-item-indicator);
 }
 
-.mobile-nav__item {
-  position: relative;
+/**
+ * The "More" sheet.
+ *
+ * Two columns of full-height rows: the grid gap is the same `--space-2`
+ * separation the tab bar uses, so the §8.13 arithmetic holds here too. Rows use
+ * the surface `.nav-link` rather than the sub variant, because this is a touch
+ * surface and the pointer-density exception does not apply.
+ */
+.mobile-nav__sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.mobile-nav__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.mobile-nav__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 /* ==========================================================================
@@ -229,60 +432,88 @@
   position: sticky;
   top: 0;
   z-index: var(--z-index-sticky);
-  border-bottom: 1px solid var(--nav-border);
+  border-bottom: var(--hairline) solid var(--nav-border);
   background: var(--nav-bg);
 }
 
 .topbar__inner {
-  min-height: calc(var(--space-12) + var(--space-2));
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--topbar-height);
   padding-inline: var(--layout-gutter);
 }
 
-/* Breadcrumbs are noise on a phone; the page `h1` carries the context. */
-.topbar__crumbs {
-  display: none;
-  min-width: 0;
+/* The wordmark stands in for the sidebar's brand below `lg`. Exactly one copy
+   of the product name is on screen at any width. */
+.topbar__brand {
+  flex-shrink: 0;
 }
-@media (min-width: 768px) {
-  .topbar__crumbs {
-    display: block;
+@media (min-width: 1024px) {
+  .topbar__brand {
+    display: none;
   }
 }
 
+/**
+ * The palette trigger.
+ *
+ * Takes the whole free row rather than collapsing to an icon. On desktop the
+ * palette is the primary way to reach one of ninety routes (§2.5), and on a
+ * phone a 44px-tall full-width control is a target a thumb finds without
+ * looking — which a 32px icon beside two other 32px icons was not.
+ */
 .topbar__search {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: var(--space-8);
-  padding-inline: var(--space-2) var(--space-2);
-  border: 1px solid var(--input-border);
+  flex: 1;
+  min-width: 0;
+  min-height: var(--size-touch-target);
+  padding-inline: var(--space-3);
+  border: var(--hairline) solid var(--input-border);
   border-radius: var(--radius-md);
   background: var(--input-bg);
   color: var(--color-text-tertiary);
   cursor: pointer;
+  text-align: start;
 }
 
-/* On a phone the search control collapses to its icon — the label and the
-   keyboard hint are both irrelevant without a keyboard. */
-.topbar__search-label,
+.topbar__search-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The chord hint is meaningless without a keyboard, and the space it takes is
+   not. It appears at `sm`, where an attached keyboard becomes plausible. */
 .topbar__kbd {
   display: none;
 }
 @media (min-width: 640px) {
   .topbar__search {
-    min-width: 12rem;
-  }
-  .topbar__search-label {
-    display: inline;
+    max-width: 26rem;
   }
   .topbar__kbd {
     display: inline-block;
     margin-inline-start: auto;
+    flex-shrink: 0;
     padding: 0 var(--space-1);
-    border: 1px solid var(--color-border-default);
+    border: var(--hairline) solid var(--color-border-default);
     border-radius: var(--radius-sm);
     font-family: var(--font-family-mono);
     font-size: var(--typography-caption-font-size);
+  }
+}
+
+/* Controls that only earn their space once there is space. `display: contents`
+   rather than a width change, so the wrapper never affects the flex line. */
+.topbar__desktop-only {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .topbar__desktop-only {
+    display: contents;
   }
 }
 
@@ -290,12 +521,69 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   min-width: var(--size-touch-target);
   min-height: var(--size-touch-target);
   border: 0;
   border-radius: var(--radius-full);
   background: transparent;
   cursor: pointer;
+}
+
+/* ==========================================================================
+   Route progress
+   ========================================================================== */
+
+/**
+ * The track sits on the boundary between chrome and content, because that is
+ * the boundary about to change. It is `aria-hidden`; the announcement is a
+ * separate live region (§8.13 — no state carried by a visual alone).
+ */
+.route-progress {
+  position: absolute;
+  inset-inline: 0;
+  bottom: calc(var(--hairline) * -1);
+  height: var(--rule-emphasis);
+  overflow: hidden;
+  background: var(--color-accent-subtle);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-duration-fast) var(--motion-ease-out);
+}
+
+.route-progress[data-pending='true'] {
+  opacity: 1;
+}
+
+/**
+ * The sweep's travel is multiplied by `--motion-travel` (§8.6), which
+ * `base.css` sets to 0 under reduced motion. Both keyframes then resolve to no
+ * movement and the segment simply rests at the start of the track: still
+ * visible, still meaning "loading", and — the part that matters — not strobing,
+ * which is what a 1ms duration would do to an indicator written the usual way.
+ */
+.route-progress__sweep {
+  display: block;
+  width: 25%;
+  height: 100%;
+  background: var(--color-accent);
+  animation: nos-route-sweep calc(var(--motion-duration-slow) * 3) var(--motion-ease-in-out)
+    infinite;
+  /* Paused while idle, so a hidden element is not driving the compositor. */
+  animation-play-state: paused;
+}
+
+.route-progress[data-pending='true'] .route-progress__sweep {
+  animation-play-state: running;
+}
+
+@keyframes nos-route-sweep {
+  from {
+    transform: translateX(calc(-100% * var(--motion-travel)));
+  }
+  to {
+    transform: translateX(calc(400% * var(--motion-travel)));
+  }
 }
 
 /* ==========================================================================
@@ -314,7 +602,7 @@
   max-width: 34rem;
   max-height: 70dvh;
   overflow: hidden;
-  border: 1px solid var(--dialog-border);
+  border: var(--hairline) solid var(--dialog-border);
   border-radius: var(--dialog-radius);
   background: var(--dialog-bg);
 }
@@ -323,13 +611,15 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  flex-shrink: 0;
   padding: var(--space-4);
-  border-bottom: 1px solid var(--dialog-border);
+  border-bottom: var(--hairline) solid var(--dialog-border);
   color: var(--color-text-tertiary);
 }
 
 .palette__input {
   flex: 1;
+  min-width: 0;
   border: 0;
   background: transparent;
   color: var(--color-text-primary);
@@ -338,12 +628,15 @@
   outline: none;
 }
 
+/* Flex sizing rather than a `calc` against the panel height: the header and the
+   footer are both intrinsically sized, and a hard-coded subtraction goes wrong
+   the moment either of them changes. */
 .palette__list {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: var(--space-2);
-  /* cmdk exposes the list height so the panel can size to its contents rather
-     than always occupying 70dvh. */
-  max-height: calc(70dvh - 4rem);
 }
 
 .palette__group [cmdk-group-heading] {
@@ -366,6 +659,22 @@
   cursor: pointer;
 }
 
+.palette__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The ancestor trail. Half the leaf labels in §3.2 collide — "Photos" alone is
+   three routes — so the row without this is a guess. */
+.palette__context {
+  flex-shrink: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--typography-caption-font-size);
+}
+
 /* cmdk sets aria-selected for both hover and keyboard, so one rule covers
    pointer and arrow-key navigation identically. */
 .palette__item[aria-selected='true'] {
@@ -379,13 +688,40 @@
 
 .palette__hint {
   margin-inline-start: auto;
+  flex-shrink: 0;
   color: var(--color-text-tertiary);
   font-size: var(--typography-caption-font-size);
 }
 
 .palette__empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
   padding: var(--space-6) var(--space-4);
   text-align: center;
+}
+
+.palette__footer {
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-4);
+  border-top: var(--hairline) solid var(--dialog-border);
+}
+
+/* A keyboard chord shown beside a palette row. Monospace, so `c w` reads as
+   two keys rather than as a word. */
+kbd.palette__hint,
+.palette__key {
+  font-family: var(--font-family-mono);
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+.palette__key {
+  display: inline-block;
+  padding-inline: var(--space-1);
+  border: var(--hairline) solid var(--color-border-default);
+  border-radius: var(--radius-sm);
 }
 
 /* ==========================================================================
@@ -396,9 +732,25 @@
   padding-block: var(--space-2);
 }
 
-/* A keyboard chord shown beside a palette row. Monospace, so `c w` reads as
-   two keys rather than as a word. */
-kbd.palette__hint {
-  font-family: var(--font-family-mono);
-  letter-spacing: 0.04em;
+/**
+ * The breadcrumb trail, in the page header rather than the top bar.
+ *
+ * The crumb links are given a full 44px of height. They are the way back up
+ * from a third-level route on a phone (§8.13's touch minimum applies to
+ * navigation before it applies to anything else), and the row they occupy is
+ * the row the top bar used to spend on the same trail — so this costs nothing
+ * net and works at every width instead of only above `md`.
+ *
+ * Scoped under `.page__crumbs` so this is an instance override of the design
+ * system's component rather than a change to it.
+ */
+.page__crumbs .nos-breadcrumbs__item a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--size-touch-target);
+  padding-inline: var(--space-1);
+}
+
+.page__actions {
+  flex-shrink: 0;
 }

@@ -1,61 +1,56 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
-import Link from 'next/link';
 import type { ReactNode } from 'react';
-import {
-  Avatar,
-  Breadcrumbs,
-  DropdownMenu,
-  Icon,
-  IconButton,
-  Inline,
-  Spacer,
-  Text,
-  Tooltip,
-} from '@naitikos/design-system';
+import { Avatar, DropdownMenu, Icon, IconButton, Text, Tooltip } from '@naitikos/design-system';
 
-import { breadcrumbsFor } from '@/lib/navigation/config';
 import { useNavigationStore } from '@/lib/stores/navigation.store';
 import { useSession } from '@/features/auth';
+import { RouteProgress } from './RouteProgress';
 
 /**
- * The top bar: breadcrumbs, search, notifications, profile.
+ * The top bar.
  *
  * Sticky rather than fixed, so it scrolls with a long page on mobile and does
  * not permanently occupy 56px of a 667px viewport. §8.4's mobile-first stance
  * is about vertical space as much as width.
+ *
+ * ## What it holds, and what it no longer holds
+ *
+ * It used to carry breadcrumbs, hidden below `md`. Those have moved into the
+ * page header (`PageBreadcrumbs`), next to the heading they qualify and visible
+ * at every width. What is left is deliberately only things that are true on
+ * every one of §3.2's ninety routes:
+ *
+ *   - the palette trigger, which on desktop is the primary way to reach a route
+ *     that is not the one you are on (§2.5 makes it the search architecture);
+ *   - who is signed in, and the way out;
+ *   - whether a navigation is in flight.
+ *
+ * On a phone the trigger takes the whole free row rather than shrinking to a
+ * 32px icon. That is the trade this bar exists to make: if 56px of the scarcest
+ * axis is going to be spent, it should buy a target the thumb can actually
+ * find, not three tiny ones.
  */
 export function TopBar({
   account,
 }: {
   readonly account: { readonly email: string; readonly role: string };
 }): ReactNode {
-  const pathname = usePathname();
-  const crumbs = breadcrumbsFor(pathname);
   const setCommandPaletteOpen = useNavigationStore((state) => state.setCommandPaletteOpen);
   const setSettingsOpen = useNavigationStore((state) => state.setSettingsOpen);
   const { signOut, isSigningOut } = useSession();
 
   return (
-    <header className="topbar">
-      <Inline gap="2" wrap={false} className="topbar__inner">
+    <header className="topbar" data-shell-nav>
+      <div className="topbar__inner">
         {/*
-          Breadcrumbs are hidden below `md` in CSS. On a phone the page title
-          carries the context and a truncated trail is noise — §3.3 caps depth
-          at three precisely so the trail is never load-bearing.
+          The wordmark stands in for the sidebar's brand below `lg`, where there
+          is no sidebar. Hidden at `lg` rather than duplicated, so the name
+          appears exactly once on screen at every width.
         */}
-        {crumbs.length > 1 && (
-          <div className="topbar__crumbs">
-            <Breadcrumbs
-              crumbs={crumbs}
-              // Injected so the design system never imports a router (§6.2).
-              renderLink={(href, children) => <Link href={href}>{children}</Link>}
-            />
-          </div>
-        )}
-
-        <Spacer />
+        <Text role="title-3" as="p" className="topbar__brand">
+          Ekayu
+        </Text>
 
         {/*
           Search is the command palette.
@@ -73,7 +68,7 @@ export function TopBar({
           >
             <Icon name="action.search" label={null} size="sm" />
             <Text role="body-sm" tone="tertiary" as="span" className="topbar__search-label">
-              Search
+              Search or jump to…
             </Text>
             <kbd className="topbar__kbd" aria-hidden="true">
               ⌘K
@@ -82,25 +77,33 @@ export function TopBar({
         </Tooltip>
 
         {/*
-          Notifications placeholder.
+          Notifications placeholder, and desktop-only.
           §5.9: "Opt-in per category, off by default, no exceptions." Everything
           is off at this milestone, so there is nothing to show — and P6 forbids
-          a badge that manufactures urgency. It renders as an empty affordance
-          rather than a count.
+          a badge that manufactures urgency. A permanently disabled control is
+          not worth 44px of a phone's top bar, so below `lg` it is absent; the
+          setting that turns notifications on lives in `/settings/notifications`
+          either way.
         */}
-        <Tooltip content="Notifications — none enabled">
-          <IconButton
-            icon="identity.notifications-off"
-            label="Notifications — none enabled"
-            size="sm"
-            disabled
-          />
-        </Tooltip>
+        <div className="topbar__desktop-only">
+          <Tooltip content="Notifications — none enabled">
+            <IconButton
+              icon="identity.notifications-off"
+              label="Notifications — none enabled"
+              size="sm"
+              disabled
+            />
+          </Tooltip>
+        </div>
 
         <DropdownMenu
           label="Account"
           trigger={
-            <button type="button" className="topbar__profile" aria-label={`Account: ${account.email}`}>
+            <button
+              type="button"
+              className="topbar__profile"
+              aria-label={`Account: ${account.email}`}
+            >
               <Avatar name={account.email} size="sm" />
             </button>
           }
@@ -128,7 +131,14 @@ export function TopBar({
             },
           ]}
         />
-      </Inline>
+      </div>
+
+      {/*
+        Pinned to the bar's lower edge rather than the viewport's, so it sits on
+        the boundary between chrome and content — which is the boundary that is
+        about to change.
+      */}
+      <RouteProgress />
     </header>
   );
 }

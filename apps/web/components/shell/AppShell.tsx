@@ -40,9 +40,15 @@ export function AppShell({ children, account, zone }: AppShellProps): ReactNode 
   const pathname = usePathname();
   const closeAllOverlays = useNavigationStore((state) => state.closeAllOverlays);
   const toggleCommandPalette = useNavigationStore((state) => state.toggleCommandPalette);
+  const endNavigation = useNavigationStore((state) => state.endNavigation);
+  const recordVisit = useNavigationStore((state) => state.recordVisit);
+
+  const mainRef = useRef<HTMLElement>(null);
 
   /**
-   * Close transient surfaces on navigation.
+   * Everything that happens when the route changes.
+   *
+   * ## Closing transient surfaces
    *
    * Without this, opening the palette, navigating, and landing on a new page
    * leaves the palette open over unrelated content. It is the most common shell
@@ -54,15 +60,36 @@ export function AppShell({ children, account, zone }: AppShellProps): ReactNode 
    * and child effects run before the parent's. Clearing overlays on mount would
    * therefore close the sheet the URL asked for, before the first paint, and
    * leave the operator on `/today` with no explanation.
+   *
+   * ## Focus
+   *
+   * §8.13 wants a logical tab order, and after a client-side navigation there
+   * is no such thing by default: focus stays on the link that was clicked, so
+   * the next Tab continues *through the navigation* rather than into the page
+   * that just arrived. Moving focus to `#main` is the fix, and it is guarded —
+   * focus is only taken when it currently sits in a navigation region or
+   * nowhere, so a route change triggered while the operator is typing in a form
+   * or working inside a sheet does not yank them out of it.
+   *
+   * `preventScroll` because Next has already restored the scroll position by
+   * this point and refocusing must not undo that.
    */
   const navigated = useRef(false);
   useEffect(() => {
+    recordVisit(pathname);
+    endNavigation();
+
     if (!navigated.current) {
       navigated.current = true;
       return;
     }
     closeAllOverlays();
-  }, [pathname, closeAllOverlays]);
+
+    const focused = document.activeElement;
+    const isSpentFocus =
+      focused === null || focused === document.body || focused.closest('[data-shell-nav]') !== null;
+    if (isSpentFocus) mainRef.current?.focus({ preventScroll: true });
+  }, [pathname, closeAllOverlays, endNavigation, recordVisit]);
 
   /**
    * ⌘K / Ctrl+K.
@@ -102,7 +129,7 @@ export function AppShell({ children, account, zone }: AppShellProps): ReactNode 
           viewport but not focus, and a keyboard user's next Tab returns them to
           the navigation they were trying to skip.
         */}
-        <main id="main" className="app-shell__content" tabIndex={-1}>
+        <main id="main" ref={mainRef} className="app-shell__content" tabIndex={-1}>
           {/*
             The unsynced banner sits above the page rather than inside it, and
             that placement is the requirement rather than a layout choice: §5.7

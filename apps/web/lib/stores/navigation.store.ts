@@ -38,6 +38,42 @@ export type NavigationState = {
   readonly captureKind: string | null;
   /** The settings sheet. */
   readonly isSettingsOpen: boolean;
+  /**
+   * Explicit sidebar disclosure decisions, keyed by node href.
+   *
+   * Absent means "follow the route": a pillar containing the current page is
+   * open, everything else is closed. That default is right almost always and
+   * needs no state at all — the entry only appears once the operator overrides
+   * it, which they do when *browsing* rather than navigating.
+   *
+   * Storing overrides rather than open/closed booleans is what keeps the two
+   * behaviours from fighting. A plain `openIds` set would have to be rewritten
+   * on every navigation to re-derive the automatic part, and any such rewrite
+   * silently discards the operator's choice.
+   */
+  readonly navGroupOverrides: Readonly<Record<string, boolean>>;
+  /**
+   * The destination of a navigation that has started but not yet landed.
+   *
+   * Server components stream, so a tap on a slow route produces no feedback at
+   * all until the first byte arrives. This is the signal the shell uses to say
+   * "that registered" — an optimistic active state on the tapped item and a
+   * progress track under the top bar. It is not a spinner over the content:
+   * §8.6 keeps motion functional, and blanking a page the operator can still
+   * read is a regression, not feedback.
+   */
+  readonly pendingHref: string | null;
+  /**
+   * Recently visited destinations, most recent first.
+   *
+   * In memory only, and that is a privacy decision rather than an oversight
+   * (P7). A persisted route history is a health-inference vector: "opened
+   * /body/skin/treatments eleven times this month" is a diagnosis written in
+   * localStorage, readable by anything with script access on this origin. A
+   * session's worth of recents is most of the ranking benefit at none of that
+   * cost.
+   */
+  readonly recentHrefs: readonly string[];
 
   readonly toggleSidebar: () => void;
   readonly setSidebarCollapsed: (collapsed: boolean) => void;
@@ -47,6 +83,10 @@ export type NavigationState = {
   readonly openCapture: (metricKey: string) => void;
   readonly closeCapture: () => void;
   readonly setSettingsOpen: (open: boolean) => void;
+  readonly toggleNavGroup: (href: string, isOpenByRoute: boolean) => void;
+  readonly beginNavigation: (href: string) => void;
+  readonly endNavigation: () => void;
+  readonly recordVisit: (href: string) => void;
   /**
    * Close every transient surface.
    *
@@ -63,6 +103,9 @@ export const useNavigationStore = create<NavigationState>((set) => ({
   isCommandPaletteOpen: false,
   captureKind: null,
   isSettingsOpen: false,
+  navGroupOverrides: {},
+  pendingHref: null,
+  recentHrefs: [],
 
   toggleSidebar: () => {
     set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed }));
@@ -90,6 +133,31 @@ export const useNavigationStore = create<NavigationState>((set) => ({
   },
   setSettingsOpen: (isSettingsOpen) => {
     set({ isSettingsOpen });
+  },
+  /**
+   * `isOpenByRoute` is passed in rather than derived here, because the store
+   * has no business knowing the route tree. The caller says what the automatic
+   * answer currently is; this records the opposite of it.
+   */
+  toggleNavGroup: (href, isOpenByRoute) => {
+    set((state) => {
+      const current = state.navGroupOverrides[href] ?? isOpenByRoute;
+      return { navGroupOverrides: { ...state.navGroupOverrides, [href]: !current } };
+    });
+  },
+  beginNavigation: (pendingHref) => {
+    set({ pendingHref });
+  },
+  endNavigation: () => {
+    set({ pendingHref: null });
+  },
+  recordVisit: (href) => {
+    set((state) => ({
+      // Deduplicated then capped. Without the dedupe the list degenerates into
+      // one destination repeated eight times after any back-and-forth, which is
+      // exactly the browsing pattern recents are meant to shortcut.
+      recentHrefs: [href, ...state.recentHrefs.filter((entry) => entry !== href)].slice(0, 8),
+    }));
   },
   closeAllOverlays: () => {
     set({
