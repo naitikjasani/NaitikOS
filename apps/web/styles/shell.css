@@ -11,7 +11,9 @@
 .app-shell {
   display: flex;
   min-height: 100dvh;
-  background: var(--color-surface);
+  background:
+    radial-gradient(circle at 78% -12%, color-mix(in srgb, var(--nav-item-indicator) 12%, transparent), transparent 32rem),
+    var(--color-surface);
   color: var(--color-text-primary);
 }
 
@@ -82,8 +84,8 @@
     flex-direction: column;
     gap: var(--space-3);
     flex-shrink: 0;
-    width: 16rem;
-    padding: var(--space-5) var(--space-3);
+    width: 17rem;
+    padding: var(--space-6) var(--space-4);
     border-inline-end: 1px solid var(--nav-border);
     background: var(--nav-bg);
     box-shadow: 1px 0 0 var(--color-surface-overlay);
@@ -141,8 +143,9 @@
 }
 
 .nav-link:hover:not(.is-unavailable) {
-  background: var(--nav-item-bg-active);
+  background: color-mix(in srgb, var(--nav-item-bg-active) 72%, transparent);
   color: var(--nav-item-text-active);
+  transform: translateX(2px);
 }
 
 .nav-link.is-active {
@@ -423,6 +426,33 @@
 
 .page {
   padding-block: var(--space-2);
+}
+
+.page h1 {
+  letter-spacing: -0.035em;
+}
+
+.page > div:first-child {
+  align-items: flex-end;
+}
+
+@media (max-width: 639px) {
+  .page > div:first-child {
+    align-items: flex-start;
+  }
+}
+
+.topbar__search:hover,
+.topbar__profile:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-overlay);
+}
+
+.topbar__search:focus-visible,
+.topbar__profile:focus-visible,
+.nav-link:focus-visible {
+  outline: 2px solid var(--nav-item-indicator);
+  outline-offset: 2px;
 }
 
 /* A keyboard chord shown beside a palette row. Monospace, so `c w` reads as

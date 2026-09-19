@@ -111,10 +111,15 @@ function formatIssues(error: z.ZodError): string {
  * `process.env.NEXT_PUBLIC_X` — a dynamic lookup produces `undefined` in the
  * browser with no error, which is a genuinely confusing hour to lose.
  */
+const isPreviewRuntime = process.env.NODE_ENV !== 'production';
 const clientParsed = clientSchema.safeParse({
-  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+  NEXT_PUBLIC_SUPABASE_URL:
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? (isPreviewRuntime ? 'http://localhost:54321' : undefined),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY:
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+    (isPreviewRuntime ? 'preview-anon-key-not-configured' : undefined),
+  NEXT_PUBLIC_SITE_URL:
+    process.env.NEXT_PUBLIC_SITE_URL ?? (isPreviewRuntime ? 'http://localhost:3000' : undefined),
 });
 
 if (!clientParsed.success) {
