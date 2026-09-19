@@ -1,6 +1,7 @@
 import type { ElementType, HTMLAttributes, ReactNode } from 'react';
 
 import { cn } from '../lib/cn';
+import { EmptyState, type EmptyStateProps } from './States';
 import { Text } from '../primitives/Text';
 
 /**
@@ -101,14 +102,50 @@ export function CardHeader({
   );
 }
 
-export function CardBody({
-  children,
-  className,
-}: {
+/**
+ * The card's content, and its empty state.
+ *
+ * §8.8: "Every card supports an empty state; **an empty card is a designed
+ * state, not a blank rectangle.** Given that this system will legitimately have
+ * empty modules for long periods, empty states are a primary design surface
+ * rather than an afterthought."
+ *
+ * The `empty` prop is what makes that structural rather than aspirational. It
+ * lives here, on the body, so a card gets the designed state on every variant
+ * without four copies of the same conditional at the call site — and because
+ * the header and footer stay put, an empty card keeps its title and its action,
+ * which is exactly what stops it reading as a broken screen.
+ *
+ * Emptiness is decided here rather than by the caller passing a flag, because
+ * `{items.map(…)}` over an empty array renders an empty array, not `null`, and
+ * a caller-supplied `isEmpty` is a second source of truth that drifts from the
+ * data the moment a filter is added.
+ */
+export type CardBodyProps = {
   readonly children?: ReactNode;
+  /**
+   * Rendered instead of the children when there are none.
+   *
+   * `EmptyState` requires a description and takes at most one action, so §8.8's
+   * "states what would appear here and offers the single action that would
+   * populate it" is enforced by the type rather than by review.
+   */
+  readonly empty?: EmptyStateProps;
   readonly className?: string;
-}): ReactNode {
-  return <div className={cn('nos-card__body', className)}>{children}</div>;
+};
+
+export function CardBody({ children, empty, className }: CardBodyProps): ReactNode {
+  const isEmpty =
+    children === undefined ||
+    children === null ||
+    children === false ||
+    (Array.isArray(children) && children.length === 0);
+
+  return (
+    <div className={cn('nos-card__body', className)}>
+      {isEmpty && empty !== undefined ? <EmptyState size="sm" {...empty} /> : children}
+    </div>
+  );
 }
 
 export function CardFooter({

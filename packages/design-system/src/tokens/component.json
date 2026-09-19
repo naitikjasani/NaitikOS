@@ -94,13 +94,39 @@
       "$comment": "Missing data renders as a gap, never interpolated (§8.9 invariant 3). There is deliberately no 'missing data' colour token — a gap is an absence, not a value."
     },
 
+    "$comment_table": "§8.11: 'On mobile, tables become card lists.' Both renderings are one DOM switched by a container query, so the card tokens below are the same table dressed differently rather than a second component's palette.",
     "table": {
       "header-bg": "{color.surface-sunken}",
       "header-text": "{color.text-secondary}",
+      "header-border": "{color.border-default}",
       "row-border": "{color.border-subtle}",
       "row-hover": "{color.surface-overlay}",
       "row-height": "{layout.row-height}",
-      "cell-padding-x": "{space.3}"
+      "cell-padding-x": "{space.3}",
+      "$comment_sticky": "The sticky first column scrolls over the rows beside it, so it needs an opaque fill of its own — a transparent sticky cell smears the columns it passes.",
+      "sticky-bg": "{color.surface-raised}",
+      "sort-indicator": "{color.text-tertiary}",
+      "sort-indicator-active": "{color.accent}",
+      "card-bg": "{color.surface-raised}",
+      "card-border": "{color.border-subtle}",
+      "card-label": "{color.text-tertiary}"
+    },
+
+    "$comment_listbox": "Shared by ComboboxField and anything else that pops a list of options (§8.10). The active-option fill is accent-subtle rather than accent, because the option text stays text-primary and must keep its AAA ratio against it.",
+    "listbox": {
+      "bg": "{color.surface-overlay}",
+      "border": "{color.border-default}",
+      "option-text": "{color.text-primary}",
+      "option-bg-active": "{color.accent-subtle}",
+      "empty-text": "{color.text-tertiary}"
+    },
+
+    "$comment_tag": "TagField chips (§8.10). Neutral by construction — a tag is a label the operator chose, never a judgement about it (§8.2).",
+    "tag": {
+      "bg": "{color.surface-overlay}",
+      "text": "{color.text-primary}",
+      "border": "{color.border-default}",
+      "remove": "{color.text-tertiary}"
     },
 
     "nav": {

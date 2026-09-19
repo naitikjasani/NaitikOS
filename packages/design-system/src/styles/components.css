@@ -105,10 +105,36 @@
 }
 
 .nos-button--sm {
+  position: relative;
   min-height: var(--space-8);
   min-width: var(--space-8);
   padding-inline: var(--space-3);
   font-size: var(--typography-caption-font-size);
+}
+
+/*
+  The hit area of a small button, which is not its box.
+
+  §8.13: "Touch targets ≥ 44×44px… Non-negotiable for gym use." A 32px control
+  breaks that, and simply growing `sm` to 44px would make it indistinguishable
+  from `md` and remove the reason it exists. So the drawn box stays small and an
+  invisible pseudo-element carries the target out to the full size.
+
+  This works because §8.13 also requires ≥8px separation: the expansion reaches
+  6px past each edge, so two correctly separated small buttons cannot both claim
+  the same pixel. Placing two of them closer than `--space-3` re-introduces the
+  overlap this is meant to avoid.
+*/
+.nos-button--sm::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  inset-inline-start: 50%;
+  transform: translate(-50%, -50%);
+  min-inline-size: var(--size-touch-target);
+  min-block-size: var(--size-touch-target);
+  inline-size: 100%;
+  block-size: 100%;
 }
 .nos-button--lg {
   min-height: var(--space-12);
@@ -369,6 +395,18 @@
   inset-inline-end: var(--space-1);
 }
 
+/*
+  Room for the trailing control.
+
+  A clear button or a combobox chevron sits on top of the input, so the input
+  has to stop before it — otherwise a long entry runs underneath the icon and
+  the last few characters are unreadable exactly when the user is checking what
+  they typed.
+*/
+.nos-input-wrap:has(.nos-input-wrap__clear) .nos-input {
+  padding-inline-end: var(--space-10);
+}
+
 .nos-input {
   width: 100%;
   min-height: var(--input-height);
@@ -507,6 +545,14 @@
   min-width: 0;
 }
 
+/*
+  The switch is drawn at 44×24 and targeted at 44×44.
+
+  A toggle track tall enough to be its own touch target reads as a button, not
+  a switch, so the extra height is an invisible pseudo-element (below) rather
+  than the visible control. The row's `min-height` already reserves the space
+  it expands into, so nothing above or below is overlapped.
+*/
 .nos-switch {
   position: relative;
   flex-shrink: 0;
@@ -519,6 +565,16 @@
   cursor: pointer;
   transition: background-color var(--motion-duration-fast) var(--motion-ease-out);
 }
+.nos-switch::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  inset-inline-start: 50%;
+  transform: translate(-50%, -50%);
+  inline-size: 100%;
+  block-size: var(--size-touch-target);
+}
+
 .nos-switch.is-checked {
   background: var(--color-accent);
   border-color: var(--color-accent);
@@ -562,8 +618,209 @@
 }
 /* The real input is visually hidden inside the label; focus must still show. */
 .nos-filefield:has(:focus-visible) {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* --- Last-value prefill ---------------------------------------------- */
+
+/*
+  §8.10: "Last value pre-filled wherever a sensible prior exists. Confirming
+  beats typing." Rendered as an offer rather than applied silently — a body
+  measurement quietly pre-filled with yesterday's number is how a stale reading
+  gets saved as today's.
+*/
+.nos-field__prefill {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  /* Full touch target (§8.13): this is pressed instead of typing, so it has to
+     be at least as easy to hit as the keyboard would have been. */
+  min-block-size: var(--size-touch-target);
+  padding-inline: var(--space-3);
+  margin-inline-start: calc(var(--space-3) * -1);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--typography-body-sm-font-size);
+  cursor: pointer;
+}
+
+.nos-field__prefill:hover {
+  color: var(--color-text-primary);
+}
+
+.nos-field__prefill-value {
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Quantity: the unit chooser inside the stepper -------------------- */
+
+/*
+  The unit sits inside the number's own box rather than beside it, because a
+  value and its unit are one reading. Units are a display concern only — the
+  stored value is canonical (§6.2) — so changing this control never converts
+  anything, it re-labels what is being entered.
+*/
+.nos-number__unit-select {
+  flex-shrink: 0;
+  min-block-size: var(--size-touch-target);
+  padding-inline: var(--space-2);
+  border: 0;
+  border-inline-start: 1px solid var(--input-border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--typography-caption-font-size);
+  cursor: pointer;
+}
+
+/* --- Select ----------------------------------------------------------- */
+
+.nos-select-wrap {
+  position: relative;
+  display: flex;
+}
+
+.nos-select {
+  /* `appearance: none` for the chevron below, and padding-end to clear it. */
+  appearance: none;
+  width: 100%;
+  padding-inline-end: var(--space-8);
+  cursor: pointer;
+}
+
+.nos-select-wrap__chevron {
+  position: absolute;
+  inset-inline-end: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-tertiary);
+  /* Decoration over a native control: the click must reach the select. */
+  pointer-events: none;
+}
+
+/* --- Combobox --------------------------------------------------------- */
+
+.nos-combobox {
+  position: relative;
+}
+
+.nos-listbox {
+  position: absolute;
+  inset-inline: 0;
+  top: calc(100% + var(--space-1));
+  z-index: var(--z-index-raised);
+  max-block-size: 16rem;
+  overflow-y: auto;
+  margin: 0;
+  padding: var(--space-1);
+  border: 1px solid var(--listbox-border);
+  border-radius: var(--radius-md);
+  background: var(--listbox-bg);
+  list-style: none;
+}
+
+.nos-listbox__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  /* ≥44px, because this list is scrolled and tapped one-handed (§8.13). */
+  min-block-size: var(--size-touch-target);
+  padding-inline: var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--listbox-option-text);
+  font-size: var(--typography-body-sm-font-size);
+  cursor: pointer;
+}
+
+/*
+  The active option is highlighted by fill; the *selected* option additionally
+  carries a check mark, rendered in the markup. §8.13: no state by colour
+  alone, and "highlighted" and "selected" are two different states that would
+  otherwise both be a background change.
+*/
+.nos-listbox__option.is-active {
+  background: var(--listbox-option-bg-active);
+}
+
+.nos-listbox__empty {
+  padding: var(--space-3);
+  color: var(--listbox-empty-text);
+  font-size: var(--typography-body-sm-font-size);
+}
+
+/* --- Tags -------------------------------------------------------------- */
+
+.nos-tagfield__tags,
+.nos-tagfield__suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  /* ≥8px separation between adjacent targets (§8.13). */
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nos-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  /*
+    The chip is a full touch target in its own right (§8.13).
+
+    The tempting alternative — a small chip with an invisible pseudo-element
+    stretching its remove button out to 44px — was tried and rejected: on a
+    wrapped row of tags those expanded areas overlap their neighbours, which
+    trades a too-small target for a target that deletes the wrong tag.
+  */
+  min-block-size: var(--size-touch-target);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--tag-border);
+  border-radius: var(--radius-full);
+  background: var(--tag-bg);
+  color: var(--tag-text);
+  font-size: var(--typography-body-sm-font-size);
+}
+
+/* The remove button owns the end of the chip, so the chip gives up its padding
+   there rather than pushing a 44px control outside its own border. */
+.nos-tag:has(.nos-tag__remove) {
+  padding-inline-end: 0;
+}
+
+.nos-tag--suggestion {
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.nos-tag__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  min-inline-size: var(--size-touch-target);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--tag-remove);
+  cursor: pointer;
+}
+
+.nos-tag__remove:hover {
+  color: var(--color-text-primary);
+}
+
+.nos-tag__remove:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-ring-offset);
+  border-radius: var(--radius-full);
 }
 
 /* ==========================================================================
@@ -735,14 +992,27 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: var(--space-10);
+  /* §8.13's ≥44px, not the 40px this used to be. A menu is where destructive
+     actions live, and a 40px row with a 4px gap is a mis-tap away from
+     "Delete". */
+  min-height: var(--size-touch-target);
   padding-inline: var(--space-3);
   border-radius: var(--radius-sm);
   color: var(--color-text-primary);
   font-size: var(--typography-body-sm-font-size);
   cursor: pointer;
   user-select: none;
-  outline: none;
+}
+
+/*
+  Radix moves DOM focus onto the highlighted item, so the item needs a real
+  ring. The previous `outline: none` left keyboard users with a background
+  tint as the only indication — which is state by colour alone (§8.13), and
+  invisible in forced-colours mode.
+*/
+.nos-menu__item:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: calc(var(--focus-ring-offset) * -1);
 }
 /* Radix sets data-highlighted for both hover and keyboard, so one rule covers
    pointer and arrow-key navigation identically. */
@@ -901,7 +1171,11 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  min-height: calc(var(--input-height) - var(--space-2));
+  /* The item, not the control around it, is what a thumb aims at — so the item
+     carries the 44px, and the bordered track grows by its own padding (§8.13).
+     Deriving this from `--input-height` produced a 36px target inside a 44px
+     box, which passes a glance and fails a measurement. */
+  min-height: var(--size-touch-target);
   padding-inline: var(--space-3);
   border: 0;
   border-radius: calc(var(--input-radius) - 2px);
@@ -1438,6 +1712,288 @@
 .nos-table__num {
   text-align: end;
   font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------------------------
+   The responsive table (§8.11)
+
+   "On mobile, tables become card lists. A horizontally scrolling table on a
+    phone is a table nobody reads. The same column definitions drive both
+    renderings, so there is no second implementation to keep in sync."
+
+   One `<table>`, two arrangements. Cards are the DEFAULT and the table is the
+   enhancement, because §8.4 is "mobile-first without qualification" and a
+   component that renders wide first flashes a horizontal scrollbar on every
+   phone load before collapsing.
+
+   The switch is a CONTAINER query, not a media query. A table inside a
+   two-column desktop layout is narrow even though the viewport is wide, and a
+   viewport query would render it as a squeezed grid; the container query asks
+   the only question that matters — how much room does this table actually have.
+   The 40rem threshold restates §8.4's `sm` breakpoint, which cannot be a
+   custom property because a query condition cannot read one.
+   -------------------------------------------------------------------------- */
+
+.nos-table-wrap {
+  container-type: inline-size;
+  /*
+    The horizontal scrollport for the wide layout, and the reason the sticky
+    first column has something to stick to. Inert in card mode, where nothing
+    overflows the inline axis.
+  */
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.nos-table__caption {
+  display: block;
+  margin-block-end: var(--space-3);
+  color: var(--color-text-secondary);
+  font-size: var(--typography-body-sm-font-size);
+  text-align: start;
+}
+
+/* --- Card layout: the default ---------------------------------------- */
+
+.nos-table--responsive,
+.nos-table--responsive > thead,
+.nos-table--responsive > tbody,
+.nos-table--responsive > thead > tr,
+.nos-table--responsive > tbody > tr,
+.nos-table--responsive th,
+.nos-table--responsive td {
+  display: block;
+}
+
+/*
+  Changing `display` on a table element drops its implicit role in every
+  engine, which is why the component restates `role="table"`, `role="row"` and
+  `role="cell"` in the markup. Without those the card list is announced as a
+  stack of anonymous divs and the column headers stop being headers.
+*/
+
+.nos-table--responsive > tbody > tr {
+  margin-block-end: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--table-card-border);
+  border-radius: var(--radius-lg);
+  background: var(--table-card-bg);
+}
+
+.nos-table--responsive > tbody > tr:hover {
+  /* No hover lift on a card list: the whole card is not a target (the
+     component deliberately has no row click handler), so an affordance here
+     would promise something that does not happen. */
+  background: var(--table-card-bg);
+}
+
+.nos-table--responsive th,
+.nos-table--responsive td {
+  height: auto;
+  padding-inline: 0;
+  border-bottom: 0;
+}
+
+/* A field row inside a card: label at the start, value at the end. */
+.nos-table--responsive > tbody > tr > td {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-block-size: var(--space-6);
+  padding-block: var(--space-1);
+}
+
+.nos-table__cell-label {
+  color: var(--table-card-label);
+  font-size: var(--typography-caption-font-size);
+  letter-spacing: var(--typography-caption-letter-spacing);
+}
+
+/* The row header is the line a person scans down, so it leads the card. */
+.nos-table--responsive > tbody > tr > .nos-table__cell--title {
+  margin-block-end: var(--space-2);
+  color: var(--color-text-primary);
+  font-size: var(--typography-title-3-font-size);
+  line-height: var(--typography-title-3-line-height);
+  font-weight: var(--typography-title-3-font-weight);
+}
+
+/*
+  A column the caller marked as card-hidden.
+
+  Dropping the seventh column of a lab panel on a 360px phone is the honest
+  move — the alternative is a card so long the next record is off-screen.
+*/
+.nos-table__cell--card-hidden {
+  display: none;
+}
+
+/*
+  The header row becomes a sort bar.
+
+  The alternative — visually hiding `thead` on cards — leaves the sort buttons
+  focusable but invisible, which strands a keyboard user on a control they
+  cannot see. Reusing the same buttons as chips means the card layout gains
+  sorting without a second control to build.
+*/
+.nos-table--responsive > thead > tr {
+  display: flex;
+  flex-wrap: wrap;
+  /* ≥8px between adjacent targets (§8.13). */
+  gap: var(--space-2);
+  margin-block-end: var(--space-3);
+}
+
+.nos-table--responsive > thead th {
+  position: static;
+  padding: 0;
+  background: transparent;
+}
+
+/* A header with no control carries no information on a card — every cell
+   already shows its own label. */
+.nos-table--responsive > thead th:not(:has(.nos-table__sort)) {
+  display: none;
+}
+
+/* Nothing sortable at all: keep the headers for assistive technology, drop the
+   empty bar from the visual layout. */
+.nos-table--responsive > thead:not(:has(.nos-table__sort)) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.nos-table--responsive > thead .nos-table__sort {
+  padding-inline: var(--space-3);
+  margin-inline: 0;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-full);
+  background: var(--input-bg);
+}
+
+/* --- Table layout: the enhancement ----------------------------------- */
+
+@container (min-width: 40rem) {
+  .nos-table--responsive {
+    display: table;
+  }
+  .nos-table--responsive > thead {
+    display: table-header-group;
+  }
+  .nos-table--responsive > tbody {
+    display: table-row-group;
+  }
+  .nos-table--responsive > thead > tr,
+  .nos-table--responsive > tbody > tr {
+    display: table-row;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+  .nos-table--responsive th,
+  .nos-table--responsive td,
+  .nos-table--responsive > tbody > tr > td {
+    display: table-cell;
+    height: var(--table-row-height);
+    padding-block: 0;
+    padding-inline: var(--table-cell-padding-x);
+    border-bottom: 1px solid var(--table-row-border);
+  }
+  .nos-table--responsive > tbody > tr:hover {
+    background: var(--table-row-hover);
+  }
+  .nos-table--responsive > tbody > tr > .nos-table__cell--title {
+    margin: 0;
+    font-size: var(--typography-body-sm-font-size);
+    line-height: var(--typography-body-sm-line-height);
+    font-weight: var(--font-weight-regular);
+  }
+  /* The per-cell label is the card layout's whole reason for existing; in a
+     table the column header is already overhead. */
+  .nos-table__cell-label {
+    display: none;
+  }
+  .nos-table__cell--card-hidden {
+    display: table-cell;
+  }
+  .nos-table--responsive > thead th {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-index-raised);
+    padding-inline: var(--table-cell-padding-x);
+    border-bottom: 1px solid var(--table-header-border);
+    background: var(--table-header-bg);
+  }
+  .nos-table--responsive > thead .nos-table__sort {
+    padding-inline: 0;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+  }
+
+  /*
+    The sticky first column.
+
+    §8.11 asks for it because a wide table scrolled two columns right without
+    it is a grid of anonymous numbers. It needs an opaque fill of its own —
+    a transparent sticky cell smears the columns passing underneath it.
+  */
+  .nos-table--sticky-first > tbody > tr > :first-child {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: var(--z-index-raised);
+    background: var(--table-sticky-bg);
+  }
+  .nos-table--sticky-first > thead > tr > :first-child {
+    /* Above both the sticky row cells and the sticky header row, since it is
+       the intersection of the two. */
+    z-index: var(--z-index-sticky);
+  }
+}
+
+/* --- The sort control ------------------------------------------------- */
+
+.nos-table__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  /* Full touch target (§8.13) — sorting a lab table is done one-handed. */
+  min-block-size: var(--size-touch-target);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+/*
+  Sorted state is carried by weight and by the arrow's direction, not by the
+  accent colour alone (§8.13). `aria-sort` on the header carries it for
+  assistive technology, and the weight change survives forced-colours mode.
+*/
+.nos-table__sort.is-sorted {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+
+.nos-table__sort:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-focus-ring);
+  outline-offset: calc(var(--focus-ring-offset) * -1);
+}
+
+.nos-table__sort-icon {
+  color: var(--table-sort-indicator);
+}
+
+.nos-table__sort-icon.is-sorted {
+  color: var(--table-sort-indicator-active);
 }
 
 /* -------------------------------------------------------------------------

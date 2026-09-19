@@ -29,6 +29,8 @@ export * from './components/Field';
 export * from './components/Navigation';
 export * from './components/Overlay';
 export * from './components/States';
+export * from './components/Table';
+export * from './components/tableModel';
 export * from './components/Toast';
 
 /* Charts (§8.9). The plot layer is plain SVG — no charting library, by C2. */

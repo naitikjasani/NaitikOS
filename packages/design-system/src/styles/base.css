@@ -130,8 +130,11 @@ button, input, select, textarea {
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
+  /* From the focus tokens, not from literals: §8.13 says the ring exists "using
+     a dedicated `--focus-ring` token" precisely so its width and offset cannot
+     drift per-component. A hard-coded 2px here would be the first drift. */
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
   /* A radius on the ring, so it traces the control rather than boxing it. */
   border-radius: var(--radius-sm);
 }
