@@ -13,11 +13,20 @@
  * this card the only route to the inbox is the command palette, which is a
  * surface you have to already know about. Its sibling `/ask` has exactly that
  * problem today.
+ *
+ * ## A hub page: the doors band, and nothing else
+ *
+ * `features/health/screens/HealthOverviewScreen.tsx` settles the five-band
+ * shape every content-bearing overview follows — act, attend, state, record,
+ * doors. This page is the doors band on its own, because it owns no data and
+ * therefore has nothing to act on, attend to, or record. Four empty bands here
+ * would buy a symmetry with four blank rectangles, which is the exact thing
+ * §8.8 rules out.
  */
 
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { Card, CardBody, Inline, Stack, Text } from '@naitikos/design-system';
+import { Card, CardBody, Stack, Text } from '@naitikos/design-system';
 
 import { PageContainer } from '@/components/shell';
 
@@ -64,16 +73,19 @@ export default function LifePage(): ReactNode {
           <Card key={module.href} variant="interactive">
             <CardBody>
               <Link href={module.href} className="nos-card__link">
-                <Inline justify="between" align="center">
-                  <Stack gap="1">
-                    <Text role="title-3" as="h2">
-                      {module.title}
-                    </Text>
-                    <Text role="body-sm" tone="secondary">
-                      {module.description}
-                    </Text>
-                  </Stack>
-                </Inline>
+                {/* A `Stack`, not the `Inline justify="between"` that wrapped a
+                    single child here: a flex row with one item distributes
+                    nothing, and at 360px it added a wrap opportunity the title
+                    and description do not want. §8.4's primitives are the
+                    layout, so the layout should be the one that is meant. */}
+                <Stack gap="1">
+                  <Text role="title-3" as="h2">
+                    {module.title}
+                  </Text>
+                  <Text role="body-sm" tone="secondary">
+                    {module.description}
+                  </Text>
+                </Stack>
               </Link>
             </CardBody>
           </Card>

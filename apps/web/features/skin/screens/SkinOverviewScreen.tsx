@@ -6,8 +6,10 @@ import { useQuery } from '@tanstack/react-query';
 import { REGION_LABELS, SKIN_STATE_LABELS, shiftDayKey } from '@naitikos/core';
 import {
   Badge,
+  Button,
   Card,
   CardBody,
+  CardHeader,
   EmptyState,
   ErrorState,
   Inline,
@@ -21,6 +23,12 @@ import { fetchProducts, fetchSkinOverview } from '../services/skinClient';
 
 /**
  * `/body/skin` — the module overview.
+ *
+ * Laid out in the five bands settled in `HealthOverviewScreen` — act, attend,
+ * state, record, doors — for the reason argued there: §8.4's layout consistency
+ * is what stops sixteen domains reading as sixteen products. Skin has no
+ * *attend* band, because nothing in this module is a thing to raise with
+ * somebody; a flare is history and belongs in *record*.
  *
  * ## Three lines, not one
  *
@@ -37,6 +45,13 @@ import { fetchProducts, fetchSkinOverview } from '../services/skinClient';
  * word resembling "cause". §14.2's Finding 9 is why: a suspected-trigger
  * ranking over n=1 with a fortnight of lag would be wrong far more often than
  * the twenty percent that destroys a warning's credibility.
+ *
+ * ## Nothing on this screen is coloured by how the skin is
+ *
+ * A state of 1 is not red and a state of 5 is not green. §8.2's rule holds
+ * hardest in the module the operator is most likely to open on a bad day: the
+ * region rows carry the number *and* the word for it, which is what §8.13's
+ * colour-alone prohibition asks for and what a scale needs anyway.
  */
 
 const WINDOW_DAYS = 90;
@@ -56,7 +71,12 @@ export function SkinOverviewScreen({ dayKey }: { readonly dayKey: string }): Rea
 
   if (overview.isLoading) return <LoadingState label="Loading" />;
   if (overview.error !== null) {
-    return <ErrorState title="Could not load this view" description="The record is intact; this view is not." />;
+    return (
+      <ErrorState
+        title="Could not load this view"
+        description="The record is intact; this view is not."
+      />
+    );
   }
 
   const data = overview.data;
@@ -66,46 +86,32 @@ export function SkinOverviewScreen({ dayKey }: { readonly dayKey: string }): Rea
     products.data?.products.find((item) => item.product.id === id)?.product.name ?? 'a product';
 
   return (
-    <Stack gap="5">
-      <Inline gap="2" wrap>
-        <Link className="nos-inline-link" href="/body/skin/state">
-          <Text role="body-sm" as="span">
-            Log today
-          </Text>
-        </Link>
-        <Link className="nos-inline-link" href="/body/skin/routine">
-          <Text role="body-sm" as="span">
-            Routine
-          </Text>
-        </Link>
-        <Link className="nos-inline-link" href="/body/skin/products">
-          <Text role="body-sm" as="span">
-            Products
-          </Text>
-        </Link>
-        <Link className="nos-inline-link" href="/body/skin/photos">
-          <Text role="body-sm" as="span">
-            Photos
-          </Text>
-        </Link>
-        <Link className="nos-inline-link" href="/body/skin/regions">
-          <Text role="body-sm" as="span">
-            Regions
-          </Text>
-        </Link>
-        <Link className="nos-inline-link" href="/body/skin/treatments">
-          <Text role="body-sm" as="span">
-            Treatments
-          </Text>
-        </Link>
+    <Stack gap="6">
+      {/* 1 — Act. §4.2 measures this module by whether the log happens daily,
+          so the log is the first thing on the page and not a link in a row of
+          six. */}
+      <Inline gap="3" wrap>
+        <Button asChild variant="primary">
+          <Link href="/body/skin/state">Log today</Link>
+        </Button>
+        <Button asChild variant="secondary">
+          <Link href="/body/skin/photos">Take a photo</Link>
+        </Button>
       </Inline>
 
+      {/* 3 — State. */}
       {data.states.length === 0 ? (
-        <EmptyState
-          icon="domain.skin"
-          title="Nothing logged yet"
-          description="A skin log is one scale per region and takes about ten seconds. The chart appears once there are a few days."
-        />
+        <Card variant="outlined">
+          <CardHeader as="h2" title="State by region" />
+          <CardBody>
+            <EmptyState
+              size="sm"
+              icon="domain.skin"
+              title="Nothing logged yet"
+              description="A skin log is one scale per region and takes about ten seconds. The chart draws itself once there are a few days of them — until then there is nothing to plot, and a line through one point would be a shape the data has not earned."
+            />
+          </CardBody>
+        </Card>
       ) : (
         <>
           <TrendChart
@@ -130,43 +136,79 @@ export function SkinOverviewScreen({ dayKey }: { readonly dayKey: string }): Rea
           />
 
           <Card variant="outlined">
-            <CardBody>
-              <Stack gap="3">
-                <Text role="title-3" as="h2">
-                  Latest by region
-                </Text>
-                {data.regions.map((region) => (
-                  <Inline key={region.region} justify="between" align="center">
-                    <Text role="body-sm" as="span">
-                      {REGION_LABELS[region.region as keyof typeof REGION_LABELS] ?? region.region}
-                    </Text>
-                    <Text role="mono" as="span">
-                      {region.latestState === null
-                        ? '—'
-                        : `${String(region.latestState)} · ${SKIN_STATE_LABELS[region.latestState - 1] ?? ''}`}
-                      {region.latestLesionCount === null
-                        ? ''
-                        : ` · ${String(region.latestLesionCount)} lesions`}
-                      {` · ${String(region.recordedDays)} days`}
-                    </Text>
-                  </Inline>
-                ))}
-              </Stack>
+            <CardHeader
+              as="h2"
+              title="Latest by region"
+              actions={
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/body/skin/regions">Per region</Link>
+                </Button>
+              }
+            />
+            <CardBody
+              empty={{
+                title: 'No regions recorded',
+                description:
+                  'Each log records face, chest and back separately, because an aggregate hides a chest flare during a good face week.',
+              }}
+            >
+              {data.regions.length === 0 ? null : (
+                <Stack gap="3">
+                  {data.regions.map((region) => (
+                    <Inline key={region.region} justify="between" align="center" gap="3" wrap>
+                      <Text role="body-sm" as="span">
+                        {REGION_LABELS[region.region as keyof typeof REGION_LABELS] ?? region.region}
+                      </Text>
+                      {/*
+                        The number and the word for it, never one without the
+                        other, and never a colour instead of either. §8.2: the
+                        scale is reported, not judged.
+                      */}
+                      <Text role="mono" as="span">
+                        {region.latestState === null
+                          ? '—'
+                          : `${String(region.latestState)} · ${SKIN_STATE_LABELS[region.latestState - 1] ?? ''}`}
+                        {region.latestLesionCount === null
+                          ? ''
+                          : ` · ${String(region.latestLesionCount)} lesions`}
+                        {` · ${String(region.recordedDays)} days`}
+                      </Text>
+                    </Inline>
+                  ))}
+                </Stack>
+              )}
             </CardBody>
           </Card>
         </>
       )}
 
-      {data.flares.length > 0 && (
-        <Card variant="outlined">
-          <CardBody>
+      {/* 4 — Record. The card renders whether or not there are flares: a
+          section that disappears when empty makes the module look smaller than
+          it is, and this one's empty state is the clearest place to say what
+          the system will and will not claim (§8.8). */}
+      <Card variant="outlined">
+        <CardHeader
+          as="h2"
+          title="Flares"
+          description="What changed, not what caused it. The system does not have the evidence to say which."
+          actions={
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/body/skin/products">Products</Link>
+            </Button>
+          }
+        />
+        <CardBody
+          empty={{
+            title: 'No flares in the last 90 days',
+            description:
+              'When one is recorded, this lists every product change in the three weeks before it, in date order — a list of facts, with nothing ranked and nothing named as a cause.',
+          }}
+        >
+          {data.flares.length === 0 ? null : (
             <Stack gap="3">
-              <Text role="title-3" as="h2">
-                Flares
-              </Text>
               {data.flares.map((flare) => (
                 <Stack gap="1" key={flare.dayKey}>
-                  <Inline justify="between" align="center">
+                  <Inline justify="between" align="center" gap="3" wrap>
                     <Text role="body-sm" as="span">
                       {flare.dayKey}
                     </Text>
@@ -193,13 +235,37 @@ export function SkinOverviewScreen({ dayKey }: { readonly dayKey: string }): Rea
                   )}
                 </Stack>
               ))}
-              <Text role="caption" tone="tertiary">
-                What changed, not what caused it. The system does not have the evidence to say which.
-              </Text>
             </Stack>
-          </CardBody>
-        </Card>
-      )}
+          )}
+        </CardBody>
+      </Card>
+
+      {/* 5 — Doors. */}
+      <Card variant="flat">
+        <CardHeader as="h2" title="Everything in Skin" />
+        <CardBody>
+          {/*
+            Buttons, not the row of 13px inline links this used to be. §8.13
+            wants ≥44×44px with ≥8px separation; `size="sm"` carries a full-size
+            hit area behind a small box, and the gap is `3` because two of them
+            any closer would overlap each other's targets.
+          */}
+          <Inline gap="3" wrap>
+            {[
+              { href: '/body/skin/state', label: 'Daily log' },
+              { href: '/body/skin/routine', label: 'Routine' },
+              { href: '/body/skin/products', label: 'Products' },
+              { href: '/body/skin/photos', label: 'Photos' },
+              { href: '/body/skin/regions', label: 'Regions' },
+              { href: '/body/skin/treatments', label: 'Treatments' },
+            ].map((door) => (
+              <Button key={door.href} asChild variant="ghost" size="sm">
+                <Link href={door.href}>{door.label}</Link>
+              </Button>
+            ))}
+          </Inline>
+        </CardBody>
+      </Card>
     </Stack>
   );
 }

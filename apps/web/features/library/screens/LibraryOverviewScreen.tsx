@@ -25,6 +25,15 @@ import type { LibraryOverviewBoard } from '@/lib/platform/library';
  * intervention" is satisfied by the register editors those modules already
  * ship, and a second editor over the same rows would be the second source of
  * truth §9.3(4) exists to prevent.
+ *
+ * ## A hub page, so it has one band and not five
+ *
+ * `HealthOverviewScreen` settles the five-band shape every content-bearing
+ * overview follows — act, attend, state, record, doors. Library, like `/body`
+ * and `/life`, is *only* the doors band: it owns no data, so there is nothing
+ * to act on, attend to, or record. Rendering four empty bands to look like its
+ * siblings would be a symmetry bought with four blank rectangles, which is the
+ * opposite of what §8.8 asks for.
  */
 
 type Door = {
@@ -105,10 +114,28 @@ export function LibraryOverviewScreen({ board }: { readonly board: LibraryOvervi
                       {door.description}
                     </Text>
                   </Stack>
-                  {/* A count, or the reason there is none. §10.9: "insufficient
-                      data" rather than a confident zero. */}
+                  {/*
+                    A count, or the reason there is none.
+
+                    `caution` is the one tone permitted here and only for the
+                    read failure: §8.2's single exception is "sync failure and
+                    data loss risk… because those are *system* states requiring
+                    user action, not statements about the user". A registry
+                    count is neither health data nor a judgement, so it is
+                    neutral whatever its value.
+
+                    Zero renders as "none yet" rather than "0 registered".
+                    §10.9 prefers the honest sentence to the confident zero, and
+                    on day one every one of these is zero — six grey `0`s down
+                    the right edge of the page is a picture of an empty product
+                    rather than of a record waiting to be written.
+                  */}
                   <Badge tone={door.count === null ? 'caution' : 'neutral'}>
-                    {door.count === null ? 'not readable' : `${String(door.count)} ${door.unit}`}
+                    {door.count === null
+                      ? 'not readable'
+                      : door.count === 0
+                        ? 'none yet'
+                        : `${String(door.count)} ${door.unit}`}
                   </Badge>
                 </Inline>
               </Link>

@@ -7,6 +7,7 @@
  */
 
 import type { ReactNode } from 'react';
+import { ErrorState } from '@naitikos/design-system';
 
 import { PageContainer } from '@/components/shell';
 import { MoneyOverviewScreen } from '@/features/money';
@@ -31,7 +32,12 @@ export default async function MoneyPage(): Promise<ReactNode> {
       {overview.ok ? (
         <MoneyOverviewScreen overview={overview.value} />
       ) : (
-        <p>Could not load money: {overview.error.message}</p>
+        /* See `/work/page.tsx` for why this is a designed state rather than a
+           paragraph with a driver error in it. */
+        <ErrorState
+          title="Could not load Money"
+          description="Nothing is lost — this is a read that failed, not a record that did. Reloading usually resolves it."
+        />
       )}
     </PageContainer>
   );

@@ -3,7 +3,18 @@
 import { useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Badge, Button, Card, CardBody, Divider, EmptyState, Inline, Stack, Text } from '@naitikos/design-system';
+import {
+  Badge,
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  Divider,
+  EmptyState,
+  Inline,
+  Stack,
+  Text,
+} from '@naitikos/design-system';
 
 import type { InsightRow } from '@/lib/platform/insights';
 import { setDisposition } from '../services/insightClient';
@@ -37,6 +48,20 @@ import { setDisposition } from '../services/insightClient';
  * useful is information about the system, not about them — so the dismiss
  * control is as prominent as the acted-on one, and neither is styled as the
  * correct answer.
+ *
+ * ## The shape, and where it departs from a pillar
+ *
+ * `HealthOverviewScreen` settles the five bands every overview follows. This
+ * screen has three of them: *state* (the findings, or the designed absence of
+ * any), *record* (the bar they had to clear), and *doors*. There is no act
+ * band, because there is nothing here to log — the whole surface is the system
+ * reporting on itself. There is no attend band either, since the findings *are*
+ * the attention, and a second one above them would be a heading over a heading.
+ *
+ * The bar sits below the findings rather than above, and that ordering is the
+ * point of the section: it is the answer to the question the findings provoke —
+ * *should I believe any of this?* — and an answer read before its question is a
+ * disclaimer.
  */
 
 export type InsightInboxScreenProps = {
@@ -65,12 +90,20 @@ export function InsightInboxScreen({
   };
 
   return (
-    <Stack gap="5">
+    <Stack gap="6">
+      {/* 3 — State: what the system noticed, or the designed absence of it. */}
       {insights.length === 0 ? (
+        /*
+          `data.chart` rather than `domain.streak`, which is what sat here.
+          §1.5 removes the concept of a streak from this product entirely — "a
+          missed day costs one day, never everything before it" — and an icon
+          named for one on the surface that most needs to look statistically
+          sober was a small contradiction in a place that cannot afford any.
+        */
         <EmptyState
-          icon="domain.streak"
+          icon="data.chart"
           title="Nothing here"
-          description="An empty inbox is the expected state. A finding only appears after it has survived a minimum sample size, a correction across the whole night's tests, a hypothesis registered in advance, and confirmation in a second independent window."
+          description="An empty inbox is the expected state, most nights. A finding only appears after it has survived a minimum sample size, a correction across the whole night's tests, a hypothesis registered in advance, and confirmation in a second independent window."
         />
       ) : (
         <Stack gap="3">
@@ -118,7 +151,13 @@ export function InsightInboxScreen({
                     {insight.limitations ?? 'No limitation recorded, which is itself a defect — every finding must carry one.'}
                   </Text>
 
-                  <Inline gap="2" justify="end" wrap>
+                  {/*
+                    `gap="3"`, not `2`. A small button's 44px hit area is drawn
+                    by a pseudo-element that reaches 6px past its box, so two of
+                    them closer than `--space-3` claim the same pixels — §8.13's
+                    "≥8px separation" enforced at the only place it can be.
+                  */}
+                  <Inline gap="3" justify="end" wrap>
                     {/* Neither is styled as the correct answer. §4.13 makes a
                         dismissal information about the system, not about the
                         operator. */}
@@ -150,45 +189,58 @@ export function InsightInboxScreen({
         </Stack>
       )}
 
-      <Stack gap="1">
-        {/* §4.13 pairs the two surfaces: the inbox is what the system noticed,
-            Ask is for what it did not. */}
-        <Inline gap="3" wrap>
-          <Link className="nos-inline-link" href="/ask">
-            Ask something the inbox did not raise
-          </Link>
-          <Link className="nos-inline-link" href="/insights/archive">
-            Everything ever surfaced
-          </Link>
-          {/*
-            §10.9's calibration surface. It had no inbound link from anywhere in
-            the application until the inbox moved up beside it — an orphaned
-            route, reachable only by typing the URL.
+      {/* 4 — Record: what the bar was, whether or not anything cleared it. */}
+      <Card variant="outlined">
+        <CardHeader as="h2" title="The bar a finding has to clear" />
+        <CardBody>
+          <Stack gap="2">
+            <Text role="body-sm" tone="secondary">
+              {baselineMessage}
+            </Text>
+            {/*
+              The comparison count, printed. §10.6 control 2 corrects across the
+              whole battery, and showing the size of that correction is what lets
+              the operator judge how hard the bar was — an insight surface that hid
+              its own denominator would be asking for trust it had not shown.
+            */}
+            <Text role="body-sm" tone="secondary">
+              {comparisons === 0
+                ? 'No statistical tests were run last night.'
+                : `${String(comparisons)} statistical ${comparisons === 1 ? 'test was' : 'tests were'} run last night, corrected together.`}
+            </Text>
+          </Stack>
+        </CardBody>
+      </Card>
 
-            It belongs here rather than anywhere else, because calibration is
-            the answer to the question this page provokes: *should I believe
-            any of this?* A system that surfaces findings and hides its own
-            track record is asking for trust it has not shown the working for.
-          */}
-          <Link className="nos-inline-link" href="/insights/calibration">
-            How well its predictions have held up
-          </Link>
-        </Inline>
-        <Text role="caption" tone="tertiary">
-          {baselineMessage}
-        </Text>
-        {/*
-          The comparison count, printed. §10.6 control 2 corrects across the
-          whole battery, and showing the size of that correction is what lets
-          the operator judge how hard the bar was — an insight surface that hid
-          its own denominator would be asking for trust it had not shown.
-        */}
-        <Text role="caption" tone="tertiary">
-          {comparisons === 0
-            ? 'No statistical tests were run last night.'
-            : `${String(comparisons)} statistical ${comparisons === 1 ? 'test was' : 'tests were'} run last night, corrected together.`}
-        </Text>
-      </Stack>
+      {/* 5 — Doors. */}
+      <Card variant="flat">
+        <CardHeader as="h2" title="Where else to look" />
+        <CardBody>
+          <Inline gap="3" wrap>
+            {/* §4.13 pairs the two surfaces: the inbox is what the system
+                noticed, Ask is for what it did not. */}
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/ask">Ask something the inbox did not raise</Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/insights/archive">Everything ever surfaced</Link>
+            </Button>
+            {/*
+              §10.9's calibration surface. It had no inbound link from anywhere in
+              the application until the inbox moved up beside it — an orphaned
+              route, reachable only by typing the URL.
+
+              It belongs here rather than anywhere else, because calibration is
+              the answer to the question this page provokes: *should I believe
+              any of this?* A system that surfaces findings and hides its own
+              track record is asking for trust it has not shown the working for.
+            */}
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/insights/calibration">How well its predictions have held up</Link>
+            </Button>
+          </Inline>
+        </CardBody>
+      </Card>
     </Stack>
   );
 }

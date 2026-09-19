@@ -1,6 +1,7 @@
 /** `/work` — the pillar overview (§3.2, §4.8). */
 
 import type { ReactNode } from 'react';
+import { ErrorState } from '@naitikos/design-system';
 
 import { PageContainer } from '@/components/shell';
 import { WorkOverviewScreen } from '@/features/work';
@@ -25,7 +26,17 @@ export default async function WorkPage(): Promise<ReactNode> {
       {overview.ok ? (
         <WorkOverviewScreen overview={overview.value} />
       ) : (
-        <p>Could not load work: {overview.error.message}</p>
+        /*
+          A designed failure, not a bare paragraph with a `DomainError.message`
+          printed into it — which is what was here, and which `core`'s own
+          definition of that field forbids: "`message` is developer-facing and
+          appears in logs", never on a screen. §5.12 sets the tone the operator
+          gets instead: the record is intact and nothing has been lost.
+        */
+        <ErrorState
+          title="Could not load Work"
+          description="Nothing is lost — this is a read that failed, not a record that did. Reloading usually resolves it."
+        />
       )}
     </PageContainer>
   );

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { dayKeyInZone, isoFromMillis, systemClock } from '@naitikos/core';
+import { ErrorState } from '@naitikos/design-system';
 
 import { PageContainer } from '@/components/shell';
 import { getDb, requireServerPermission } from '@/lib/auth/session';
@@ -42,7 +43,17 @@ export default async function InsightInboxPage(): Promise<ReactNode> {
           comparisons={outcome.value.comparisons}
         />
       ) : (
-        <p>Could not load insights.</p>
+        /*
+          Distinct from the inbox's own empty state, and the distinction is the
+          whole point: "nothing was found last night" and "we could not look" are
+          different sentences, and §8.9(3) will not let the second be rendered as
+          the first. An insight surface that showed a read failure as silence
+          would be the one lie it cannot afford.
+        */
+        <ErrorState
+          title="Could not load the inbox"
+          description="This is a read that failed, not an empty night. Nothing has been dismissed and nothing has been missed — reloading usually resolves it."
+        />
       )}
     </PageContainer>
   );

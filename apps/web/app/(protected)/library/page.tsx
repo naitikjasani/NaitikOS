@@ -1,6 +1,7 @@
 /** `/library` — the pillar overview (§3.2). */
 
 import type { ReactNode } from 'react';
+import { ErrorState } from '@naitikos/design-system';
 
 import { PageContainer } from '@/components/shell';
 import { LibraryOverviewScreen } from '@/features/library';
@@ -24,7 +25,12 @@ export default async function LibraryPage(): Promise<ReactNode> {
       {board.ok ? (
         <LibraryOverviewScreen board={board.value} />
       ) : (
-        <p>Could not load the library: {board.error.message}</p>
+        /* See `/work/page.tsx`. A registry that will not load is a read
+           failure, and saying so is cheaper than a paragraph nobody can act on. */
+        <ErrorState
+          title="Could not load the Library"
+          description="Nothing is lost — the registries are written by the modules that own them and are untouched by this. Reloading usually resolves it."
+        />
       )}
     </PageContainer>
   );
