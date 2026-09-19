@@ -70,6 +70,33 @@ async function authFetch(path: string, init: RequestInit = {}): Promise<Response
   });
 }
 
+/**
+ * Retry once after a stale CSRF cookie/header pair is rejected.
+ *
+ * Preview tabs can survive a deployment or host change with an old readable
+ * CSRF cookie. The server correctly rejects that pair; refreshing the page
+ * alone does not help because the proxy sees the old cookie as present. Clear
+ * only the non-credential CSRF cookie, let the proxy seed a fresh token, then
+ * retry the original request once.
+ */
+async function authMutation(path: string, init: RequestInit = {}): Promise<Response> {
+  const response = await authFetch(path, init);
+  if (response.status !== 403 || typeof document === 'undefined') return response;
+
+  let isCsrfRejection = false;
+  try {
+    const body = (await response.clone().json()) as { error?: { code?: unknown } };
+    isCsrfRejection = typeof body.error?.code === 'string' && body.error.code.startsWith('csrf_');
+  } catch {
+    return response;
+  }
+  if (!isCsrfRejection) return response;
+
+  document.cookie = `${CSRF_COOKIE_NAME}=; Max-Age=0; path=/`;
+  await fetch(window.location.pathname, { credentials: 'same-origin', cache: 'no-store' });
+  return authFetch(path, init);
+}
+
 /** Normalise any failure response into a renderable error. */
 async function toClientError(response: Response): Promise<AuthClientError> {
   const fallback: AuthClientError = {
@@ -112,7 +139,7 @@ export async function signIn(input: {
   // produces the latter.
   redirectTo?: string | undefined;
 }): Promise<SignInResult> {
-  const response = await authFetch('/api/auth/sign-in', {
+  const response = await authMutation('/api/auth/sign-in', {
     method: 'POST',
     body: JSON.stringify(input),
   });
