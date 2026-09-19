@@ -1,4 +1,11 @@
+import path from 'node:path';
+import { loadEnvConfig } from '@next/env';
 import type { NextConfig } from 'next';
+
+// Next runs from apps/web in this workspace, while v0 injects project
+// variables at the repository root. Load that environment before the config
+// and middleware bundles are evaluated.
+loadEnvConfig(path.resolve(process.cwd(), '../..'));
 
 /**
  * Next configuration.
