@@ -4,6 +4,8 @@ import { useState, type ReactNode } from 'react';
 import { MAX_RPE, MIN_RPE, RPE_STEP, type Exercise, type SetPrefill } from '@naitikos/core';
 import { Badge, Button, Card, CardBody, Inline, NumberField, Stack, Text } from '@naitikos/design-system';
 
+import type { LoggedSet } from '../services/liveSessionStore';
+
 /**
  * The one control the whole module is arranged around.
  *
@@ -13,7 +15,33 @@ import { Badge, Button, Card, CardBody, Inline, NumberField, Stack, Text } from 
  *
  * So the fields arrive **filled**, the prefill's provenance is stated on the
  * card ("last time: 60 kg × 8, 10 Aug"), and the primary action is a single
- * full-width button. A set that is a repeat of last week costs one tap.
+ * full-width button.
+ *
+ * ## The tap budget, which is the specification
+ *
+ * A set that repeats last week costs **one tap**, and that is true of a
+ * unilateral set too. It used not to be: a unilateral movement required
+ * choosing a side and *then* pressing Log, two taps for a decision the operator
+ * had already made. The side chooser is therefore not a chooser any more — it
+ * *is* the log button, twice: "Log left" and "Log right". Nothing is guessed
+ * (see below), and nothing is asked twice.
+ *
+ * ## The button says what it is about to record
+ *
+ * `Log 60 kg × 8`, not `Log set`. The whole design of this screen is that the
+ * operator confirms rather than types, and a confirm button whose label does not
+ * name what is being confirmed asks for a blind tap — which is exactly how
+ * last week's numbers get recorded as this week's on the set where the operator
+ * meant to add a plate and the stepper did not register. The label is the
+ * read-back, and it costs nothing.
+ *
+ * ## What has already been done, at the point of doing the next one
+ *
+ * The sets already logged *for this movement* are listed on the card. §12's
+ * criterion is a session logged "under fatigue"; the question asked most often
+ * under fatigue is "was that my third or my fourth?", and answering it used to
+ * mean scrolling up to a flat chronological list and counting. `Set 4` plus
+ * `60×8 · 60×8 · 60×7` answers it without moving the thumb.
  *
  * ## Two things that are deliberately not prefilled
  *
@@ -22,7 +50,9 @@ import { Badge, Button, Card, CardBody, Inline, NumberField, Stack, Text } from 
  *
  * **Side.** A unilateral movement alternates, and guessing wrong is worse than
  * asking — the two sides are two sets, and mislabelling them corrupts the
- * per-side breakdown permanently (observations are append-only, §9.1).
+ * per-side breakdown permanently (observations are append-only, §9.1). Which is
+ * why the two log buttons are *equal*: neither is primary-and-the-other-not, so
+ * nothing about the layout suggests an answer the operator has not given.
  */
 
 export type SetDraft = {
@@ -41,6 +71,8 @@ export type SetEditorProps = {
   readonly isQueueing?: boolean;
   /** Shown when the session has no bodyweight and this movement needs one. */
   readonly bodyweightKnown: boolean;
+  /** This movement's sets so far in this session, in the order they were logged. */
+  readonly loggedSets: readonly LoggedSet[];
 };
 
 export function SetEditor({
@@ -50,6 +82,7 @@ export function SetEditor({
   onLog,
   isQueueing = false,
   bodyweightKnown,
+  loggedSets,
 }: SetEditorProps): ReactNode {
   const [draft, setDraft] = useState<SetDraft>(() => fromPrefill(prefill));
 
@@ -76,33 +109,51 @@ export function SetEditor({
   }
 
   const needsSide = exercise.isUnilateral;
-  const canLog = draft.reps !== null && draft.reps > 0 && (!needsSide || draft.side !== null);
+  const canLog = draft.reps !== null && draft.reps > 0;
+
+  const log = (side: 'left' | 'right' | null): void => {
+    onLog({ ...draft, side });
+  };
+
+  /** `60 kg × 8`, or `× 8` for a movement carrying no external load. */
+  const readback =
+    draft.load === null || draft.load === 0
+      ? `× ${String(draft.reps ?? 0)}`
+      : `${String(draft.load)} ${draft.loadUnit} × ${String(draft.reps ?? 0)}`;
 
   return (
     <Card variant="outlined">
       <CardBody>
         <Stack gap="3">
-          <Inline justify="between" align="center">
-            <Stack gap="1">
+          <Stack gap="1">
+            <Inline justify="between" align="center" gap="2">
               <Text role="title-3" as="h3">
                 {exercise.name}
               </Text>
-              <Text role="caption" tone="tertiary">
-                Set {setNumber}
+              <Badge tone="neutral">Set {setNumber}</Badge>
+            </Inline>
+
+            {loggedSets.length > 0 && (
+              <Text role="mono" as="p" tone="secondary">
+                {loggedSets.map(describeLoggedSet).join(' · ')}
               </Text>
-            </Stack>
+            )}
 
             {/*
               The provenance of the numbers already in the fields. Without it a
               prefilled value is indistinguishable from a recorded one, which is
               a data-integrity problem wearing a convenience hat.
+
+              On its own line rather than opposite the exercise name: at 360px
+              "Romanian Deadlift" and "Last time: 100 kg × 8" do not share a row,
+              and the one that wraps to three words is the one that matters.
             */}
             {prefill.source !== 'none' && prefill.fromDayKey !== null && (
-              <Badge tone="neutral" icon="nav.timeline">
+              <Text role="caption" as="p" tone="tertiary">
                 Last time: {prefill.load ?? '—'} {prefill.loadUnit} × {prefill.reps ?? '—'}
-              </Badge>
+              </Text>
             )}
-          </Inline>
+          </Stack>
 
           {exercise.isBodyweight && !bodyweightKnown && (
             /*
@@ -150,45 +201,64 @@ export function SetEditor({
             hint="Optional. 10 means no further reps were possible."
           />
 
-          {needsSide && (
-            <Stack gap="1">
-              <Text role="caption" tone="secondary">
-                Side
-              </Text>
-              <Inline gap="2">
-                {(['left', 'right'] as const).map((side) => (
-                  <Button
-                    key={side}
-                    variant={draft.side === side ? 'primary' : 'secondary'}
-                    fullWidth
-                    onClick={() => {
-                      setDraft((current) => ({ ...current, side }));
-                    }}
-                  >
-                    {side === 'left' ? 'Left' : 'Right'}
-                  </Button>
-                ))}
-              </Inline>
-            </Stack>
+          {/*
+            The primary action, at the bottom edge of the card and full width.
+            §8.13's one-handed case: "a thumb reaches the bottom edge of a phone
+            and the middle of it, not the top-right corner."
+          */}
+          {needsSide ? (
+            <Inline gap="2" align="center" wrap={false}>
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
+                isLoading={isQueueing}
+                disabled={!canLog}
+                onClick={() => {
+                  log('left');
+                }}
+              >
+                Log left
+              </Button>
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
+                isLoading={isQueueing}
+                disabled={!canLog}
+                onClick={() => {
+                  log('right');
+                }}
+              >
+                Log right
+              </Button>
+            </Inline>
+          ) : (
+            <Button
+              variant="primary"
+              size="lg"
+              fullWidth
+              isLoading={isQueueing}
+              disabled={!canLog}
+              iconStart="action.confirm"
+              onClick={() => {
+                log(null);
+              }}
+            >
+              Log {readback}
+            </Button>
           )}
-
-          <Button
-            variant="primary"
-            size="lg"
-            fullWidth
-            isLoading={isQueueing}
-            disabled={!canLog}
-            iconStart="action.confirm"
-            onClick={() => {
-              onLog(draft);
-            }}
-          >
-            Log set
-          </Button>
         </Stack>
       </CardBody>
     </Card>
   );
+}
+
+/** `60×8`, `60×8 L`, `×12`. Compact enough that six of them fit one line at 360px. */
+function describeLoggedSet(set: LoggedSet): string {
+  const core = set.load === null || set.load === 0 ? `×${String(set.reps ?? 0)}` : `${String(set.load)}×${String(set.reps ?? 0)}`;
+  if (set.side === null) return core;
+  return `${core} ${set.side === 'left' ? 'L' : 'R'}`;
 }
 
 function fromPrefill(prefill: SetPrefill): SetDraft {

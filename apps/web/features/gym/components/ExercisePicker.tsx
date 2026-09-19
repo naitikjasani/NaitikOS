@@ -10,6 +10,28 @@ import { Badge, EmptyState, Inline, SearchField, Sheet, Stack, Text } from '@nai
  * §4.1's design note is unambiguous about the standard: "under fatigue,
  * mid-session, an exact-match search box is a P1 violation."
  *
+ * ## Recents are the path; search is the fallback
+ *
+ * §4.3 states the hierarchy that §4.1 assumes: "recents and frequents — one
+ * tap, covers the large majority of real intake for a person who eats broadly
+ * the same things … search — the fallback, not the default." Training is *more*
+ * repetitive than eating, not less; a lifter on a program performs the same
+ * twelve movements for a mesocycle.
+ *
+ * Two things follow, and both used to be the other way round.
+ *
+ * **The recents are not scoped to this session.** They were, which meant the
+ * list was empty at the exact moment it was most valuable — the first movement
+ * of the workout — so every session began with a search. `liveSessionStore`
+ * now remembers them across sessions, on the device.
+ *
+ * **The search field is not focused on open.** Autofocusing it raises the
+ * software keyboard, which on a phone covers the bottom half of the screen:
+ * the half the recents are in, and the half a thumb can reach (§8.13). It
+ * turned a sheet whose top item is usually the right answer into a sheet
+ * showing four rows and a keyboard. The operator who wants to type taps the
+ * field, which costs one tap and is the *uncommon* path.
+ *
  * ## Ranking happens on the device
  *
  * The whole library is loaded once and `core`'s `searchExercises` ranks it
@@ -64,8 +86,6 @@ export function ExercisePicker({
           value={term}
           onValueChange={setTerm}
           placeholder="bench, squat, rdl…"
-          // Focused on open: the operator came here to type.
-          autoFocus
         />
 
         {/*
@@ -73,9 +93,14 @@ export function ExercisePicker({
           Most sessions repeat last week's, so the fastest path is usually a tap
           rather than a search — and showing them *under* a search box the
           operator has already started using would be noise.
+
+          `gap-2` rather than `gap-1` throughout: these rows are full-width
+          touch targets stacked directly on one another, and §8.13's "≥ 8px
+          separation. Non-negotiable for gym use" is a rule about the space
+          *between* targets, which `gap-1` (4px) breaks.
         */}
         {term === '' && recent.length > 0 && (
-          <Stack gap="1">
+          <Stack gap="2">
             <Text role="caption" tone="tertiary">
               Recent
             </Text>
@@ -92,7 +117,7 @@ export function ExercisePicker({
             description="Try a shorter word, or part of the equipment — “db”, “cable”."
           />
         ) : (
-          <Stack gap="1">
+          <Stack gap="2">
             {results.slice(0, 40).map((exercise) => (
               <ExerciseRow key={exercise.id} exercise={exercise} onSelect={choose} />
             ))}
