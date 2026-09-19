@@ -116,8 +116,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       warningSigns: input.warningSigns ?? null,
       copingStrategies: input.copingStrategies ?? null,
       reasonsToLive: input.reasonsToLive ?? null,
-      contacts: (input.contacts ?? []).map(normaliseContact),
-      professionalContacts: (input.professionalContacts ?? []).map(normaliseContact),
+      /*
+       * Forwarded only when the client actually sent them.
+       *
+       * `?? []` was here, and it is how an edit to the warning signs deleted
+       * the operator's emergency contacts: the authoring screen has no editor
+       * for `professionalContacts`, so it never sends the field, and an empty
+       * array reaching the upsert is indistinguishable from a deliberate
+       * clear. The contract marks both arrays optional precisely so that
+       * absence can mean "unchanged" — this is where that has to be honoured.
+       */
+      ...(input.contacts === undefined
+        ? {}
+        : { contacts: input.contacts.map(normaliseContact) }),
+      ...(input.professionalContacts === undefined
+        ? {}
+        : { professionalContacts: input.professionalContacts.map(normaliseContact) }),
       reviewedAt: isoFromMillis(systemClock.nowMillis()),
     });
     if (!result.ok) return errorResponse(result.error, traceId);

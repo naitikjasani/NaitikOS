@@ -636,8 +636,21 @@ export type CrisisPlanInput = {
   readonly warningSigns: string | null;
   readonly copingStrategies: string | null;
   readonly reasonsToLive: string | null;
-  readonly contacts: readonly CrisisContact[];
-  readonly professionalContacts: readonly CrisisContact[];
+  /**
+   * Omitted means "leave whatever is stored alone"; `[]` means "clear it".
+   *
+   * The distinction is load-bearing and it is here because collapsing it lost
+   * data. `professionalContacts` has no editor in the UI, so the authoring
+   * screen never sent it; the route coerced the absent field to `[]` and the
+   * upsert below wrote that `[]` over the stored value. Saving an edit to the
+   * warning signs therefore deleted every emergency number in the plan —
+   * silently, and on the one table where that failure is least survivable.
+   *
+   * A partial write must not be able to clear a field it does not know about.
+   * Absent and empty are different sentences and the type now says so.
+   */
+  readonly contacts?: readonly CrisisContact[] | undefined;
+  readonly professionalContacts?: readonly CrisisContact[] | undefined;
   readonly reviewedAt: string;
 };
 
@@ -685,8 +698,8 @@ export async function writeCrisisPlan(
         warningSigns: input.warningSigns,
         copingStrategies: input.copingStrategies,
         reasonsToLive: input.reasonsToLive,
-        contacts: [...input.contacts],
-        professionalContacts: [...input.professionalContacts],
+        contacts: [...(input.contacts ?? [])],
+        professionalContacts: [...(input.professionalContacts ?? [])],
         lastReviewedAt: input.reviewedAt,
       })
       .onConflictDoUpdate({
@@ -696,8 +709,11 @@ export async function writeCrisisPlan(
           warningSigns: input.warningSigns,
           copingStrategies: input.copingStrategies,
           reasonsToLive: input.reasonsToLive,
-          contacts: [...input.contacts],
-          professionalContacts: [...input.professionalContacts],
+          /* Absent leaves the column untouched. See {@link CrisisPlanInput}. */
+          ...(input.contacts === undefined ? {} : { contacts: [...input.contacts] }),
+          ...(input.professionalContacts === undefined
+            ? {}
+            : { professionalContacts: [...input.professionalContacts] }),
           lastReviewedAt: input.reviewedAt,
           updatedAt: sql`now()`,
           version: sql`${crisisPlan.version} + 1`,

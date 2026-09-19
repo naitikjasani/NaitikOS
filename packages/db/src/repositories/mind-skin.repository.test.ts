@@ -35,7 +35,7 @@ import { createDatabase } from '../client';
 import { resetDomainTables } from '../testing/reset';
 import { createMedicationRepository } from './medication.repository';
 import { createMetricRepository } from './metric.repository';
-import { createMindRepository } from './mind.repository';
+import { createMindRepository, writeCrisisPlan } from './mind.repository';
 import { createRoutineRepository } from './routine.repository';
 import { createSkinRepository } from './skin.repository';
 
@@ -597,6 +597,83 @@ suite('mind, skin, routine and medication repositories', () => {
       // One dose expected, one taken. The other 29 days are not misses.
       expect(adherence.ratio).toBe(1);
       expect(adherence.sentence).toContain('29 days have no record either way');
+    });
+  });
+
+  /* ---------------------------------------------------------------------
+   * The crisis plan
+   * ------------------------------------------------------------------ */
+
+  describe('the crisis plan', () => {
+    /*
+     * One test, and it is a regression test for data loss.
+     *
+     * The authoring screen has no editor for `professionalContacts`, so it does
+     * not send the field. The route used to coerce that absence to `[]` and the
+     * upsert wrote it over the stored column — so editing the warning signs
+     * deleted every emergency number in the plan. On this table that is the
+     * least survivable failure in the product, and it was silent.
+     *
+     * The guarantee is now a type distinction — absent means unchanged, `[]`
+     * means clear — and a type distinction that nothing asserts is a comment.
+     */
+    it('leaves contacts untouched when a partial write omits them', async () => {
+      if (db === undefined) return;
+      const planId = newId();
+
+      const created = await writeCrisisPlan(db, {
+        id: planId,
+        warningSigns: 'Not sleeping.',
+        copingStrategies: null,
+        reasonsToLive: null,
+        contacts: [{ name: 'A', relationship: 'brother', phone: '+911', notes: null }],
+        professionalContacts: [{ name: 'Dr B', relationship: null, phone: '+912', notes: null }],
+        reviewedAt: '2026-08-24T13:00:00.000Z',
+      });
+      expect(isOk(created)).toBe(true);
+
+      // The shape the authoring screen actually sends: prose, and nothing else.
+      const edited = unwrap<{ contacts: readonly unknown[]; professionalContacts: readonly unknown[] }>(
+        (await writeCrisisPlan(db, {
+          id: planId,
+          warningSigns: 'Not sleeping, and skipping meals.',
+          copingStrategies: null,
+          reasonsToLive: null,
+          reviewedAt: '2026-08-25T13:00:00.000Z',
+        })) as never,
+        'edit',
+      );
+
+      expect(edited.contacts).toHaveLength(1);
+      expect(edited.professionalContacts).toHaveLength(1);
+    });
+
+    it('clears contacts when a write says so explicitly', async () => {
+      if (db === undefined) return;
+      const planId = newId();
+
+      await writeCrisisPlan(db, {
+        id: planId,
+        warningSigns: 'Not sleeping.',
+        copingStrategies: null,
+        reasonsToLive: null,
+        professionalContacts: [{ name: 'Dr B', relationship: null, phone: '+912', notes: null }],
+        reviewedAt: '2026-08-24T13:00:00.000Z',
+      });
+
+      const cleared = unwrap<{ professionalContacts: readonly unknown[] }>(
+        (await writeCrisisPlan(db, {
+          id: planId,
+          warningSigns: 'Not sleeping.',
+          copingStrategies: null,
+          reasonsToLive: null,
+          professionalContacts: [],
+          reviewedAt: '2026-08-25T13:00:00.000Z',
+        })) as never,
+        'clear',
+      );
+
+      expect(cleared.professionalContacts).toHaveLength(0);
     });
   });
 });
