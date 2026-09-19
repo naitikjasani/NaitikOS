@@ -91,10 +91,11 @@ export function csrfGuard(request: NextRequest, traceId: string): NextResponse |
     referer: request.headers.get('referer'),
     // From validated configuration, never from the Host header — an attacker
     // controls Host, and checking against it would not be a check.
-    // The v0 preview can run a production build on a loopback origin while
-    // NEXT_PUBLIC_SITE_URL points at the deployed app. Loopback is not a
-    // remotely attacker-controlled origin, so bind preview checks to the
-    // request origin; keep the configured-origin check everywhere else.
+    // The v0 preview proxies the browser request to a loopback server URL.
+    // In that setup request.nextUrl.origin is localhost, while the browser's
+    // Origin and Referer contain the actual preview origin. Use the browser
+    // origin for loopback preview requests; keep the configured-origin check
+    // everywhere else.
     expectedOrigin: (() => {
       const requestUrl = request.nextUrl;
       const isLoopback =
@@ -102,7 +103,7 @@ export function csrfGuard(request: NextRequest, traceId: string): NextResponse |
         requestUrl.hostname === '127.0.0.1' ||
         requestUrl.hostname === '[::1]';
       return isDevelopment() || isLoopback
-        ? requestUrl.origin
+        ? request.headers.get('origin') ?? requestUrl.origin
         : new URL(clientEnv.NEXT_PUBLIC_SITE_URL).origin;
     })(),
     cookieToken: request.cookies.get(CSRF_COOKIE_NAME)?.value ?? null,
