@@ -68,20 +68,30 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       password: parsed.data.password,
     });
 
-    const db = getDb();
-    const audit = createAuthAuditRecorder(db);
     const now = systemClock.now();
 
     if (isErr(identity)) {
-      await audit.record({
-        kind: 'sign_in_failed',
-        email: parsed.data.email,
-        strategy: 'password',
-        occurredAt: now,
-        traceId,
-      });
+      // Do not initialize the application database for a provider-level
+      // credential failure. Apart from avoiding an unnecessary dependency, this
+      // ensures an invalid password produces the intended auth error instead of
+      // being masked by an unrelated database connection failure.
+      try {
+        const audit = createAuthAuditRecorder(getDb());
+        await audit.record({
+          kind: 'sign_in_failed',
+          email: parsed.data.email,
+          strategy: 'password',
+          occurredAt: now,
+          traceId,
+        });
+      } catch {
+        // Audit recording is best effort and must never change the auth result.
+      }
       return errorResponse(identity.error, traceId);
     }
+
+    const db = getDb();
+    const audit = createAuthAuditRecorder(db);
 
     // The allowlist, the role, and the audit — all of it in one call, which is
     // the only path that produces an Actor (§5.4).
