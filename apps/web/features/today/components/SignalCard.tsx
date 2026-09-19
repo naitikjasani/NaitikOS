@@ -47,6 +47,19 @@ const CONFIDENCE_LABEL: Readonly<Record<Finding['confidence'], string>> = Object
 export function SignalCard({ finding, insufficient, baseline }: SignalCardProps): ReactNode {
   if (finding === null) {
     const first = insufficient[0];
+    /*
+     * Two different silences, and they must not read the same.
+     *
+     * *Quiet* is P6 working — "a day with nothing worth saying is a day the
+     * system stays quiet" — and it is a finished, positive state. *Gathering*
+     * is §10.6's sixty-day gate, and it is a state the operator is in for their
+     * first two months. Rendering both as one grey sentence made week three
+     * look like week thirty and made a working system look broken, which is the
+     * failure §10.6 names when it says "'not enough data yet' is honest and
+     * builds trust" — honest requires saying *which* of the two this is.
+     */
+    const quiet = first === undefined && baseline.inferentialAllowed;
+
     return (
       <Card variant="flat">
         <CardBody>
@@ -55,7 +68,12 @@ export function SignalCard({ finding, insufficient, baseline }: SignalCardProps)
               Today’s signal
             </Text>
             <Text role="body-sm" tone="secondary">
-              {first?.message ?? baseline.message}
+              {quiet ? 'Nothing worth flagging today.' : (first?.message ?? baseline.message)}
+            </Text>
+            <Text role="caption" tone="tertiary">
+              {quiet
+                ? 'A quiet day is a result, not a gap.'
+                : 'Nothing is wrong here. The detectors stay quiet until there is enough history for a finding that would survive being checked.'}
             </Text>
           </Stack>
         </CardBody>

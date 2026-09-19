@@ -45,6 +45,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CloseField } from '@naitikos/core';
 import { systemClock } from '@naitikos/core';
 
+import { writePrior } from '@/lib/capture/priors';
 import { type Draft, type DraftScope } from '@/lib/offline/drafts';
 import { type DraftOffer, type DraftProblem, useDraft } from '@/lib/offline/useDraft';
 import { queryKeys } from '@/lib/query/QueryProvider';
@@ -72,6 +73,16 @@ export type UseDailyClose = {
   readonly submit: () => void;
   readonly isSubmitting: boolean;
   readonly queuedAt: number | null;
+  /**
+   * Leave the completion state and go back to the questions.
+   *
+   * The submission is already durable, so this is not an undo — it is the
+   * operator correcting an answer they got wrong thirty seconds ago. §9.4 keeps
+   * the original either way, so re-submitting writes a correction rather than
+   * overwriting a fact, and the only thing this clears is the screen state that
+   * says "there is nothing left to do".
+   */
+  readonly resumeEditing: () => void;
   /**
    * Answers entered for this day that were never submitted (§8.10).
    *
@@ -273,6 +284,31 @@ export function useDailyClose(dayKey: string, zone: string): UseDailyClose {
       setQueuedAt(now);
 
       /*
+       * Remember the numeric answers as tomorrow's one-tap offer (§8.10).
+       *
+       * Only the `number` controls, and only here. A tap scale is excluded on
+       * purpose: last night's mood is not a sensible prior for tonight's, and
+       * offering it would be the system suggesting an answer to the one
+       * question the record exists to hear honestly. A sleep duration is the
+       * opposite — it moves by minutes, the stepper starts at zero, and
+       * `CloseNumberField` explains what the fifteen presses cost.
+       *
+       * After the queue resolves, so an abandoned or failed submission never
+       * changes what tomorrow opens with.
+       */
+      for (const field of snapshot?.fields ?? []) {
+        if (field.kind !== 'metric' || field.control !== 'number') continue;
+        const raw = answers[field.id];
+        const numeric =
+          typeof raw === 'number'
+            ? raw
+            : typeof raw === 'string' && raw.trim() !== ''
+              ? Number(raw)
+              : Number.NaN;
+        if (Number.isFinite(numeric)) writePrior(field.metricKey, numeric);
+      }
+
+      /*
        * The draft is redundant now, and not one moment earlier.
        *
        * `submitClose` awaits `queueAndDrain`, which resolves only once the
@@ -354,6 +390,9 @@ export function useDailyClose(dayKey: string, zone: string): UseDailyClose {
     },
     isSubmitting: mutation.isPending,
     queuedAt,
+    resumeEditing: () => {
+      setQueuedAt(null);
+    },
     recoverable: draft.offered,
     restoreDraft,
     discardDraft: draft.discard,

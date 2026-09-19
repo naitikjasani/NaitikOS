@@ -21,12 +21,12 @@
 
 import type { ReactNode } from 'react';
 import { Suspense } from 'react';
-import { ErrorState, LoadingState } from '@naitikos/design-system';
+import { Card, CardBody, ErrorState, LoadingState, Stack, Text } from '@naitikos/design-system';
 import { dayKeyInZone, systemClock, isoFromMillis } from '@naitikos/core';
 import { createConsoleLogger, createDailyCloseRepository, createMetricRepository } from '@naitikos/db';
 
 import { PageContainer } from '@/components/shell';
-import { NowPanel, SignalCard } from '@/features/today';
+import { NowPanel, SignalCard, type CloseState } from '@/features/today';
 import { getDb, requireServerPermission } from '@/lib/auth/session';
 import { DEFAULT_PROFILE_ZONE } from '@/lib/platform/context';
 import { loadInsights, topFinding } from '@/lib/platform/insights';
@@ -170,28 +170,62 @@ async function TodaySummary(): Promise<ReactNode> {
     withinBudget('insights', loadInsights(db, { toDayKey: dayKey, zone })),
   ]);
 
+  /*
+   * Three outcomes, not two — and the third is the one that used to be a lie.
+   *
+   * A read that exceeded its budget came back as `null` and was rendered as
+   * `false`: "you have not closed today", stated with the same confidence as if
+   * it had been checked. §8.9's rule is that missing data is shown as missing,
+   * and it applies hardest to a page whose entire job is telling the operator
+   * what is outstanding. The panel now has a state for "nobody knows", which is
+   * the true one.
+   */
+  const closeState: CloseState =
+    state === null || !state.ok
+      ? 'unknown'
+      : state.value.observations.some((o) => o.metricKey === 'system.daily_close.completed')
+        ? 'closed'
+        : 'open';
+
   return (
     <>
       <NowPanel
         dayKey={dayKey}
-        isClosed={
-          state !== null &&
-          state.ok &&
-          state.value.observations.some((o) => o.metricKey === 'system.daily_close.completed')
-        }
-        compoundingDays={compounding !== null && compounding.ok ? compounding.value : 0}
+        closeState={closeState}
+        compoundingDays={compounding !== null && compounding.ok ? compounding.value : null}
         windowDays={COMPOUNDING_WINDOW_DAYS}
       />
       {/*
         One card, never two. The cap lives in `topFinding`, server-side, so no
         component can widen it (§3.2).
+
+        When the read did not arrive the card says so rather than disappearing.
+        A silently absent card is indistinguishable from a day with no signal,
+        and those are opposite facts: one is P6's silence working as designed and
+        the other is a query that never came back. The budget above already
+        decided this costs the signal and nothing else; saying which is what
+        keeps the operator from wondering whether the detectors have stopped.
       */}
-      {insights !== null && insights.ok && (
+      {insights !== null && insights.ok ? (
         <SignalCard
           finding={topFinding(insights.value)}
           insufficient={insights.value.insufficient}
           baseline={insights.value.baseline}
         />
+      ) : (
+        <Card variant="flat">
+          <CardBody>
+            <Stack gap="1">
+              <Text role="caption" tone="tertiary">
+                Today’s signal
+              </Text>
+              <Text role="body-sm" tone="secondary">
+                Today’s signal could not be read. Nothing recorded is affected — the detectors run
+                over the record, they do not change it.
+              </Text>
+            </Stack>
+          </CardBody>
+        </Card>
       )}
     </>
   );

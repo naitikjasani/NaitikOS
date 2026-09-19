@@ -40,10 +40,24 @@ export default async function DailyClosePage({
     typeof requested === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(requested) ? requested : today;
 
   return (
-    <PageContainer
-      title="Daily Close"
-      description="The day's minimum viable record, in under sixty seconds."
-    >
+    /*
+     * No description, and the omission is load-bearing.
+     *
+     * "The day's minimum viable record, in under sixty seconds" used to sit
+     * here. At 360px it wrapped to two lines and cost about fifty pixels above
+     * the fold — on the one screen in the application where §4.0 forbids
+     * scrolling, and where those fifty pixels are the difference between the
+     * primary action being visible and being below the fold. It is also a
+     * sentence the operator reads once and then never again, every night,
+     * forever. The screen says what it needs to where it is needed: the step
+     * heading names the questions and the line under the action row says every
+     * field is optional.
+     *
+     * `breadcrumbs={false}` for the same reason and one more: a trail back into
+     * the app, rendered above the first question, is an invitation to leave a
+     * ritual §4.0 budgets at sixty seconds.
+     */
+    <PageContainer title="Daily Close" breadcrumbs={false}>
       <DailyCloseScreen dayKey={dayKey} zone={zone} isToday={dayKey === today} />
     </PageContainer>
   );
